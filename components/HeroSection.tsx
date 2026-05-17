@@ -1,0 +1,273 @@
+"use client";
+import React from 'react';
+import { motion } from 'framer-motion';
+import { Clock, Disc3, Sparkles, TrendingUp } from 'lucide-react';
+import { AreaChart, Area, ResponsiveContainer } from 'recharts';
+const moodData = [
+{
+  value: 20
+},
+{
+  value: 40
+},
+{
+  value: 30
+},
+{
+  value: 70
+},
+{
+  value: 50
+},
+{
+  value: 90
+},
+{
+  value: 80
+}];
+
+export function HeroSection() {
+  return (
+    <section className="relative mb-12">
+      {/* Ambient Glow */}
+      <div className="absolute top-0 right-0 w-[600px] h-[400px] bg-spotify/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute top-20 left-20 w-[400px] h-[400px] bg-violet-500/10 rounded-full blur-[100px] pointer-events-none" />
+
+      <div className="relative z-10">
+        <motion.div
+          initial={{
+            opacity: 0,
+            y: 20
+          }}
+          animate={{
+            opacity: 1,
+            y: 0
+          }}
+          transition={{
+            duration: 0.6,
+            ease: 'easeOut'
+          }}
+          className="mb-10 flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+          
+          <div>
+            <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-2 flex items-center gap-1">
+              Good evening,{' '}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-white/60">
+                Chijioke
+              </span>
+              <motion.div
+                animate={{
+                  opacity: [1, 0, 1]
+                }}
+                transition={{
+                  duration: 1,
+                  repeat: Infinity
+                }}
+                className="w-1 h-8 bg-spotify ml-1 rounded-full" />
+              
+            </h1>
+            <p className="text-lg text-white/60 font-medium">
+              Your music{' '}
+              <span className="font-serif-display italic text-spotify/80">
+                changed
+              </span>{' '}
+              this month.
+            </p>
+          </div>
+
+          {/* Now Playing Pill */}
+          <div className="glass-card px-4 py-3 rounded-full flex items-center gap-3 border-white/10 bg-white/[0.02]">
+            <div className="flex items-end gap-[2px] h-4">
+              {Array.from({
+                length: 16
+              }).map((_, i) =>
+              <motion.div
+                key={i}
+                className="w-[2px] bg-spotify rounded-t-sm"
+                animate={{
+                  height: ['20%', '100%', '40%', '80%', '20%']
+                }}
+                transition={{
+                  duration: 1.5,
+                  repeat: Infinity,
+                  ease: 'easeInOut',
+                  delay: i * 0.1
+                }} />
+
+              )}
+            </div>
+            <span className="text-xs font-medium text-white/70">
+              ~ Now listening · Solitude — Tame Impala
+            </span>
+          </div>
+        </motion.div>
+
+        {/* Hero Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Music Age Card */}
+          <motion.div
+            initial={{
+              opacity: 0,
+              y: 20
+            }}
+            animate={{
+              opacity: 1,
+              y: 0
+            }}
+            transition={{
+              duration: 0.6,
+              delay: 0.1,
+              ease: 'easeOut'
+            }}
+            className="glass-card p-6 relative overflow-hidden group col-span-1 md:col-span-2 lg:col-span-1">
+            
+            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/20 rounded-full blur-[50px] group-hover:bg-blue-500/30 transition-colors" />
+
+            <div className="flex items-center gap-2 mb-6">
+              <Clock size={16} className="text-blue-400" />
+              <span className="text-sm font-medium text-white/70">
+                Music Age
+              </span>
+            </div>
+
+            <div className="flex items-end gap-3 mb-6">
+              <span className="text-6xl font-serif-display leading-none">
+                22
+              </span>
+              <span className="text-sm text-white/50 mb-1">years old</span>
+            </div>
+
+            <div className="h-16 -mx-2">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={moodData}>
+                  <defs>
+                    <linearGradient id="colorAge" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <Area
+                    type="monotone"
+                    dataKey="value"
+                    stroke="#3B82F6"
+                    strokeWidth={2}
+                    fillOpacity={1}
+                    fill="url(#colorAge)" />
+                  
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+            <p className="text-xs text-white/40 mt-2">
+              Trending younger this week
+            </p>
+          </motion.div>
+
+          {/* Song of the Day Card */}
+          <motion.div
+            initial={{
+              opacity: 0,
+              y: 20
+            }}
+            animate={{
+              opacity: 1,
+              y: 0
+            }}
+            transition={{
+              duration: 0.6,
+              delay: 0.2,
+              ease: 'easeOut'
+            }}
+            className="glass-card p-6 relative overflow-hidden group col-span-1">
+            
+            <div className="absolute inset-0 bg-gradient-to-br from-pink-500/10 to-orange-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+
+            <div className="flex items-center justify-between mb-6 relative z-10">
+              <div className="flex items-center gap-2">
+                <Sparkles size={16} className="text-pink-400" />
+                <span className="text-sm font-medium text-white/70">
+                  Song of the Day
+                </span>
+              </div>
+              <span className="text-[10px] uppercase tracking-wider text-white/40 border border-white/10 px-2 py-1 rounded-full">
+                Nostalgia
+              </span>
+            </div>
+
+            <div className="flex items-center gap-4 relative z-10">
+              <div className="w-20 h-20 rounded-xl bg-gradient-to-br from-pink-500 to-orange-400 shadow-lg relative overflow-hidden shrink-0">
+                <div className="absolute inset-0 bg-black/20" />
+                <Disc3
+                  className="absolute bottom-2 right-2 text-white/50"
+                  size={16} />
+                
+              </div>
+              <div>
+                <h3 className="font-bold text-lg leading-tight mb-1">
+                  Pink + White
+                </h3>
+                <p className="text-sm text-white/60 mb-2">Frank Ocean</p>
+                <p className="text-xs text-pink-400 font-medium">
+                  You loved this in Aug 2024
+                </p>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Listening Personality */}
+          <motion.div
+            initial={{
+              opacity: 0,
+              y: 20
+            }}
+            animate={{
+              opacity: 1,
+              y: 0
+            }}
+            transition={{
+              duration: 0.6,
+              delay: 0.3,
+              ease: 'easeOut'
+            }}
+            className="glass-card p-6 relative overflow-hidden group col-span-1">
+            
+            <div className="absolute top-0 right-0 w-32 h-32 bg-violet-500/20 rounded-full blur-[50px] group-hover:bg-violet-500/30 transition-colors" />
+
+            <div className="flex items-center gap-2 mb-6">
+              <TrendingUp size={16} className="text-violet-400" />
+              <span className="text-sm font-medium text-white/70">
+                Personality
+              </span>
+            </div>
+
+            <h3 className="text-2xl font-serif-display italic text-violet-300 mb-2">
+              The Night Explorer
+            </h3>
+            <p className="text-sm text-white/50 mb-6">
+              68% of your discovery happens after 10 PM.
+            </p>
+
+            <div className="flex items-center gap-1 h-8">
+              {[20, 30, 40, 60, 80, 100, 90, 70, 50, 30, 20, 40].map((h, i) =>
+              <div
+                key={i}
+                className="flex-1 bg-white/10 rounded-t-sm relative group-hover:bg-white/20 transition-colors">
+                
+                  <div
+                  className="absolute bottom-0 left-0 right-0 bg-violet-500 rounded-t-sm transition-all duration-500"
+                  style={{
+                    height: `${h}%`
+                  }} />
+                
+                </div>
+              )}
+            </div>
+            <div className="flex justify-between text-[10px] text-white/40 mt-2">
+              <span>6 AM</span>
+              <span>12 AM</span>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+    </section>);
+
+}
