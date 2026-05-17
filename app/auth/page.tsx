@@ -75,9 +75,15 @@ export default function LoginPage() {
 
             {/* CTA */}
             <button
-              onClick={() => {
+              onClick={async () => {
                 setLoading(true);
                 setError(null);
+                try {
+                  await signIn("spotify", { callbackUrl: "/dashboard" });
+                } catch (e) {
+                  setError(`Something went wrong. Please try again. ${e}`);
+                  setLoading(false);
+                }
               }}
               className="w-full flex items-center justify-center gap-2.5 rounded-full px-7 py-[15px] bg-[#1db954] [background-image:linear-gradient(135deg,rgba(255,255,255,0.14)_0%,transparent_60%)] text-black font-bold text-[15px] tracking-[0.02em] border-0 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_0_36px_rgba(29,185,84,0.45),0_8px_20px_rgba(0,0,0,0.4)] active:translate-y-0 active:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53e076]/40"
             >
