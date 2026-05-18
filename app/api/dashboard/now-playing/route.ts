@@ -59,6 +59,7 @@ export async function GET() {
   ]);
 
   if (nowPlayingRes.status === 401 || recentlyPlayedRes.status === 401) {
+    console.log("Spotify API returned 401 - likely due to expired token", nowPlayingRes);
     return NextResponse.json({ error: "Spotify authorization failed" }, { status: 401 });
   }
 
