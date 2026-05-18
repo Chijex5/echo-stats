@@ -5,6 +5,7 @@ import { Clock, Disc3, Sparkles, TrendingUp } from 'lucide-react';
 import { AreaChart, Area, ResponsiveContainer } from 'recharts';
 import { getGreeting } from '@/lib/greetings';
 import { useSession } from 'next-auth/react';
+import { useNowPlayingSync } from '@/lib/hooks/useDashboard';
 const moodData = [
 {
   value: 20
@@ -30,6 +31,12 @@ const moodData = [
 
 export function HeroSection() {
   const { data: session } = useSession();
+  const { data: nowPlayingData } = useNowPlayingSync();
+  const nowPlayingText = nowPlayingData?.nowPlaying ?
+  `~ Now listening · ${nowPlayingData.nowPlaying.trackName} — ${nowPlayingData.nowPlaying.artistName}` :
+  nowPlayingData?.lastPlayed ?
+  `~ Last played · ${nowPlayingData.lastPlayed.trackName} — ${nowPlayingData.lastPlayed.artistName}` :
+  "~ Not playing right now";
   return (
     <section className="relative mb-12">
       {/* Ambient Glow */}
@@ -97,7 +104,7 @@ export function HeroSection() {
               )}
             </div>
             <span className="text-xs font-medium text-white/70">
-              ~ Now listening · Solitude — Tame Impala
+              {nowPlayingText}
             </span>
           </div>
         </motion.div>
