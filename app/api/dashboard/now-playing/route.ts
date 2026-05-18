@@ -43,6 +43,7 @@ export async function GET() {
   const session = await getServerSession(authOptions);
 
   if (!session?.user?.id) {
+    console.log("[sync] No valid session or user ID found");
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -58,7 +59,7 @@ export async function GET() {
   try {
     accessToken = await getValidSpotifyToken(session.user.id);
   } catch (err) {
-    console.error("[sync] Token refresh failed:", err);
+    console.log("[sync] Token refresh failed:", err);
     return NextResponse.json(
       { error: "Spotify token refresh failed. Please sign in again." },
       { status: 401 }
@@ -80,6 +81,7 @@ export async function GET() {
 
   // A 401 here after a fresh token means the user revoked app access
   if (nowPlayingRes.status === 401 || recentlyPlayedRes.status === 401) {
+    console.log("[sync] Spotify access revoked for user", session.user.id, nowPlayingRes);
     return NextResponse.json(
       { error: "Spotify access revoked. Please reconnect your account." },
       { status: 401 }
@@ -87,6 +89,7 @@ export async function GET() {
   }
 
   if (!recentlyPlayedRes.ok) {
+    console.log("[sync] Failed to fetch recently played tracks from Spotify");
     return NextResponse.json(
       { error: "Failed to fetch recently played tracks from Spotify" },
       { status: 502 }
