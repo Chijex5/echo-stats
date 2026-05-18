@@ -38,7 +38,14 @@ export async function GET() {
       { $sort: { value: -1 } },
       { $limit: 4 },
     ]),
-    StreamEntry.aggregate<{ _id: number; count: number }>([
+    StreamEntry.aggregate<{
+      _id: number;
+      count: number;
+      calm: number;
+      energetic: number;
+      sad: number;
+      happy: number;
+    }>([
       { $match: { userId, ts: { $gte: thirtyDaysAgo } } },
       {
         $group: {

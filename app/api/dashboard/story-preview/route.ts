@@ -17,7 +17,7 @@ export async function GET() {
   const yearStart = new Date(now.getFullYear(), 0, 1);
 
   const [newArtists, monthlyBars] = await Promise.all([
-    StreamEntry.aggregate<{ _id: string }>([
+    StreamEntry.aggregate<{ count: number }>([
       { $match: { userId } },
       { $group: { _id: "$artistName", firstPlayed: { $min: "$ts" } } },
       { $match: { firstPlayed: { $gte: yearStart } } },
