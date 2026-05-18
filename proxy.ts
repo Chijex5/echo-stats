@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
-const PUBLIC_PATHS   = ["/auth", "/api/auth"];
+const PUBLIC_PATHS   = ["/auth", "/api/auth", "/"];
 const IMPORT_PATH    = "/import";
 const DASHBOARD_PATH = "/dashboard";
 
