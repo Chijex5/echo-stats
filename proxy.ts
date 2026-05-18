@@ -1,17 +1,19 @@
+// middleware.ts
+
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
-const PUBLIC_PATHS  = ["/auth", "/api/auth"];
-const IMPORT_PATH   = "/import";
+const PUBLIC_PATHS   = ["/auth", "/api/auth"];
+const IMPORT_PATH    = "/import";
 const DASHBOARD_PATH = "/dashboard";
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Let public paths and static assets through
+  // Static assets and public paths — skip entirely
   if (
-    PUBLIC_PATHS.some(p => pathname.startsWith(p)) ||
+    PUBLIC_PATHS.some((p) => pathname.startsWith(p)) ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon")
   ) {
@@ -20,19 +22,29 @@ export async function proxy(req: NextRequest) {
 
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
 
-  // Not signed in → send to /auth
+  // ── API routes: never redirect — return 401 so fetch() can handle it ──
+  if (pathname.startsWith("/api/")) {
+    if (!token) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    return NextResponse.next(); // authenticated — let the route handler decide
+  }
+
+  // ── Page routes ───────────────────────────────────────────────────────
+
+  // Not signed in → /auth
   if (!token) {
     return NextResponse.redirect(new URL("/auth", req.url));
   }
 
   const onboarded = token.onboardingCompleted as boolean;
 
-  // Signed in but not onboarded → only /import is allowed
+  // Signed in but not onboarded → only /import allowed
   if (!onboarded && pathname !== IMPORT_PATH) {
     return NextResponse.redirect(new URL(IMPORT_PATH, req.url));
   }
 
-  // Fully onboarded user hitting /import → bounce to /dashboard
+  // Fully onboarded hitting /import → bounce to /dashboard
   if (onboarded && pathname === IMPORT_PATH) {
     return NextResponse.redirect(new URL(DASHBOARD_PATH, req.url));
   }
@@ -41,6 +53,5 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  // Match everything except Next.js internals and static files
   matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };

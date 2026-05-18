@@ -231,7 +231,7 @@ export default function ImportPage() {
   // ─────────────────────────────────────────────────────────────────────────
 
   return (
-    <div className="pt-32 pb-20 min-h-screen relative overflow-hidden">
+    <div className="pt-32 pb-20 min-h-screen relative overflow-x-hidden">
       {/* Ambient */}
       <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-spotify/10 rounded-full blur-[120px] mix-blend-screen animate-pulse-slow" />
       <div className="absolute top-1/3 right-1/4 w-[600px] h-[600px] bg-violet-600/10 rounded-full blur-[150px] mix-blend-screen animate-pulse-slow" style={{ animationDelay: "1s" }} />
