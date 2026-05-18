@@ -1457,31 +1457,32 @@ export default function TopTracksPage() {
   const [sort, setSort] = useState('Most played');
   const [selected, setSelected] = useState(1);
   return (
-    <div className="min-h-screen bg-background text-white selection:bg-spotify/30 selection:text-white flex">
+    <div className="min-h-screen bg-background text-white selection:bg-spotify/30 selection:text-white flex overflow-x-hidden">
       <Sidebar />
-
-      <div className="flex-1 lg:ml-64 flex flex-col min-h-screen relative">
+      <div className="flex-1 lg:ml-64 flex flex-col overflow-x-hidden">
         <TopNav />
-
-        <main className="flex-1 p-6 md:p-10 max-w-[1400px] mx-auto w-full relative">
+        <main className="flex-1 px-4 py-6 md:px-8 md:py-10 w-full">
+          {/* max-w constraint lives here, not on <main> */}
+          <div className="max-w-[1400px] mx-auto relative overflow-x-hidden">
           {/* Ambient Page Blobs */}
-          <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-emerald-500/10 rounded-full blur-[150px] pointer-events-none mix-blend-screen" />
-          <div className="absolute top-[35%] left-[-20%] w-[600px] h-[600px] bg-violet-600/10 rounded-full blur-[150px] pointer-events-none mix-blend-screen" />
-          <div className="absolute bottom-0 right-[-10%] w-[700px] h-[700px] bg-blue-600/10 rounded-full blur-[150px] pointer-events-none mix-blend-screen" />
+            <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-emerald-500/10 rounded-full blur-[150px] pointer-events-none mix-blend-screen" />
+            <div className="absolute top-[35%] left-[-20%] w-[600px] h-[600px] bg-violet-600/10 rounded-full blur-[150px] pointer-events-none mix-blend-screen" />
+            <div className="absolute bottom-0 right-[-10%] w-[700px] h-[700px] bg-blue-600/10 rounded-full blur-[150px] pointer-events-none mix-blend-screen" />
 
-          <div className="relative z-10 flex flex-col gap-14">
-            <TracksHero
-              range={range}
-              setRange={setRange}
-              sort={sort}
-              setSort={setSort} />
-            
-            <TrackLeaderboard selected={selected} setSelected={setSelected} />
-            <TrackSpotlight rank={selected} />
-            <TrackCharts />
-            <TrackFilters />
-            <TrackInsights />
-            <RediscoveryStrip />
+            <div className="relative z-10 flex flex-col gap-14">
+              <TracksHero
+                range={range}
+                setRange={setRange}
+                sort={sort}
+                setSort={setSort} />
+              
+              <TrackLeaderboard selected={selected} setSelected={setSelected} />
+              <TrackSpotlight rank={selected} />
+              <TrackCharts />
+              <TrackFilters />
+              <TrackInsights />
+              <RediscoveryStrip />
+            </div>
           </div>
         </main>
       </div>

@@ -796,43 +796,46 @@ export default function SongOfTheDayPage() {
   const { data, isLoading, error } = useSongOfTheDay();
 
   return (
-    <div className="min-h-screen bg-background text-white selection:bg-spotify/30 selection:text-white flex">
+    <div className="min-h-screen bg-background text-white selection:bg-spotify/30 selection:text-white flex overflow-x-hidden">
       <Sidebar />
-      <div className="flex-1 lg:ml-64 flex flex-col min-h-screen relative">
+      <div className="flex-1 lg:ml-64 flex flex-col overflow-x-hidden">
         <TopNav />
-        <main className="flex-1 p-6 md:p-10 max-w-[1400px] mx-auto w-full relative">
+        <main className="flex-1 px-4 py-6 md:px-8 md:py-10 w-full">
+          {/* max-w constraint lives here, not on <main> */}
+          <div className="max-w-[1400px] mx-auto relative overflow-x-hidden">
           {/* Ambient */}
-          <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-blue-500/10 rounded-full blur-[150px] pointer-events-none mix-blend-screen" />
-          <div className="absolute top-[40%] left-[-20%] w-[600px] h-[600px] bg-violet-600/10 rounded-full blur-[150px] pointer-events-none mix-blend-screen" />
-          <div className="absolute bottom-0 right-[-10%] w-[700px] h-[700px] bg-amber-500/10 rounded-full blur-[150px] pointer-events-none mix-blend-screen" />
+            <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-blue-500/10 rounded-full blur-[150px] pointer-events-none mix-blend-screen" />
+            <div className="absolute top-[40%] left-[-20%] w-[600px] h-[600px] bg-violet-600/10 rounded-full blur-[150px] pointer-events-none mix-blend-screen" />
+            <div className="absolute bottom-0 right-[-10%] w-[700px] h-[700px] bg-amber-500/10 rounded-full blur-[150px] pointer-events-none mix-blend-screen" />
 
-          {error && (
-            <div className="relative z-10 flex items-center justify-center min-h-[60vh]">
-              <p className="text-white/50 text-sm">Could not load today&apos;s song. Please try again.</p>
-            </div>
-          )}
-
-          <div className="relative z-10 flex flex-col gap-14">
-            {isLoading || !data ? (
-              <>
-                <SotdHeroSkeleton />
-                <TheStorySkeleton />
-                <MemorySnapshotSkeleton />
-                <WhySkeleton />
-                <RelatedSkeleton />
-                <MoodSkeleton />
-              </>
-            ) : (
-              <>
-                <SotdHero song={data.song} stats={data.stats} />
-                <TheStory beats={data.storyBeats} song={data.song} />
-                <MemorySnapshotSection data={data.memorySnapshot} />
-                <WhyWePickedThis reasons={data.algoReasons} affinityScore={data.affinityScore} affinityLabel={data.affinityLabel} />
-                <RelatedForgotten related={data.related} />
-                <MoodReconstructionSection data={data.moodReconstruction} song={data.song} />
-                <DailyRitualSection data={data.dailyRitual} />
-              </>
+            {error && (
+              <div className="relative z-10 flex items-center justify-center min-h-[60vh]">
+                <p className="text-white/50 text-sm">Could not load today&apos;s song. Please try again.</p>
+              </div>
             )}
+
+            <div className="relative z-10 flex flex-col gap-14">
+              {isLoading || !data ? (
+                <>
+                  <SotdHeroSkeleton />
+                  <TheStorySkeleton />
+                  <MemorySnapshotSkeleton />
+                  <WhySkeleton />
+                  <RelatedSkeleton />
+                  <MoodSkeleton />
+                </>
+              ) : (
+                <>
+                  <SotdHero song={data.song} stats={data.stats} />
+                  <TheStory beats={data.storyBeats} song={data.song} />
+                  <MemorySnapshotSection data={data.memorySnapshot} />
+                  <WhyWePickedThis reasons={data.algoReasons} affinityScore={data.affinityScore} affinityLabel={data.affinityLabel} />
+                  <RelatedForgotten related={data.related} />
+                  <MoodReconstructionSection data={data.moodReconstruction} song={data.song} />
+                  <DailyRitualSection data={data.dailyRitual} />
+                </>
+              )}
+            </div>
           </div>
         </main>
       </div>
