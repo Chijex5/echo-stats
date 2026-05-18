@@ -171,3 +171,31 @@ export function useInsights() {
     { revalidateOnFocus: false }
   );
 }
+
+// ─── Now Playing + Sync ──────────────────────────────────────────────────────
+
+export interface NowPlayingSyncTrack {
+  trackName: string;
+  artistName: string;
+}
+
+export interface NowPlayingSyncResponse {
+  nowPlaying: NowPlayingSyncTrack | null;
+  lastPlayed: NowPlayingSyncTrack | null;
+  sync: {
+    processed: number;
+    inserted: number;
+    syncedAt: string;
+  };
+}
+
+export function useNowPlayingSync(refreshIntervalMs = 60_000) {
+  return useSWR<NowPlayingSyncResponse>(
+    "/api/dashboard/now-playing",
+    fetcher<NowPlayingSyncResponse>,
+    {
+      revalidateOnFocus: false,
+      refreshInterval: refreshIntervalMs,
+    }
+  );
+}
