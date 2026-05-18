@@ -3,6 +3,8 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Clock, Disc3, Sparkles, TrendingUp } from 'lucide-react';
 import { AreaChart, Area, ResponsiveContainer } from 'recharts';
+import { getGreeting } from '@/lib/greetings';
+import { useSession } from 'next-auth/react';
 const moodData = [
 {
   value: 20
@@ -27,6 +29,7 @@ const moodData = [
 }];
 
 export function HeroSection() {
+  const { data: session } = useSession();
   return (
     <section className="relative mb-12">
       {/* Ambient Glow */}
@@ -51,10 +54,7 @@ export function HeroSection() {
           
           <div>
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-2 flex items-center gap-1">
-              Good evening,{' '}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-white/60">
-                Chijioke
-              </span>
+              {getGreeting({ dateTime: new Date(), name: session?.user?.name })}
               <motion.div
                 animate={{
                   opacity: [1, 0, 1]

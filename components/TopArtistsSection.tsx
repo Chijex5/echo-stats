@@ -1,303 +1,169 @@
 "use client";
-import React from 'react';
-import { motion } from 'framer-motion';
-import {
-  ChevronLeft,
-  ChevronRight,
-  TrendingUp,
-  TrendingDown } from
-'lucide-react';
-import { LineChart, Line, ResponsiveContainer } from 'recharts';
-const artists = [
-{
-  id: 1,
-  name: 'Kendrick Lamar',
-  genre: 'Hip-hop',
-  initials: 'KL',
-  color: 'from-red-500 to-orange-500',
-  trend: 'up',
-  delta: '+12 plays this month',
-  data: [
-  {
-    v: 10
-  },
-  {
-    v: 15
-  },
-  {
-    v: 12
-  },
-  {
-    v: 20
-  },
-  {
-    v: 25
-  }]
 
-},
-{
-  id: 2,
-  name: 'Tame Impala',
-  genre: 'Indie',
-  initials: 'TI',
-  color: 'from-purple-500 to-indigo-500',
-  trend: 'down',
-  delta: '−4 plays vs last',
-  data: [
-  {
-    v: 25
-  },
-  {
-    v: 20
-  },
-  {
-    v: 22
-  },
-  {
-    v: 15
-  },
-  {
-    v: 12
-  }]
+import React, { useRef } from "react";
+import { motion } from "framer-motion";
+import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown } from "lucide-react";
+import { LineChart, Line, ResponsiveContainer } from "recharts";
+import { useTopArtists, type TopArtist, type Trend } from "@/lib/hooks/useDashboard";
 
-},
-{
-  id: 3,
-  name: 'Frank Ocean',
-  genre: 'R&B',
-  initials: 'FO',
-  color: 'from-pink-500 to-rose-400',
-  trend: 'up',
-  delta: '+8 plays this month',
-  data: [
-  {
-    v: 5
-  },
-  {
-    v: 10
-  },
-  {
-    v: 8
-  },
-  {
-    v: 15
-  },
-  {
-    v: 18
-  }]
+// ─── Skeleton ──────────────────────────────────────────────────────────────
 
-},
-{
-  id: 4,
-  name: 'Fred again..',
-  genre: 'Electronic',
-  initials: 'FA',
-  color: 'from-emerald-400 to-cyan-500',
-  trend: 'up',
-  delta: '+24 plays this month',
-  data: [
-  {
-    v: 2
-  },
-  {
-    v: 8
-  },
-  {
-    v: 15
-  },
-  {
-    v: 20
-  },
-  {
-    v: 30
-  }]
+function ArtistSkeleton({ index }: { index: number }) {
+  return (
+    <div
+      className="w-48 shrink-0 snap-start rounded-2xl glass-card p-5 flex flex-col items-center text-center animate-pulse"
+      style={{ animationDelay: `${index * 60}ms` }}
+    >
+      {/* avatar circle */}
+      <div className="w-20 h-20 rounded-full bg-white/10 mb-4" />
+      {/* name */}
+      <div className="h-3 w-28 rounded bg-white/10 mb-2" />
+      {/* genre pill */}
+      <div className="h-4 w-16 rounded-full bg-white/[0.06] mb-4" />
+      {/* sparkline */}
+      <div className="w-full h-8 rounded bg-white/[0.06] mb-3" />
+      {/* delta */}
+      <div className="h-2.5 w-24 rounded bg-white/10" />
+    </div>
+  );
+}
 
-},
-{
-  id: 5,
-  name: 'Billie Eilish',
-  genre: 'Pop',
-  initials: 'BE',
-  color: 'from-blue-500 to-cyan-400',
-  trend: 'same',
-  delta: 'Steady listening',
-  data: [
-  {
-    v: 15
-  },
-  {
-    v: 16
-  },
-  {
-    v: 15
-  },
-  {
-    v: 17
-  },
-  {
-    v: 15
-  }]
+// ─── Trend icon ────────────────────────────────────────────────────────────
 
-},
-{
-  id: 6,
-  name: 'Cleo Sol',
-  genre: 'Soul',
-  initials: 'CS',
-  color: 'from-amber-500 to-orange-400',
-  trend: 'up',
-  delta: '+15 plays this month',
-  data: [
-  {
-    v: 0
-  },
-  {
-    v: 5
-  },
-  {
-    v: 10
-  },
-  {
-    v: 15
-  },
-  {
-    v: 20
-  }]
+const TREND_ICON: Record<Trend, React.ReactNode> = {
+  up: <TrendingUp size={10} className="text-spotify" />,
+  down: <TrendingDown size={10} className="text-red-400" />,
+  same: null,
+};
 
-},
-{
-  id: 7,
-  name: 'Burna Boy',
-  genre: 'Afrobeats',
-  initials: 'BB',
-  color: 'from-green-500 to-emerald-400',
-  trend: 'down',
-  delta: '−8 plays vs last',
-  data: [
-  {
-    v: 30
-  },
-  {
-    v: 25
-  },
-  {
-    v: 20
-  },
-  {
-    v: 15
-  },
-  {
-    v: 10
-  }]
+// ─── Single Artist Card ────────────────────────────────────────────────────
 
-},
-{
-  id: 8,
-  name: 'The Weeknd',
-  genre: 'R&B',
-  initials: 'TW',
-  color: 'from-red-600 to-pink-600',
-  trend: 'up',
-  delta: '+5 plays this month',
-  data: [
-  {
-    v: 10
-  },
-  {
-    v: 12
-  },
-  {
-    v: 15
-  },
-  {
-    v: 14
-  },
-  {
-    v: 18
-  }]
+interface ArtistCardProps {
+  artist: TopArtist;
+  index: number;
+  isFirst: boolean;
+}
 
-}];
+function ArtistCard({ artist, index, isFirst }: ArtistCardProps) {
+  const lineColor =
+    artist.trend === "up"
+      ? "rgba(29,185,84,0.7)"   // spotify green
+      : artist.trend === "down"
+      ? "rgba(248,113,113,0.7)" // red-400
+      : "rgba(255,255,255,0.4)";
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: 20 }}
+      whileInView={{ opacity: 1, x: 0 }}
+      viewport={{ once: true, margin: "-50px" }}
+      transition={{ duration: 0.5, delay: index * 0.05 }}
+      className="w-48 shrink-0 snap-start rounded-2xl glass-card p-5 flex flex-col items-center text-center hover:-translate-y-1 transition-transform duration-300"
+    >
+      {/* Avatar */}
+      <div
+        className={`w-20 h-20 rounded-full bg-gradient-to-br ${artist.color} flex items-center justify-center text-2xl font-bold text-white shadow-lg mb-4 relative`}
+      >
+        {isFirst && (
+          <div className="absolute -inset-1 rounded-full border-2 border-spotify animate-pulse" />
+        )}
+        {artist.initials}
+      </div>
+
+      {/* Name */}
+      <h3 className="font-semibold text-sm w-full truncate mb-1">{artist.name}</h3>
+
+      {/* Plays count as subtle pill — genre isn't in the API, so we surface plays */}
+      <div className="px-2 py-0.5 rounded-full bg-white/5 text-[10px] font-medium text-white/60 mb-4">
+        {artist.plays.toLocaleString()} plays
+      </div>
+
+      {/* Sparkline */}
+      <div className="w-full h-8 mb-3">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={artist.sparkline}>
+            <Line
+              type="monotone"
+              dataKey="v"
+              stroke={lineColor}
+              strokeWidth={2}
+              dot={false}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Delta label */}
+      <div className="flex items-center gap-1 text-[10px] text-white/50">
+        {TREND_ICON[artist.trend]}
+        <span>{artist.deltaLabel}</span>
+      </div>
+    </motion.div>
+  );
+}
+
+// ─── TopArtistsSection ─────────────────────────────────────────────────────
+
+const SKELETON_COUNT = 8;
 
 export function TopArtistsSection() {
+  const { data, isLoading, error } = useTopArtists(8);
+  const artists = data?.artists ?? [];
+
+  // Scroll the carousel programmatically via the chevron buttons
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  function scroll(dir: "left" | "right") {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollBy({ left: dir === "left" ? -208 : 208, behavior: "smooth" });
+  }
+
   return (
     <section className="mb-12">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold tracking-tight">Top Artists</h2>
         <div className="flex items-center gap-2">
-          <button className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors">
+          <button
+            aria-label="Scroll left"
+            onClick={() => scroll("left")}
+            className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors"
+          >
             <ChevronLeft size={16} className="text-white/70" />
           </button>
-          <button className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors">
+          <button
+            aria-label="Scroll right"
+            onClick={() => scroll("right")}
+            className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors"
+          >
             <ChevronRight size={16} className="text-white/70" />
           </button>
         </div>
       </div>
 
-      <div className="flex overflow-x-auto hide-scrollbar snap-x snap-mandatory gap-4 pb-4 -mx-6 px-6 md:mx-0 md:px-0">
-        {artists.map((artist, index) =>
-        <motion.div
-          key={artist.id}
-          initial={{
-            opacity: 0,
-            x: 20
-          }}
-          whileInView={{
-            opacity: 1,
-            x: 0
-          }}
-          viewport={{
-            once: true,
-            margin: '-50px'
-          }}
-          transition={{
-            duration: 0.5,
-            delay: index * 0.05
-          }}
-          className="w-48 shrink-0 snap-start rounded-2xl glass-card p-5 flex flex-col items-center text-center hover:-translate-y-1 transition-transform duration-300">
-          
-            <div
-            className={`w-20 h-20 rounded-full bg-gradient-to-br ${artist.color} flex items-center justify-center text-2xl font-bold text-white shadow-lg mb-4 relative`}>
-            
-              {index === 0 &&
-            <div className="absolute -inset-1 rounded-full border-2 border-spotify animate-pulse" />
-            }
-              {artist.initials}
-            </div>
+      {error && (
+        <p className="text-sm text-red-400/70 mb-4">
+          Could not load artists. Please try again.
+        </p>
+      )}
 
-            <h3 className="font-semibold text-sm w-full truncate mb-1">
-              {artist.name}
-            </h3>
-
-            <div className="px-2 py-0.5 rounded-full bg-white/5 text-[10px] font-medium text-white/60 mb-4">
-              {artist.genre}
-            </div>
-
-            <div className="w-full h-8 mb-3">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={artist.data}>
-                  <Line
-                  type="monotone"
-                  dataKey="v"
-                  stroke="rgba(255,255,255,0.5)"
-                  strokeWidth={2}
-                  dot={false} />
-                
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-
-            <div className="flex items-center gap-1 text-[10px] text-white/50">
-              {artist.trend === 'up' &&
-            <TrendingUp size={10} className="text-spotify" />
-            }
-              {artist.trend === 'down' &&
-            <TrendingDown size={10} className="text-red-400" />
-            }
-              {artist.delta}
-            </div>
-          </motion.div>
-        )}
+      <div
+        ref={scrollRef}
+        className="flex overflow-x-auto hide-scrollbar snap-x snap-mandatory gap-4 pb-4 -mx-6 px-6 md:mx-0 md:px-0"
+      >
+        {isLoading
+          ? Array.from({ length: SKELETON_COUNT }, (_, i) => (
+              <ArtistSkeleton key={i} index={i} />
+            ))
+          : artists.map((artist, index) => (
+              <ArtistCard
+                key={artist.name}
+                artist={artist}
+                index={index}
+                isFirst={index === 0}
+              />
+            ))}
       </div>
-    </section>);
-
+    </section>
+  );
 }

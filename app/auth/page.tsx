@@ -79,7 +79,7 @@ export default function LoginPage() {
                 setLoading(true);
                 setError(null);
                 try {
-                  await signIn("spotify", { callbackUrl: "/dashboard" });
+                  await signIn("spotify", { callbackUrl: "//auth/callback" });
                 } catch (e) {
                   setError(`Something went wrong. Please try again. ${e}`);
                   setLoading(false);
