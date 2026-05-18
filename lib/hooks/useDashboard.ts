@@ -182,6 +182,14 @@ export interface NowPlayingSyncTrack {
 export interface NowPlayingSyncResponse {
   nowPlaying: NowPlayingSyncTrack | null;
   lastPlayed: NowPlayingSyncTrack | null;
+  spotifyAuth?: {
+    nowPlaying: {
+      authorized: boolean;
+      reconnectRequired: boolean;
+      status: number;
+      message: string | null;
+    };
+  };
   sync: {
     processed: number;
     inserted: number;
@@ -197,5 +205,127 @@ export function useNowPlayingSync(refreshIntervalMs = 60_000) {
       revalidateOnFocus: false,
       refreshInterval: refreshIntervalMs,
     }
+  );
+}
+
+// ─── Timeline Explorer ─────────────────────────────────────────────────────
+
+export interface TimelineCell {
+  date: string;
+  plays: number;
+  intensity: number;
+}
+
+export interface TimelineSnapshotTrack {
+  title: string;
+  artist: string;
+  plays: number;
+}
+
+export interface TimelineResponse {
+  yearLabels: string[];
+  cells: TimelineCell[];
+  selectedRange: {
+    label: string;
+    days: number;
+  };
+  snapshot: {
+    label: string;
+    tracks: TimelineSnapshotTrack[];
+    collage: string[];
+    topArtist: string;
+  };
+}
+
+export function useTimelineExplorer() {
+  return useSWR<TimelineResponse>(
+    "/api/dashboard/timeline",
+    fetcher<TimelineResponse>,
+    { revalidateOnFocus: false }
+  );
+}
+
+// ─── Visual Analytics ──────────────────────────────────────────────────────
+
+export interface StreamPoint {
+  date: string;
+  value: number;
+}
+
+export interface GenrePoint {
+  name: string;
+  value: number;
+}
+
+export interface MoodPoint {
+  happy: number;
+  sad: number;
+  energetic: number;
+  calm: number;
+}
+
+export interface YearPoint {
+  year: string;
+  value: number;
+}
+
+export interface VisualAnalyticsResponse {
+  streamData: StreamPoint[];
+  genreData: GenrePoint[];
+  genreCount: number;
+  moodData: MoodPoint[];
+  yearData: YearPoint[];
+}
+
+export function useVisualAnalytics() {
+  return useSWR<VisualAnalyticsResponse>(
+    "/api/dashboard/visual-analytics",
+    fetcher<VisualAnalyticsResponse>,
+    { revalidateOnFocus: false }
+  );
+}
+
+// ─── Rediscovery ───────────────────────────────────────────────────────────
+
+export interface RediscoveryCard {
+  key: string;
+  title: string;
+  count: number;
+  desc: string;
+  color: string;
+  shadow: string;
+}
+
+export interface RediscoveryResponse {
+  cards: RediscoveryCard[];
+}
+
+export function useRediscovery() {
+  return useSWR<RediscoveryResponse>(
+    "/api/dashboard/rediscovery",
+    fetcher<RediscoveryResponse>,
+    { revalidateOnFocus: false }
+  );
+}
+
+// ─── Story Preview ─────────────────────────────────────────────────────────
+
+export interface StoryPreviewBar {
+  month: number;
+  heightPct: number;
+}
+
+export interface StoryPreviewResponse {
+  slideCount: number;
+  newArtists: number;
+  platformCopy: string;
+  bars: StoryPreviewBar[];
+}
+
+export function useStoryPreview() {
+  return useSWR<StoryPreviewResponse>(
+    "/api/dashboard/story-preview",
+    fetcher<StoryPreviewResponse>,
+    { revalidateOnFocus: false }
   );
 }

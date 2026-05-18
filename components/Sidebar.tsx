@@ -10,6 +10,7 @@ import {
   History,
   Sparkles,
   Smartphone,
+  UserRound,
   Settings } from
 'lucide-react';
 
@@ -50,6 +51,11 @@ const navItems = [
   icon: Smartphone,
   label: 'Story Mode',
   path: '/dashboard/story'
+},
+{
+  icon: UserRound,
+  label: 'Profile',
+  path: '/dashboard/profile'
 }];
 
 export function Sidebar() {

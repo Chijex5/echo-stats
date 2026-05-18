@@ -13,6 +13,9 @@ const PILLS = [
 ];
 
 const SCOPES = [
+  "user-read-email",
+  "user-read-private",
+  "user-read-currently-playing",
   "user-top-read",
   "user-read-recently-played",
   "user-library-read",
@@ -79,7 +82,11 @@ export default function LoginPage() {
                 setLoading(true);
                 setError(null);
                 try {
-                  await signIn("spotify", { callbackUrl: "//auth/callback" });
+                  await signIn(
+                    "spotify",
+                    { callbackUrl: "/auth/callback" },
+                    { scope: SCOPES.join(" "), show_dialog: "true" }
+                  );
                 } catch (e) {
                   setError(`Something went wrong. Please try again. ${e}`);
                   setLoading(false);
@@ -91,6 +98,12 @@ export default function LoginPage() {
               {loading ? "Signing in..." : "Sign in with Spotify"}
               <ArrowRight className="w-4 h-4 ml-auto" />
             </button>
+
+            {error && (
+              <p className="mt-3 rounded-xl border border-red-400/20 bg-red-500/10 px-3 py-2 text-xs leading-5 text-red-100">
+                {error}
+              </p>
+            )}
 
             {/* Scopes */}
             <div className="flex flex-wrap gap-1.5 mt-5">

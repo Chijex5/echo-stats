@@ -21,6 +21,24 @@ declare global {
 const cache: MongooseCache = global._mongoose ?? { conn: null, promise: null };
 global._mongoose = cache;
 
+function getMongoConnectionErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+
+  if (
+    message.includes("Could not connect to any servers") ||
+    message.includes("Server selection timed out")
+  ) {
+    return [
+      "Could not connect to MongoDB Atlas.",
+      "Check that your current IP is allowed in Atlas Network Access.",
+      "Current local dev IP can be checked with: curl https://checkip.amazonaws.com",
+      `Original error: ${message}`,
+    ].join(" ");
+  }
+
+  return `Could not connect to MongoDB. Original error: ${message}`;
+}
+
 export async function connectDB(): Promise<typeof mongoose> {
   // 1. Already connected and connection is alive — return immediately
   if (cache.conn && mongoose.connection.readyState === 1) {
@@ -44,6 +62,12 @@ export async function connectDB(): Promise<typeof mongoose> {
   }
 
   // 4. Await the shared promise (concurrent callers all wait on the same one)
-  cache.conn = await cache.promise;
-  return cache.conn;
+  try {
+    cache.conn = await cache.promise;
+    return cache.conn;
+  } catch (error) {
+    cache.conn = null;
+    cache.promise = null;
+    throw new Error(getMongoConnectionErrorMessage(error), { cause: error });
+  }
 }

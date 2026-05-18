@@ -32,6 +32,47 @@ type TrackSummary = {
   artistName: string;
 };
 
+type SpotifyErrorInfo = {
+  status: number;
+  message: string;
+};
+
+async function fetchSpotifyPlayback(accessToken: string) {
+  const headers = { Authorization: `Bearer ${accessToken}` };
+
+  return Promise.all([
+    fetch("https://api.spotify.com/v1/me/player/currently-playing", {
+      headers,
+      cache: "no-store",
+    }),
+    fetch("https://api.spotify.com/v1/me/player/recently-played?limit=50", {
+      headers,
+      cache: "no-store",
+    }),
+  ]);
+}
+
+async function getSpotifyErrorInfo(response: Response): Promise<SpotifyErrorInfo> {
+  const fallback = {
+    status: response.status,
+    message: response.statusText || "Unknown Spotify error",
+  };
+
+  try {
+    const payload = await response.clone().json();
+    const message =
+      typeof payload?.error?.message === "string"
+        ? payload.error.message
+        : typeof payload?.error === "string"
+          ? payload.error
+          : fallback.message;
+
+    return { status: response.status, message };
+  } catch {
+    return fallback;
+  }
+}
+
 function toTrackSummary(track: SpotifyTrack): TrackSummary {
   return {
     trackName: track.name,
@@ -66,24 +107,22 @@ export async function GET() {
     );
   }
 
-  const headers = { Authorization: `Bearer ${accessToken}` };
+  let [nowPlayingRes, recentlyPlayedRes] = await fetchSpotifyPlayback(accessToken);
 
-  const [nowPlayingRes, recentlyPlayedRes] = await Promise.all([
-    fetch("https://api.spotify.com/v1/me/player/currently-playing", {
-      headers,
-      cache: "no-store",
-    }),
-    fetch("https://api.spotify.com/v1/me/player/recently-played?limit=50", {
-      headers,
-      cache: "no-store",
-    }),
-  ]);
+  if (recentlyPlayedRes.status === 401) {
+    try {
+      accessToken = await getValidSpotifyToken(session.user.id, { forceRefresh: true });
+      [nowPlayingRes, recentlyPlayedRes] = await fetchSpotifyPlayback(accessToken);
+    } catch (err) {
+      console.log("[sync] Forced token refresh failed:", err);
+    }
+  }
 
-  // A 401 here after a fresh token means the user revoked app access
-  if (nowPlayingRes.status === 401 || recentlyPlayedRes.status === 401) {
-    console.log("[sync] Spotify access revoked for user", session.user.id, nowPlayingRes);
+  if (recentlyPlayedRes.status === 401) {
+    const error = await getSpotifyErrorInfo(recentlyPlayedRes);
+    console.log("[sync] Spotify recently played unauthorized for user", session.user.id, error);
     return NextResponse.json(
-      { error: "Spotify access revoked. Please reconnect your account." },
+      { error: "Spotify authorization failed. Please reconnect your account." },
       { status: 401 }
     );
   }
@@ -97,11 +136,36 @@ export async function GET() {
   }
 
   let nowPlaying: TrackSummary | null = null;
-  if (nowPlayingRes.status === 200) {
+  const nowPlayingAuth = {
+    authorized: true,
+    reconnectRequired: false,
+    status: nowPlayingRes.status,
+    message: null as string | null,
+  };
+
+  if (nowPlayingRes.status === 401 || nowPlayingRes.status === 403) {
+    const error = await getSpotifyErrorInfo(nowPlayingRes);
+    nowPlayingAuth.authorized = false;
+    nowPlayingAuth.reconnectRequired = true;
+    nowPlayingAuth.message = error.message;
+    console.log("[sync] Spotify now playing unauthorized; continuing recent sync", {
+      userId: session.user.id,
+      ...error,
+    });
+  } else if (nowPlayingRes.status === 200) {
     const payload = (await nowPlayingRes.json()) as CurrentlyPlayingResponse;
     if (payload.is_playing && payload.item?.type === "track") {
       nowPlaying = toTrackSummary(payload.item);
     }
+  } else if (nowPlayingRes.status !== 204 && !nowPlayingRes.ok) {
+    const error = await getSpotifyErrorInfo(nowPlayingRes);
+    nowPlayingAuth.authorized = false;
+    nowPlayingAuth.status = error.status;
+    nowPlayingAuth.message = error.message;
+    console.log("[sync] Spotify now playing unavailable; continuing recent sync", {
+      userId: session.user.id,
+      ...error,
+    });
   }
 
   const recentlyPlayedPayload = (await recentlyPlayedRes.json()) as RecentlyPlayedResponse;
@@ -153,6 +217,9 @@ export async function GET() {
   return NextResponse.json({
     nowPlaying,
     lastPlayed: latestPlayed?.track ? toTrackSummary(latestPlayed.track) : null,
+    spotifyAuth: {
+      nowPlaying: nowPlayingAuth,
+    },
     sync: {
       processed: ops.length,
       inserted:  result?.upsertedCount ?? 0,

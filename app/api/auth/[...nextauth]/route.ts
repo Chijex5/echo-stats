@@ -1,4 +1,4 @@
-import NextAuth, { NextAuthOptions, Session } from "next-auth";
+import NextAuth, { NextAuthOptions } from "next-auth";
 import { JWT } from "next-auth/jwt";
 import SpotifyProvider from "next-auth/providers/spotify";
 import { connectDB } from "@/lib/db";
@@ -55,12 +55,24 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
     const refreshed = await response.json();
     if (!response.ok) throw refreshed;
 
+    const refreshToken = refreshed.refresh_token ?? token.refreshToken;
+    const tokenExpiresAt = Date.now() + refreshed.expires_in * 1000;
+
+    if (token.mongoId) {
+      await connectDB();
+      await User.findByIdAndUpdate(token.mongoId, {
+        accessToken: refreshed.access_token,
+        refreshToken,
+        tokenExpiresAt,
+      });
+    }
+
     return {
       ...token,
       accessToken: refreshed.access_token,
-      tokenExpiresAt: Date.now() + refreshed.expires_in * 1000,
+      tokenExpiresAt,
       // Spotify only returns a new refresh_token occasionally
-      refreshToken: refreshed.refresh_token ?? token.refreshToken,
+      refreshToken,
     };
   } catch (error) {
     console.error("[NextAuth] Token refresh failed:", error);
@@ -81,6 +93,7 @@ export const authOptions: NextAuthOptions = {
           scope: [
             "user-read-email",
             "user-read-private",
+            "user-read-currently-playing",
             "user-top-read",
             "user-read-recently-played",
             "user-library-read",

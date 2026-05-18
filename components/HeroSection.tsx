@@ -6,6 +6,8 @@ import { AreaChart, Area, ResponsiveContainer } from 'recharts';
 import { getGreeting } from '@/lib/greetings';
 import { useSession } from 'next-auth/react';
 import { useNowPlayingSync } from '@/lib/hooks/useDashboard';
+import { useSongOfTheDay } from '@/lib/hooks/useSongOfTheDay';
+import { number } from 'zod';
 const moodData = [
 {
   value: 20
@@ -29,9 +31,26 @@ const moodData = [
   value: 80
 }];
 
+export const getLastPlayedText = (lastPlayed: number) => {
+  const now = Date.now();
+  const diff = now - lastPlayed;
+  const minutes = Math.floor(diff / (1000 * 60));
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+  if (minutes < 60) {
+    return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`;
+  } else if (hours < 24) {
+    return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
+  } else {
+    return `${days} day${days !== 1 ? 's' : ''} ago`;
+  }
+}
+
 export function HeroSection() {
   const { data: session } = useSession();
   const { data: nowPlayingData } = useNowPlayingSync();
+  const { data: songOfTheDayData } = useSongOfTheDay();
   const nowPlayingText = nowPlayingData?.nowPlaying ?
   `~ Now listening · ${nowPlayingData.nowPlaying.trackName} — ${nowPlayingData.nowPlaying.artistName}` :
   nowPlayingData?.lastPlayed ?
@@ -210,11 +229,11 @@ export function HeroSection() {
               </div>
               <div>
                 <h3 className="font-bold text-lg leading-tight mb-1">
-                  Pink + White
+                  {songOfTheDayData?.song.title || "Unknown Track"}
                 </h3>
-                <p className="text-sm text-white/60 mb-2">Frank Ocean</p>
+                <p className="text-sm text-white/60 mb-2">{songOfTheDayData?.song.artist || "Unknown Artist"}</p>
                 <p className="text-xs text-pink-400 font-medium">
-                  You loved this in Aug 2024
+                  {getLastPlayedText(new Date(songOfTheDayData?.stats.lastPlayedDate || "").getTime())}
                 </p>
               </div>
             </div>

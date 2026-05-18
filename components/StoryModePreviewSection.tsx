@@ -2,9 +2,24 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Play, Share2, Sparkles, Smartphone } from 'lucide-react';
+import { useStoryPreview } from '@/lib/hooks/useDashboard';
+
 export function StoryModePreviewSection() {
+  const { data, error } = useStoryPreview();
+  const slideCount = data?.slideCount ?? 12;
+  const newArtists = data?.newArtists ?? 0;
+  const platformCopy = data?.platformCopy ?? "Instagram & TikTok";
+  const bars = data?.bars.length
+    ? data.bars.map((bar) => bar.heightPct)
+    : [40, 70, 45, 90, 60, 85, 100, 50];
+
   return (
     <section className="mb-20">
+      {error && (
+        <p className="text-sm text-red-400/70 mb-4">
+          Could not load story preview. Showing defaults.
+        </p>
+      )}
       <motion.div
         initial={{
           opacity: 0,
@@ -49,12 +64,11 @@ export function StoryModePreviewSection() {
 
             <ul className="space-y-4 mb-10">
               <li className="flex items-center gap-3 text-sm text-white/80">
-                <Smartphone size={16} className="text-white/40" /> 12
+                <Smartphone size={16} className="text-white/40" /> {slideCount}
                 personalized slides
               </li>
               <li className="flex items-center gap-3 text-sm text-white/80">
-                <Share2 size={16} className="text-white/40" /> Optimized for
-                Instagram & TikTok
+                <Share2 size={16} className="text-white/40" /> Optimized for {platformCopy}
               </li>
               <li className="flex items-center gap-3 text-sm text-white/80">
                 <Play size={16} className="text-white/40" /> Animated
@@ -96,13 +110,13 @@ export function StoryModePreviewSection() {
                   <h3 className="text-3xl font-bold leading-tight mb-6">
                     You found <br />
                     <span className="text-6xl font-serif-display block mt-2">
-                      47
+                      {newArtists.toLocaleString()}
                     </span>
                     new artists.
                   </h3>
 
                   <div className="flex items-end gap-1 h-16 opacity-80">
-                    {[40, 70, 45, 90, 60, 85, 100, 50].map((h, i) =>
+                    {bars.map((h, i) =>
                     <div
                       key={i}
                       className="flex-1 bg-white rounded-t-sm"

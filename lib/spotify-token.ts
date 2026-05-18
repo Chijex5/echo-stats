@@ -6,7 +6,10 @@ import User from "./models/User";
  * Reads from DB, refreshes via Spotify if within 5-min buffer, writes back to DB.
  * Never touches the NextAuth JWT cookie.
  */
-export async function getValidSpotifyToken(mongoId: string): Promise<string> {
+export async function getValidSpotifyToken(
+  mongoId: string,
+  options: { forceRefresh?: boolean } = {}
+): Promise<string> {
   await connectDB();
 
   const user = await User.findById(mongoId).select(
@@ -16,7 +19,7 @@ export async function getValidSpotifyToken(mongoId: string): Promise<string> {
   if (!user) throw new Error("User not found");
 
   // Token still fresh — return as-is
-  if (Date.now() < user.tokenExpiresAt - 5 * 60 * 1000) {
+  if (!options.forceRefresh && Date.now() < user.tokenExpiresAt - 5 * 60 * 1000) {
     return user.accessToken;
   }
 
