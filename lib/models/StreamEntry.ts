@@ -14,6 +14,9 @@ export interface IStreamEntry extends Document {
   shuffle: boolean;
   skipped: boolean;
   offline: boolean;
+  releaseYear?: number;
+  releaseDatePrecision?: "year" | "month" | "day" | null;
+  releaseYearConfidence?: number | null;
 }
 
 const StreamEntrySchema = new Schema<IStreamEntry>(
@@ -31,6 +34,9 @@ const StreamEntrySchema = new Schema<IStreamEntry>(
     shuffle:         { type: Boolean },
     skipped:         { type: Boolean },
     offline:         { type: Boolean },
+    releaseYear:     { type: Number },
+    releaseDatePrecision: { type: String, enum: ["year", "month", "day", null], default: null },
+    releaseYearConfidence: { type: Number, min: 0, max: 1, default: null },
   },
   {
     // No timestamps — ts IS the timestamp
