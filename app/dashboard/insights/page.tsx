@@ -19,6 +19,7 @@ import {
   ArrowUpRight,
   CalendarHeart } from
 'lucide-react';
+import { useStoryMode } from '@/lib/hooks/useDashboard';
 import {
   AreaChart,
   Area,
@@ -546,6 +547,7 @@ function InsightsHero() {
 function PrimaryInsightCards() {
   const { data: insights } = useInsights();
   const { data: analytics } = useVisualAnalytics();
+  const { data: storyData, isLoading } = useStoryMode();
   const eraData = analytics?.yearData.map((item) => ({
     label: item.year,
     value: item.value,
@@ -612,7 +614,7 @@ function PrimaryInsightCards() {
                   </RadialBarChart>
                 </ResponsiveContainer>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-4xl font-serif-display">22</span>
+                  <span className="text-4xl font-serif-display">{storyData?.musicAge?.year ?? 'Unknown'}</span>
                   <span className="text-[10px] uppercase tracking-widest text-white/40">
                     years
                   </span>
@@ -620,7 +622,7 @@ function PrimaryInsightCards() {
               </div>
               <div className="pb-2">
                 <h3 className="text-2xl font-bold mb-2">
-                  Your music age is 22.
+                  {`Your music age is ${storyData?.musicAge?.year ?? 'Unknown'}`}
                 </h3>
                 <p className="text-sm text-white/60 leading-relaxed">
                   Your favorite tracks average a 2022 release year — four years

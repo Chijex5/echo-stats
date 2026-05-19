@@ -8,6 +8,8 @@ import { useSession } from 'next-auth/react';
 import { useNowPlayingSync } from '@/lib/hooks/useDashboard';
 import { useSongOfTheDay } from '@/lib/hooks/useSongOfTheDay';
 import { number } from 'zod';
+import { useStoryMode } from '@/lib/hooks/useDashboard';
+import { s } from 'framer-motion/client';
 const moodData = [
 {
   value: 20
@@ -51,6 +53,7 @@ export function HeroSection() {
   const { data: session } = useSession();
   const { data: nowPlayingData } = useNowPlayingSync();
   const { data: songOfTheDayData } = useSongOfTheDay();
+  const { data: storyData } = useStoryMode();
   const nowPlayingText = nowPlayingData?.nowPlaying ?
   `~ Now listening · ${nowPlayingData.nowPlaying.trackName} — ${nowPlayingData.nowPlaying.artistName}` :
   nowPlayingData?.lastPlayed ?
@@ -164,7 +167,7 @@ export function HeroSection() {
 
             <div className="flex items-end gap-3 mb-6">
               <span className="text-6xl font-serif-display leading-none tabular-nums tracking-tighter">
-                22
+                {storyData?.musicAge?.year ?? 'Unknown'}
               </span>
               <span className="text-sm text-white/50 mb-1">years old</span>
             </div>
