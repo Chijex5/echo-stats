@@ -212,6 +212,17 @@ export async function GET() {
     .map((item) => {
       const track = item.track as SpotifyTrack;
       const releaseMeta = releaseYearFromTrack(track);
+      const releaseFields = {
+        ...(releaseMeta.releaseYear !== null
+          ? { releaseYear: releaseMeta.releaseYear }
+          : {}),
+        ...(releaseMeta.releaseDatePrecision !== null
+          ? { releaseDatePrecision: releaseMeta.releaseDatePrecision }
+          : {}),
+        ...(releaseMeta.releaseYearConfidence !== null
+          ? { releaseYearConfidence: releaseMeta.releaseYearConfidence }
+          : {}),
+      };
       return {
         updateOne: {
           filter: {
@@ -229,9 +240,7 @@ export async function GET() {
               artistName:      track.artists?.map((a) => a.name).join(", ") || "Unknown Artist",
               albumName:       track.album?.name || "Unknown Album",
               spotifyTrackUri: track.uri,
-              releaseYear: releaseMeta.releaseYear,
-              releaseDatePrecision: releaseMeta.releaseDatePrecision,
-              releaseYearConfidence: releaseMeta.releaseYearConfidence,
+              ...releaseFields,
               reasonStart:     "",
               reasonEnd:       "",
               shuffle:         false,
