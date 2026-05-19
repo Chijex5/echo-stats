@@ -392,7 +392,14 @@ export interface StoryModeResponse {
   to: string;
   topSong: { title: string; subtitle: string };
   topArtist: { title: string; subtitle: string };
-  musicAge: { year: string; subtitle: string };
+  musicAge: {
+    year: string;
+    subtitle: string;
+    weightedReleaseYear?: number | null;
+    confidence?: number | null;
+    coverage?: number;
+    inferred?: boolean;
+  };
   emotionalMonth: { month: number | null; subtitle: string };
   hiddenGem: { trackName: string; artistName: string; plays: number } | null;
   favoriteEra: { title: string; subtitle: string };

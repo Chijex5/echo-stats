@@ -24,7 +24,7 @@ export default function StoryModePage() {
     return [
       { id: 1, label: "Top Song", title: data?.topSong.title ?? "Loading your anthem", subtitle: data?.topSong.subtitle ?? "Analyzing play history", accent: "from-fuchsia-500 via-purple-500 to-blue-500" },
       { id: 2, label: "Top Artist", title: data?.topArtist.title ?? "Loading top artist", subtitle: data?.topArtist.subtitle ?? "Calculating listening minutes", accent: "from-emerald-500 via-cyan-500 to-indigo-500" },
-      { id: 3, label: "Music Age", title: data?.musicAge.year ?? "Unknown", subtitle: data?.musicAge.subtitle ?? "Your listening center of gravity", accent: "from-violet-600 via-pink-500 to-amber-400" },
+      { id: 3, label: "Music Age (Inferred)", title: data?.musicAge.year ?? "Unknown", subtitle: data?.musicAge.subtitle ?? "Inferred from release-date metadata.", accent: "from-violet-600 via-pink-500 to-amber-400" },
       { id: 4, label: "Favorite Era", title: data?.favoriteEra.title ?? "Favorite era loading", subtitle: data?.favoriteEra.subtitle ?? "Scanning your listening hours", accent: "from-blue-600 via-violet-500 to-fuchsia-500" },
       { id: 5, label: "Forgotten Favorite", title: data?.forgottenFavorite.title ?? "Hidden memory loading", subtitle: data?.forgottenFavorite.subtitle ?? "Looking for long-gap rediscoveries", accent: "from-amber-400 via-orange-500 to-pink-500" },
       { id: 6, label: "Emotional Month", title: emotionalMonth, subtitle: data?.emotionalMonth.subtitle ?? "Not enough data in selected range", accent: "from-indigo-600 via-cyan-500 to-emerald-400" },
