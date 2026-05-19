@@ -102,29 +102,35 @@ export function HeroSection() {
           </div>
 
           {/* Now Playing Pill */}
-          <div className="glass-card px-4 py-3 rounded-full flex items-center gap-3 border-white/10 bg-white/[0.02]">
-            <div className="flex items-end gap-[2px] h-4">
-              {Array.from({
-                length: 16
-              }).map((_, i) =>
-              <motion.div
-                key={i}
-                className="w-[2px] bg-spotify rounded-t-sm"
-                animate={{
-                  height: ['20%', '100%', '40%', '80%', '20%']
-                }}
-                transition={{
-                  duration: 1.5,
-                  repeat: Infinity,
-                  ease: 'easeInOut',
-                  delay: i * 0.1
-                }} />
+          <div className="glass-card px-4 py-3 rounded-2xl flex items-center gap-3 border-white/10 bg-white/[0.02]">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}>
+              <Disc3 size={28} className="text-spotify shrink-0" />
+            </motion.div>
 
+            <div className="flex flex-col min-w-0 flex-1">
+              <span className="text-[10px] uppercase tracking-widest text-spotify/70 font-semibold">
+                {nowPlayingData?.nowPlaying ? 'Now listening' : nowPlayingData?.lastPlayed ? 'Last played' : 'Offline'}
+              </span>
+              <span className="text-xs font-medium text-white/80 truncate">
+                {nowPlayingData?.nowPlaying
+                  ? `${nowPlayingData.nowPlaying.trackName} — ${nowPlayingData.nowPlaying.artistName}`
+                  : nowPlayingData?.lastPlayed
+                  ? `${nowPlayingData.lastPlayed.trackName} — ${nowPlayingData.lastPlayed.artistName}`
+                  : 'Not playing right now'}
+              </span>
+            </div>
+
+            <div className="flex items-end gap-[2px] h-4 shrink-0">
+              {Array.from({ length: 16 }).map((_, i) =>
+                <motion.div
+                  key={i}
+                  className="w-[2px] bg-spotify rounded-t-sm"
+                  animate={{ height: ['20%', '100%', '40%', '80%', '20%'] }}
+                  transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut', delay: i * 0.1 }} />
               )}
             </div>
-            <span className="text-xs font-medium text-white/70">
-              {nowPlayingText}
-            </span>
           </div>
         </motion.div>
 
@@ -157,7 +163,7 @@ export function HeroSection() {
             </div>
 
             <div className="flex items-end gap-3 mb-6">
-              <span className="text-6xl font-serif-display leading-none">
+              <span className="text-6xl font-serif-display leading-none tabular-nums tracking-tighter">
                 22
               </span>
               <span className="text-sm text-white/50 mb-1">years old</span>
@@ -220,12 +226,9 @@ export function HeroSection() {
             </div>
 
             <div className="flex items-center gap-4 relative z-10">
-              <div className="w-20 h-20 rounded-xl bg-gradient-to-br from-pink-500 to-orange-400 shadow-lg relative overflow-hidden shrink-0">
+              <div className="w-20 h-20 rounded-xl bg-gradient-to-br from-pink-500 to-orange-400 shadow-lg shadow-pink-500/30 relative overflow-hidden shrink-0">
                 <div className="absolute inset-0 bg-black/20" />
-                <Disc3
-                  className="absolute bottom-2 right-2 text-white/50"
-                  size={16} />
-                
+                <Disc3 className="absolute inset-0 m-auto text-white/40" size={28} />
               </div>
               <div>
                 <h3 className="font-bold text-lg leading-tight mb-1">
@@ -260,9 +263,8 @@ export function HeroSection() {
 
             <div className="flex items-center gap-2 mb-6">
               <TrendingUp size={16} className="text-violet-400" />
-              <span className="text-sm font-medium text-white/70">
-                Personality
-              </span>
+              <span className="text-sm font-medium text-white/70">Personality</span>
+              <span className="ml-auto w-2 h-2 rounded-full bg-violet-400 shadow-[0_0_6px_2px_rgba(167,139,250,0.5)]" />
             </div>
 
             <h3 className="text-2xl font-serif-display italic text-violet-300 mb-2">
