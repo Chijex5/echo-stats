@@ -4,11 +4,110 @@ import mongoose from "mongoose";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { connectDB } from "@/lib/db";
 import StreamEntry from "@/lib/models/StreamEntry";
+import { getValidSpotifyToken } from "@/lib/spotify-token";
 
 function parseDate(raw: string | null, fallback: Date) {
   if (!raw) return fallback;
   const dt = new Date(raw);
   return Number.isNaN(dt.getTime()) ? fallback : dt;
+}
+
+type ReleasePrecision = "year" | "month" | "day";
+type TrackReleaseAgg = {
+  _id: string;
+  plays: number;
+  trackName: string;
+  artistName: string;
+  albumName: string;
+  releaseYear?: number;
+  releaseDatePrecision?: ReleasePrecision | null;
+  releaseYearConfidence?: number | null;
+};
+
+type SpotifyTracksResponse = {
+  tracks?: Array<{
+    uri: string;
+    album?: {
+      release_date?: string;
+      release_date_precision?: ReleasePrecision;
+    };
+  } | null>;
+};
+
+const DISTORTED_VERSION_RE = /\b(remaster(?:ed)?|live)\b/i;
+
+function parseSpotifyTrackId(uri: string): string | null {
+  if (uri.startsWith("spotify:track:")) return uri.split(":")[2] ?? null;
+  if (uri.includes("open.spotify.com/track/")) {
+    const maybeId = uri.split("/track/")[1]?.split("?")[0] ?? null;
+    return maybeId || null;
+  }
+  return null;
+}
+
+function releaseConfidence(precision?: ReleasePrecision | null) {
+  if (precision === "day") return 1;
+  if (precision === "month") return 0.8;
+  if (precision === "year") return 0.6;
+  return null;
+}
+
+function normalizeReleaseYear(
+  releaseDate?: string,
+  precision?: ReleasePrecision
+): { releaseYear: number | null; releaseDatePrecision: ReleasePrecision | null; releaseYearConfidence: number | null } {
+  if (!releaseDate) return { releaseYear: null, releaseDatePrecision: null, releaseYearConfidence: null };
+  const year = Number.parseInt(releaseDate.slice(0, 4), 10);
+  if (!Number.isFinite(year) || year < 1900 || year > new Date().getFullYear() + 1) {
+    return { releaseYear: null, releaseDatePrecision: null, releaseYearConfidence: null };
+  }
+  return {
+    releaseYear: year,
+    releaseDatePrecision: precision ?? null,
+    releaseYearConfidence: releaseConfidence(precision),
+  };
+}
+
+function isDistortedVersion(trackName: string, albumName: string) {
+  return DISTORTED_VERSION_RE.test(trackName) || DISTORTED_VERSION_RE.test(albumName);
+}
+
+async function fetchTrackReleaseMetadata(userMongoId: string, uris: string[]) {
+  const token = await getValidSpotifyToken(userMongoId);
+  const dedupedUris = Array.from(new Set(uris));
+  const uriById = new Map<string, string>();
+  for (const uri of dedupedUris) {
+    const id = parseSpotifyTrackId(uri);
+    if (id) uriById.set(id, uri);
+  }
+
+  const ids = Array.from(uriById.keys());
+  const map = new Map<string, { releaseYear: number; releaseDatePrecision: ReleasePrecision | null; releaseYearConfidence: number | null }>();
+  for (let i = 0; i < ids.length; i += 50) {
+    const batch = ids.slice(i, i + 50);
+    const res = await fetch(`https://api.spotify.com/v1/tracks?ids=${batch.join(",")}`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+    if (!res.ok) continue;
+
+    const payload = (await res.json()) as SpotifyTracksResponse;
+    for (const track of payload.tracks ?? []) {
+      if (!track?.uri) continue;
+      const normalized = normalizeReleaseYear(
+        track.album?.release_date,
+        track.album?.release_date_precision
+      );
+      if (!normalized.releaseYear) continue;
+      map.set(track.uri, {
+        releaseYear: normalized.releaseYear,
+        releaseDatePrecision: normalized.releaseDatePrecision,
+        releaseYearConfidence: normalized.releaseYearConfidence,
+      });
+    }
+  }
+
+  return map;
 }
 
 export async function GET(req: NextRequest) {
@@ -27,7 +126,7 @@ export async function GET(req: NextRequest) {
   const userId = new mongoose.Types.ObjectId(session.user.id);
   const rangeMatch = { userId, ts: { $gte: from, $lte: to } };
 
-  const [topTrack, topArtist, decadeData, monthData, hiddenGem, daypartData, forgottenFavorite, totals] = await Promise.all([
+  const [topTrack, topArtist, trackReleaseAgg, monthData, hiddenGem, daypartData, forgottenFavorite, totals] = await Promise.all([
     StreamEntry.aggregate<{ _id: string; artistName: string; plays: number }>([
       { $match: rangeMatch },
       { $group: { _id: "$trackName", artistName: { $first: "$artistName" }, plays: { $sum: 1 } } },
@@ -40,12 +139,21 @@ export async function GET(req: NextRequest) {
       { $sort: { plays: -1 } },
       { $limit: 1 },
     ]),
-    StreamEntry.aggregate<{ _id: number; count: number }>([
-      { $match: { ...rangeMatch, releaseYear: { $type: "number" } } },
-      { $project: { decade: { $multiply: [{ $floor: { $divide: ["$releaseYear", 10] } }, 10] } } },
-      { $group: { _id: "$decade", count: { $sum: 1 } } },
-      { $sort: { count: -1 } },
-      { $limit: 1 },
+    StreamEntry.aggregate<TrackReleaseAgg>([
+      { $match: rangeMatch },
+      {
+        $group: {
+          _id: "$spotifyTrackUri",
+          plays: { $sum: 1 },
+          trackName: { $first: "$trackName" },
+          artistName: { $first: "$artistName" },
+          albumName: { $first: "$albumName" },
+          releaseYear: { $first: "$releaseYear" },
+          releaseDatePrecision: { $first: "$releaseDatePrecision" },
+          releaseYearConfidence: { $first: "$releaseYearConfidence" },
+        },
+      },
+      { $match: { _id: { $type: "string", $ne: "" } } },
     ]),
     StreamEntry.aggregate<{ _id: number; plays: number }>([
       { $match: rangeMatch },
@@ -126,6 +234,75 @@ export async function GET(req: NextRequest) {
   const total = totals[0];
   const lateNightRatio = total?.totalPlays ? total.lateNightPlays / total.totalPlays : 0;
   const artistDensity = total?.totalPlays ? total.uniqueArtists / total.totalPlays : 0;
+  const totalTrackPlays = trackReleaseAgg.reduce((sum, row) => sum + row.plays, 0);
+  const nonDistortedTracks = trackReleaseAgg.filter(
+    (row) => !isDistortedVersion(row.trackName ?? "", row.albumName ?? "")
+  );
+
+  const missingMetadataUris = nonDistortedTracks
+    .filter((row) => !Number.isFinite(row.releaseYear))
+    .map((row) => row._id);
+
+  let releaseMetadataMap = new Map<string, { releaseYear: number; releaseDatePrecision: ReleasePrecision | null; releaseYearConfidence: number | null }>();
+  if (missingMetadataUris.length > 0) {
+    try {
+      releaseMetadataMap = await fetchTrackReleaseMetadata(session.user.id, missingMetadataUris);
+      if (releaseMetadataMap.size > 0) {
+        const metadataOps = Array.from(releaseMetadataMap.entries()).map(([uri, metadata]) => ({
+          updateMany: {
+            filter: { userId, spotifyTrackUri: uri, $or: [{ releaseYear: { $exists: false } }, { releaseYear: null }] },
+            update: {
+              $set: {
+                releaseYear: metadata.releaseYear,
+                releaseDatePrecision: metadata.releaseDatePrecision,
+                releaseYearConfidence: metadata.releaseYearConfidence,
+              },
+            },
+          },
+        }));
+        await StreamEntry.bulkWrite(metadataOps, { ordered: false });
+      }
+    } catch {
+      // Best-effort enrichment; continue with available metadata.
+    }
+  }
+
+  let eligiblePlays = 0;
+  let weightedYearSum = 0;
+  let weightedConfidenceSum = 0;
+
+  for (const row of nonDistortedTracks) {
+    const backfilled = releaseMetadataMap.get(row._id);
+    const releaseYear =
+      Number.isFinite(row.releaseYear) ? Number(row.releaseYear) : backfilled?.releaseYear ?? null;
+    if (!releaseYear || releaseYear < 1900 || releaseYear > now.getFullYear() + 1) continue;
+
+    const trackConfidence =
+      row.releaseYearConfidence ??
+      backfilled?.releaseYearConfidence ??
+      releaseConfidence(row.releaseDatePrecision ?? backfilled?.releaseDatePrecision ?? null) ??
+      0.5;
+
+    eligiblePlays += row.plays;
+    weightedYearSum += releaseYear * row.plays;
+    weightedConfidenceSum += trackConfidence * row.plays;
+  }
+
+  const weightedAvgReleaseYear = eligiblePlays > 0 ? weightedYearSum / eligiblePlays : null;
+  const inferredMusicAge =
+    weightedAvgReleaseYear !== null
+      ? Math.max(0, Math.round(now.getFullYear() - weightedAvgReleaseYear + 18))
+      : null;
+  const playCoveragePct = totalTrackPlays > 0 ? Math.round((eligiblePlays / totalTrackPlays) * 100) : 0;
+  const confidencePct = eligiblePlays > 0 ? Math.round((weightedConfidenceSum / eligiblePlays) * 100) : 0;
+  const noTrackIds = trackReleaseAgg.length === 0;
+  const musicAgeSubtitle =
+    inferredMusicAge !== null
+      ? `Inferred (not real age) from Spotify release dates · ${playCoveragePct}% play coverage · ${confidencePct}% confidence.`
+      : noTrackIds
+        ? "No track IDs in this range, so music age cannot be inferred reliably."
+        : "Not enough release-date metadata yet to infer music age reliably.";
+
   const personalityTitle = lateNightRatio > 0.35 ? "The Night Explorer" : artistDensity > 0.4 ? "The Curious Crate Digger" : "The Comfort Collector";
   const personalitySubtitle = lateNightRatio > 0.35
     ? "You come alive after dark, with most plays landing late-night."
@@ -145,8 +322,12 @@ export async function GET(req: NextRequest) {
       subtitle: topArtist[0] ? `${topArtist[0].plays} total plays` : "Play more music to unlock this slide",
     },
     musicAge: {
-      year: decadeData[0]?._id ? `${decadeData[0]._id}s` : "Unknown",
-      subtitle: "Your listening center of gravity",
+      year: inferredMusicAge !== null ? String(inferredMusicAge) : "Unknown",
+      subtitle: musicAgeSubtitle,
+      weightedReleaseYear: weightedAvgReleaseYear !== null ? Number(weightedAvgReleaseYear.toFixed(1)) : null,
+      confidence: inferredMusicAge !== null ? confidencePct : null,
+      coverage: playCoveragePct,
+      inferred: inferredMusicAge !== null,
     },
     emotionalMonth: {
       month: monthData[0]?._id ?? null,
