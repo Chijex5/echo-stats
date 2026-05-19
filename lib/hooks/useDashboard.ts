@@ -391,6 +391,9 @@ export interface StoryModeResponse {
   musicAge: { year: string; subtitle: string };
   emotionalMonth: { month: number | null; subtitle: string };
   hiddenGem: { trackName: string; artistName: string; plays: number } | null;
+  favoriteEra: { title: string; subtitle: string };
+  forgottenFavorite: { title: string; subtitle: string };
+  personality: { title: string; subtitle: string };
 }
 
 export function useStoryMode(from?: string, to?: string) {

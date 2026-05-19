@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
   const userId = new mongoose.Types.ObjectId(session.user.id);
   const rangeMatch = { userId, ts: { $gte: from, $lte: to } };
 
-  const [topTrack, topArtist, decadeData, monthData, hiddenGem] = await Promise.all([
+  const [topTrack, topArtist, decadeData, monthData, hiddenGem, daypartData, forgottenFavorite, totals] = await Promise.all([
     StreamEntry.aggregate<{ _id: string; artistName: string; plays: number }>([
       { $match: rangeMatch },
       { $group: { _id: "$trackName", artistName: { $first: "$artistName" }, plays: { $sum: 1 } } },
@@ -61,7 +61,77 @@ export async function GET(req: NextRequest) {
       { $limit: 1 },
       { $project: { _id: 0, trackName: "$_id.trackName", artistName: "$_id.artistName", plays: 1 } },
     ]),
+
+    StreamEntry.aggregate<{ _id: string; plays: number }>([
+      { $match: rangeMatch },
+      { $project: { hour: { $hour: "$ts" } } },
+      {
+        $project: {
+          daypart: {
+            $switch: {
+              branches: [
+                { case: { $and: [{ $gte: ["$hour", 6] }, { $lt: ["$hour", 12] }] }, then: "Morning" },
+                { case: { $and: [{ $gte: ["$hour", 12] }, { $lt: ["$hour", 18] }] }, then: "Afternoon" },
+                { case: { $and: [{ $gte: ["$hour", 18] }, { $lt: ["$hour", 23] }] }, then: "Evening" },
+              ],
+              default: "Late Night",
+            },
+          },
+        },
+      },
+      { $group: { _id: "$daypart", plays: { $sum: 1 } } },
+      { $sort: { plays: -1 } },
+    ]),
+    StreamEntry.aggregate<{ trackName: string; artistName: string; gapDays: number }>([
+      { $match: rangeMatch },
+      { $sort: { ts: 1 } },
+      {
+        $group: {
+          _id: { trackName: "$trackName", artistName: "$artistName" },
+          plays: { $sum: 1 },
+          firstPlayed: { $first: "$ts" },
+          lastPlayed: { $last: "$ts" },
+        },
+      },
+      { $match: { plays: { $gte: 3 } } },
+      { $project: { _id: 0, trackName: "$_id.trackName", artistName: "$_id.artistName", gapDays: { $divide: [{ $subtract: ["$lastPlayed", "$firstPlayed"] }, 1000 * 60 * 60 * 24] } } },
+      { $sort: { gapDays: -1 } },
+      { $limit: 1 },
+    ]),
+    StreamEntry.aggregate<{ _id: null; totalPlays: number; uniqueArtists: number; lateNightPlays: number }>([
+      { $match: rangeMatch },
+      {
+        $group: {
+          _id: null,
+          totalPlays: { $sum: 1 },
+          uniqueArtists: { $addToSet: "$artistName" },
+          lateNightPlays: {
+            $sum: {
+              $cond: [
+                { $or: [{ $lt: [{ $hour: "$ts" }, 6] }, { $gte: [{ $hour: "$ts" }, 23] }] },
+                1,
+                0,
+              ],
+            },
+          },
+        },
+      },
+      { $project: { totalPlays: 1, lateNightPlays: 1, uniqueArtists: { $size: "$uniqueArtists" } } },
+    ]),
+
   ]);
+
+  const favoriteEra = daypartData[0]?._id ?? "Unknown";
+  const forgotten = forgottenFavorite[0];
+  const total = totals[0];
+  const lateNightRatio = total?.totalPlays ? total.lateNightPlays / total.totalPlays : 0;
+  const artistDensity = total?.totalPlays ? total.uniqueArtists / total.totalPlays : 0;
+  const personalityTitle = lateNightRatio > 0.35 ? "The Night Explorer" : artistDensity > 0.4 ? "The Curious Crate Digger" : "The Comfort Collector";
+  const personalitySubtitle = lateNightRatio > 0.35
+    ? "You come alive after dark, with most plays landing late-night."
+    : artistDensity > 0.4
+      ? "You rotate artists often and keep discovering fresh sounds."
+      : "You know exactly what you love and revisit it with intention.";
 
   return NextResponse.json({
     from: from.toISOString(),
@@ -83,5 +153,19 @@ export async function GET(req: NextRequest) {
       subtitle: monthData[0] ? `Peak activity month with ${monthData[0].plays} plays` : "Not enough data in selected range",
     },
     hiddenGem: hiddenGem[0] ?? null,
+    favoriteEra: {
+      title: favoriteEra,
+      subtitle: daypartData[0] ? `${daypartData[0].plays} plays in your strongest listening window` : "Not enough plays in selected range",
+    },
+    forgottenFavorite: forgotten
+      ? {
+          title: forgotten.trackName,
+          subtitle: `${forgotten.artistName} · resurfaced after ${Math.round(forgotten.gapDays)} days`,
+        }
+      : { title: "No rediscovery yet", subtitle: "Keep listening to unlock long-gap rediscoveries" },
+    personality: {
+      title: personalityTitle,
+      subtitle: personalitySubtitle,
+    },
   });
 }
