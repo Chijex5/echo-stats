@@ -129,10 +129,26 @@ export async function GET() {
     };
   });
 
+  const availableYears = [...new Set(months.map((month) => month._id.year))].sort((a, b) => a - b);
+  const startYear = availableYears[0] ?? new Date().getFullYear();
+  const endYear = availableYears.at(-1) ?? startYear;
+
+  const yearHoursMap = new Map<number, number>();
+  for (const point of yearHours) {
+    const y = point._id.year;
+    yearHoursMap.set(y, (yearHoursMap.get(y) ?? 0) + point.v);
+  }
+
+  const fullYearHours = Array.from({ length: endYear - startYear + 1 }, (_, index) => {
+    const year = startYear + index;
+    return { year: String(year), v: Math.round((yearHoursMap.get(year) ?? 0) / 3_600_000) };
+  });
+
   return NextResponse.json({
     periods,
-    yearLabels: [...new Set(months.map((month) => String(month._id.year)))],
-    yearHours: yearHours.map((point) => ({ v: Math.round(point.v / 3_600_000) })),
+    yearLabels: availableYears.map(String),
+    yearHours: fullYearHours,
+    range: { startYear, endYear },
     insights: [
       {
         label: "Peak month",

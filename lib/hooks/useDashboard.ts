@@ -369,7 +369,11 @@ export interface TimelinePageInsight {
 export interface TimelinePageResponse {
   periods: TimelinePagePeriod[];
   yearLabels: string[];
-  yearHours: Array<{ v: number }>;
+  yearHours: Array<{ year: string; v: number }>;
+  range?: {
+    startYear: number;
+    endYear: number;
+  };
   insights: TimelinePageInsight[];
 }
 

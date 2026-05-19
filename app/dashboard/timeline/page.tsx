@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, memo } from 'react';
+import React, { useMemo, useState, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles,
@@ -7,9 +7,6 @@ import {
   ArrowUpRight,
   ArrowRight,
   Shuffle,
-  ZoomIn,
-  ZoomOut,
-  Search,
   Volume2,
   Moon,
   Sun,
@@ -588,12 +585,21 @@ function TimelineControl({
   setActiveIdx,
   periods,
   yearHours,
-  yearLabels
+  yearLabels,
+  startYear,
+  endYear
 
 
 
-}: {activeIdx: number;setActiveIdx: (n: number) => void;periods: Period[];yearHours: {v: number}[];yearLabels: string[];}) {
+}: {activeIdx: number;setActiveIdx: (n: number) => void;periods: Period[];yearHours: {year?: string; v: number}[];yearLabels: string[];startYear: number;endYear: number;}) {
   const activePeriod = periods[activeIdx] ?? periods[0] ?? PERIODS[0];
+  const years = useMemo(() => [...new Set(periods.map((period) => period.year))].sort((a, b) => a - b), [periods]);
+  const selectedYear = activePeriod.year;
+  const monthsForYear = useMemo(() =>
+    periods.filter((period) => period.year === selectedYear).sort((a, b) => a.monthIdx - b.monthIdx),
+  [periods, selectedYear]);
+  const selectedMonthId = activePeriod.id;
+
   return (
     <section>
       <div className="glass-card p-6 md:p-8 relative overflow-hidden">
@@ -610,36 +616,42 @@ function TimelineControl({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            {/* Date search */}
-            <div className="relative hidden md:block">
-              <Search
-                size={14}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
-              
-              <input
-                type="text"
-                placeholder="Jump to date…"
-                className="bg-white/5 border border-white/10 rounded-full py-2 pl-9 pr-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:border-spotify/50 focus:bg-white/10 transition-all w-44" />
-              
+          <div className="flex w-full md:w-auto items-center gap-2.5 md:gap-3">
+            <div className="flex-1 md:flex-none rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5">
+              <label className="block text-[10px] uppercase tracking-widest text-white/40 mb-1">Year</label>
+              <select
+                value={String(selectedYear)}
+                onChange={(event) => {
+                  const nextYear = Number(event.target.value);
+                  const firstMonthInYear = periods.find((period) => period.year === nextYear);
+                  if (!firstMonthInYear) return;
+                  const nextIndex = periods.findIndex((period) => period.id === firstMonthInYear.id);
+                  if (nextIndex >= 0) setActiveIdx(nextIndex);
+                }}
+                className="w-full bg-transparent text-sm font-medium text-white focus:outline-none">
+                {years.map((year) =>
+                <option key={year} value={String(year)} className="bg-[#0D1117] text-white">
+                    {year}
+                  </option>
+                )}
+              </select>
             </div>
-            {/* Zoom */}
-            <div className="flex items-center bg-white/5 border border-white/10 rounded-full p-1">
-              <button
-                className="w-7 h-7 rounded-full hover:bg-white/10 flex items-center justify-center text-white/70"
-                aria-label="Zoom out">
-                
-                <ZoomOut size={13} />
-              </button>
-              <span className="text-[10px] uppercase tracking-widest text-white/40 px-1.5">
-                Month
-              </span>
-              <button
-                className="w-7 h-7 rounded-full hover:bg-white/10 flex items-center justify-center text-white/70"
-                aria-label="Zoom in">
-                
-                <ZoomIn size={13} />
-              </button>
+
+            <div className="flex-1 md:flex-none rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5">
+              <label className="block text-[10px] uppercase tracking-widest text-white/40 mb-1">Month</label>
+              <select
+                value={selectedMonthId}
+                onChange={(event) => {
+                  const nextIndex = periods.findIndex((period) => period.id === event.target.value);
+                  if (nextIndex >= 0) setActiveIdx(nextIndex);
+                }}
+                className="w-full bg-transparent text-sm font-medium text-white focus:outline-none">
+                {monthsForYear.map((period) =>
+                <option key={period.id} value={period.id} className="bg-[#0D1117] text-white">
+                    {period.monthName}
+                  </option>
+                )}
+              </select>
             </div>
           </div>
         </div>
@@ -681,7 +693,7 @@ function TimelineControl({
             <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 grid grid-cols-12 gap-0">
               {/* faint month ticks */}
               {Array.from({
-                length: 12 * 8
+                length: Math.max(12, (endYear - startYear + 1) * 12)
               }).map((_, i) =>
               <div key={i} className="h-1.5 border-l border-white/5" />
               )}
@@ -689,11 +701,10 @@ function TimelineControl({
 
             {/* Period markers */}
             {periods.map((p, i) => {
-              // Map period to horizontal position (Jan 2018 = 0%, Dec 2025 = 100%)
-              const startYear = 2018;
-              const monthsTotal = 8 * 12;
+              // Map period to horizontal position across available Spotify years
+              const monthsTotal = Math.max(1, (endYear - startYear + 1) * 12);
               const monthsFromStart = (p.year - startYear) * 12 + p.monthIdx;
-              const left = monthsFromStart / (monthsTotal - 1) * 100;
+              const left = monthsTotal === 1 ? 50 : monthsFromStart / Math.max(monthsTotal - 1, 1) * 100;
               const active = activeIdx === i;
               return (
                 <button
@@ -758,7 +769,7 @@ function TimelineControl({
         <div className="relative flex items-center gap-3 mt-6 text-xs text-white/40">
           <Calendar size={12} />
           <span>
-            Tip: pick any month above, or use search to jump to an exact date.
+            Pick a year first, then choose from months that exist in your Spotify timeline.
           </span>
         </div>
       </div>
@@ -1449,10 +1460,13 @@ function TimelineInsights({ insights }: {insights?: TimelinePageInsight[];}) {
 }
 // ---------- PAGE ----------
 export default function TimelinePage() {
-  const [activeIdx, setActiveIdx] = useState(4); // Sep 2024
+  const [activeIdx, setActiveIdx] = useState<number | null>(null);
   const { data, error } = useTimelinePage();
   const periods = data?.periods.length ? data.periods : PERIODS;
-  const safeActiveIdx = Math.min(activeIdx, periods.length - 1);
+
+
+  const defaultIdx = data?.periods.length ? data.periods.length - 1 : 4;
+  const safeActiveIdx = Math.min(activeIdx ?? defaultIdx, periods.length - 1);
   const yearLabels = data?.yearLabels.length ? data.yearLabels : ['2018', '2019', '2020', '2021', '2022', '2023', '2024', '2025'];
   return (
     <div className="min-h-screen bg-background text-white selection:bg-spotify/30 selection:text-white flex overflow-x-hidden">
@@ -1474,7 +1488,9 @@ export default function TimelinePage() {
                 setActiveIdx={setActiveIdx}
                 periods={periods}
                 yearHours={data?.yearHours ?? YEAR_HOURS}
-                yearLabels={yearLabels} />
+                yearLabels={yearLabels}
+                startYear={data?.range?.startYear ?? Number(yearLabels[0])}
+                endYear={data?.range?.endYear ?? Number(yearLabels.at(-1) ?? yearLabels[0])} />
               
               <SnapshotViewer activeIdx={safeActiveIdx} periods={periods} />
               <TimeMachineStories />
