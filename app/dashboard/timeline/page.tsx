@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, memo } from 'react';
+import React, { useMemo, useState, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles,
@@ -7,9 +7,6 @@ import {
   ArrowUpRight,
   ArrowRight,
   Shuffle,
-  ZoomIn,
-  ZoomOut,
-  Search,
   Volume2,
   Moon,
   Sun,
@@ -26,7 +23,9 @@ import { AreaChart, Area, ResponsiveContainer } from 'recharts';
 import { Sidebar } from '@/components/Sidebar';
 import { TopNav } from '@/components/TopNav';
 import {
+  useTimelineExplorer,
   useTimelinePage,
+  type TimelineCell,
   type TimelinePageInsight,
 } from '@/lib/hooks/useDashboard';
 // ---------- DATA ----------
@@ -588,12 +587,21 @@ function TimelineControl({
   setActiveIdx,
   periods,
   yearHours,
-  yearLabels
+  yearLabels,
+  startYear,
+  endYear
 
 
 
-}: {activeIdx: number;setActiveIdx: (n: number) => void;periods: Period[];yearHours: {v: number}[];yearLabels: string[];}) {
+}: {activeIdx: number;setActiveIdx: (n: number) => void;periods: Period[];yearHours: {year?: string; v: number}[];yearLabels: string[];startYear: number;endYear: number;}) {
   const activePeriod = periods[activeIdx] ?? periods[0] ?? PERIODS[0];
+  const years = useMemo(() => [...new Set(periods.map((period) => period.year))].sort((a, b) => a - b), [periods]);
+  const selectedYear = activePeriod.year;
+  const monthsForYear = useMemo(() =>
+    periods.filter((period) => period.year === selectedYear).sort((a, b) => a.monthIdx - b.monthIdx),
+  [periods, selectedYear]);
+  const selectedMonthId = activePeriod.id;
+
   return (
     <section>
       <div className="glass-card p-6 md:p-8 relative overflow-hidden">
@@ -610,36 +618,42 @@ function TimelineControl({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            {/* Date search */}
-            <div className="relative hidden md:block">
-              <Search
-                size={14}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
-              
-              <input
-                type="text"
-                placeholder="Jump to date…"
-                className="bg-white/5 border border-white/10 rounded-full py-2 pl-9 pr-3 text-xs text-white placeholder:text-white/40 focus:outline-none focus:border-spotify/50 focus:bg-white/10 transition-all w-44" />
-              
+          <div className="flex w-full md:w-auto items-center gap-2.5 md:gap-3">
+            <div className="flex-1 md:flex-none rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5">
+              <label className="block text-[10px] uppercase tracking-widest text-white/40 mb-1">Year</label>
+              <select
+                value={String(selectedYear)}
+                onChange={(event) => {
+                  const nextYear = Number(event.target.value);
+                  const firstMonthInYear = periods.find((period) => period.year === nextYear);
+                  if (!firstMonthInYear) return;
+                  const nextIndex = periods.findIndex((period) => period.id === firstMonthInYear.id);
+                  if (nextIndex >= 0) setActiveIdx(nextIndex);
+                }}
+                className="w-full bg-transparent text-sm font-medium text-white focus:outline-none">
+                {years.map((year) =>
+                <option key={year} value={String(year)} className="bg-[#0D1117] text-white">
+                    {year}
+                  </option>
+                )}
+              </select>
             </div>
-            {/* Zoom */}
-            <div className="flex items-center bg-white/5 border border-white/10 rounded-full p-1">
-              <button
-                className="w-7 h-7 rounded-full hover:bg-white/10 flex items-center justify-center text-white/70"
-                aria-label="Zoom out">
-                
-                <ZoomOut size={13} />
-              </button>
-              <span className="text-[10px] uppercase tracking-widest text-white/40 px-1.5">
-                Month
-              </span>
-              <button
-                className="w-7 h-7 rounded-full hover:bg-white/10 flex items-center justify-center text-white/70"
-                aria-label="Zoom in">
-                
-                <ZoomIn size={13} />
-              </button>
+
+            <div className="flex-1 md:flex-none rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5">
+              <label className="block text-[10px] uppercase tracking-widest text-white/40 mb-1">Month</label>
+              <select
+                value={selectedMonthId}
+                onChange={(event) => {
+                  const nextIndex = periods.findIndex((period) => period.id === event.target.value);
+                  if (nextIndex >= 0) setActiveIdx(nextIndex);
+                }}
+                className="w-full bg-transparent text-sm font-medium text-white focus:outline-none">
+                {monthsForYear.map((period) =>
+                <option key={period.id} value={period.id} className="bg-[#0D1117] text-white">
+                    {period.monthName}
+                  </option>
+                )}
+              </select>
             </div>
           </div>
         </div>
@@ -681,7 +695,7 @@ function TimelineControl({
             <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 grid grid-cols-12 gap-0">
               {/* faint month ticks */}
               {Array.from({
-                length: 12 * 8
+                length: Math.max(12, (endYear - startYear + 1) * 12)
               }).map((_, i) =>
               <div key={i} className="h-1.5 border-l border-white/5" />
               )}
@@ -689,11 +703,10 @@ function TimelineControl({
 
             {/* Period markers */}
             {periods.map((p, i) => {
-              // Map period to horizontal position (Jan 2018 = 0%, Dec 2025 = 100%)
-              const startYear = 2018;
-              const monthsTotal = 8 * 12;
+              // Map period to horizontal position across available Spotify years
+              const monthsTotal = Math.max(1, (endYear - startYear + 1) * 12);
               const monthsFromStart = (p.year - startYear) * 12 + p.monthIdx;
-              const left = monthsFromStart / (monthsTotal - 1) * 100;
+              const left = monthsTotal === 1 ? 50 : monthsFromStart / Math.max(monthsTotal - 1, 1) * 100;
               const active = activeIdx === i;
               return (
                 <button
@@ -758,7 +771,7 @@ function TimelineControl({
         <div className="relative flex items-center gap-3 mt-6 text-xs text-white/40">
           <Calendar size={12} />
           <span>
-            Tip: pick any month above, or use search to jump to an exact date.
+            Pick a year first, then choose from months that exist in your Spotify timeline.
           </span>
         </div>
       </div>
@@ -1027,32 +1040,13 @@ function TimeMachineStories() {
     </section>);
 
 }
-function CalendarHeatmap() {
-  const [year, setYear] = useState(2024);
-  // 365 cells, deterministic intensity
-  const days = Array.from({
-    length: 365
-  }).map((_, i) => {
-    const week = Math.floor(i / 7);
-    const day = i % 7;
-    const wknd = day === 0 || day === 6 ? 0.2 : 0;
-    const seasonal = Math.sin((week + (year - 2024) * 12) * 0.18) * 0.3;
-    const spike = (i + year) % 17 === 0 ? 0.3 : 0;
-    return Math.max(0.05, Math.min(0.95, 0.4 + seasonal + wknd + spike));
-  });
-  const months = [
-  'Jan',
-  'Feb',
-  'Mar',
-  'Apr',
-  'May',
-  'Jun',
-  'Jul',
-  'Aug',
-  'Sep',
-  'Oct',
-  'Nov',
-  'Dec'];
+function CalendarHeatmap({ cells, selectedRangeLabel }: {cells: TimelineCell[];selectedRangeLabel?: string;}) {
+  const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const days = cells.length ? cells : Array.from({ length: 364 }).map((_, i) => ({
+    date: `mock-${i}`,
+    plays: 0,
+    intensity: 0.08,
+  }));
 
   return (
     <section>
@@ -1062,27 +1056,8 @@ function CalendarHeatmap() {
             Year at a glance
           </h2>
           <p className="text-sm text-white/50">
-            Every day you listened, colored by intensity.
+            {selectedRangeLabel ?? 'Every day you listened in your recent Spotify timeline.'}
           </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setYear((y) => Math.max(2018, y - 1))}
-            className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors"
-            aria-label="Previous year">
-            
-            <ArrowRight size={14} className="rotate-180 text-white/70" />
-          </button>
-          <span className="text-sm font-medium tabular-nums px-2 min-w-[3rem] text-center">
-            {year}
-          </span>
-          <button
-            onClick={() => setYear((y) => Math.min(2025, y + 1))}
-            className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors"
-            aria-label="Next year">
-            
-            <ArrowRight size={14} className="text-white/70" />
-          </button>
         </div>
       </div>
 
@@ -1090,30 +1065,27 @@ function CalendarHeatmap() {
         <div className="absolute -top-20 -left-20 w-[420px] h-[420px] bg-violet-600/15 rounded-full blur-[120px] pointer-events-none" />
 
         <div className="relative overflow-x-auto hide-scrollbar">
-          {/* Month labels */}
           <div
             className="grid gap-1 mb-2"
             style={{
               gridTemplateColumns: 'repeat(53, minmax(0, 1fr))'
             }}>
-            
-            {months.map((m, i) =>
+            {monthLabels.map((m, i) =>
             <div
               key={m}
               className="text-[9px] uppercase tracking-widest text-white/40"
               style={{
                 gridColumn: `${1 + Math.floor(i * 53 / 12)} / span 4`
               }}>
-              
                 {m}
               </div>
             )}
           </div>
 
           <div className="grid grid-rows-7 grid-flow-col gap-[3px] min-w-[680px]">
-            {days.map((v, i) =>
+            {days.map((day, i) =>
             <motion.div
-              key={i}
+              key={`${day.date}-${i}`}
               initial={{
                 opacity: 0,
                 scale: 0.4
@@ -1131,27 +1103,11 @@ function CalendarHeatmap() {
               }}
               className="aspect-square rounded-[2px] hover:ring-2 hover:ring-white/50 transition-all"
               style={{
-                backgroundColor: `rgba(29,185,84,${v})`,
-                width: 12
+                backgroundColor: `rgba(29,185,84,${Math.max(0.06, day.intensity)})`,
+                boxShadow: day.intensity > 0.5 ? '0 0 10px rgba(29,185,84,0.16)' : undefined
               }}
-              title={`Day ${i + 1}`} />
-
+              title={`${day.date} · ${day.plays} plays`} />
             )}
-          </div>
-
-          {/* Legend */}
-          <div className="relative flex items-center justify-end gap-2 text-[10px] text-white/40 mt-4">
-            less
-            {[0.15, 0.35, 0.55, 0.75, 0.9].map((o) =>
-            <span
-              key={o}
-              className="w-3 h-3 rounded-sm"
-              style={{
-                backgroundColor: `rgba(29,185,84,${o})`
-              }} />
-
-            )}
-            more
           </div>
         </div>
       </div>
@@ -1449,10 +1405,14 @@ function TimelineInsights({ insights }: {insights?: TimelinePageInsight[];}) {
 }
 // ---------- PAGE ----------
 export default function TimelinePage() {
-  const [activeIdx, setActiveIdx] = useState(4); // Sep 2024
+  const [activeIdx, setActiveIdx] = useState<number | null>(null);
   const { data, error } = useTimelinePage();
+  const { data: explorerData } = useTimelineExplorer();
   const periods = data?.periods.length ? data.periods : PERIODS;
-  const safeActiveIdx = Math.min(activeIdx, periods.length - 1);
+
+
+  const defaultIdx = data?.periods.length ? data.periods.length - 1 : 4;
+  const safeActiveIdx = Math.min(activeIdx ?? defaultIdx, periods.length - 1);
   const yearLabels = data?.yearLabels.length ? data.yearLabels : ['2018', '2019', '2020', '2021', '2022', '2023', '2024', '2025'];
   return (
     <div className="min-h-screen bg-background text-white selection:bg-spotify/30 selection:text-white flex overflow-x-hidden">
@@ -1474,11 +1434,13 @@ export default function TimelinePage() {
                 setActiveIdx={setActiveIdx}
                 periods={periods}
                 yearHours={data?.yearHours ?? YEAR_HOURS}
-                yearLabels={yearLabels} />
+                yearLabels={yearLabels}
+                startYear={data?.range?.startYear ?? Number(yearLabels[0])}
+                endYear={data?.range?.endYear ?? Number(yearLabels.at(-1) ?? yearLabels[0])} />
               
               <SnapshotViewer activeIdx={safeActiveIdx} periods={periods} />
               <TimeMachineStories />
-              <CalendarHeatmap />
+              <CalendarHeatmap cells={explorerData?.cells ?? []} selectedRangeLabel={explorerData?.selectedRange.label} />
               <TimeComparison periods={periods} />
               <RandomNostalgia setActiveIdx={setActiveIdx} periods={periods} />
               <TimelineInsights insights={data?.insights} />
