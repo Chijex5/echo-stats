@@ -1,3 +1,4 @@
+import { MobileNavProvider } from "@/components/mobile-nav-context";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Providers from "./provider";
@@ -30,7 +31,9 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <Providers>
-          {children}
+           <MobileNavProvider>
+              {children}
+           </MobileNavProvider>
         </Providers>
       </body>
     </html>
