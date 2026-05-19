@@ -23,7 +23,9 @@ import { AreaChart, Area, ResponsiveContainer } from 'recharts';
 import { Sidebar } from '@/components/Sidebar';
 import { TopNav } from '@/components/TopNav';
 import {
+  useTimelineExplorer,
   useTimelinePage,
+  type TimelineCell,
   type TimelinePageInsight,
 } from '@/lib/hooks/useDashboard';
 // ---------- DATA ----------
@@ -615,7 +617,6 @@ function TimelineControl({
 
   // How many total months the scrubber spans
   const monthsTotal = Math.max(1, (endYear - startYear + 1) * 12);
-
   return (
     <section>
       <div className="glass-card p-6 md:p-8 relative overflow-hidden">
@@ -728,7 +729,6 @@ function TimelineControl({
               const pct =
                 monthsTotal <= 1 ? 50 : (monthsFromStart / (monthsTotal - 1)) * 100;
               const isActive = activeIdx === i;
-
               return (
                 <button
                   key={p.id}
@@ -1066,32 +1066,13 @@ function TimeMachineStories() {
     </section>);
 
 }
-function CalendarHeatmap() {
-  const [year, setYear] = useState(2024);
-  // 365 cells, deterministic intensity
-  const days = Array.from({
-    length: 365
-  }).map((_, i) => {
-    const week = Math.floor(i / 7);
-    const day = i % 7;
-    const wknd = day === 0 || day === 6 ? 0.2 : 0;
-    const seasonal = Math.sin((week + (year - 2024) * 12) * 0.18) * 0.3;
-    const spike = (i + year) % 17 === 0 ? 0.3 : 0;
-    return Math.max(0.05, Math.min(0.95, 0.4 + seasonal + wknd + spike));
-  });
-  const months = [
-  'Jan',
-  'Feb',
-  'Mar',
-  'Apr',
-  'May',
-  'Jun',
-  'Jul',
-  'Aug',
-  'Sep',
-  'Oct',
-  'Nov',
-  'Dec'];
+function CalendarHeatmap({ cells, selectedRangeLabel }: {cells: TimelineCell[];selectedRangeLabel?: string;}) {
+  const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const days = cells.length ? cells : Array.from({ length: 364 }).map((_, i) => ({
+    date: `mock-${i}`,
+    plays: 0,
+    intensity: 0.08,
+  }));
 
   return (
     <section>
@@ -1101,27 +1082,8 @@ function CalendarHeatmap() {
             Year at a glance
           </h2>
           <p className="text-sm text-white/50">
-            Every day you listened, colored by intensity.
+            {selectedRangeLabel ?? 'Every day you listened in your recent Spotify timeline.'}
           </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setYear((y) => Math.max(2018, y - 1))}
-            className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors"
-            aria-label="Previous year">
-            
-            <ArrowRight size={14} className="rotate-180 text-white/70" />
-          </button>
-          <span className="text-sm font-medium tabular-nums px-2 min-w-[3rem] text-center">
-            {year}
-          </span>
-          <button
-            onClick={() => setYear((y) => Math.min(2025, y + 1))}
-            className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors"
-            aria-label="Next year">
-            
-            <ArrowRight size={14} className="text-white/70" />
-          </button>
         </div>
       </div>
 
@@ -1129,30 +1091,27 @@ function CalendarHeatmap() {
         <div className="absolute -top-20 -left-20 w-[420px] h-[420px] bg-violet-600/15 rounded-full blur-[120px] pointer-events-none" />
 
         <div className="relative overflow-x-auto hide-scrollbar">
-          {/* Month labels */}
           <div
             className="grid gap-1 mb-2"
             style={{
               gridTemplateColumns: 'repeat(53, minmax(0, 1fr))'
             }}>
-            
-            {months.map((m, i) =>
+            {monthLabels.map((m, i) =>
             <div
               key={m}
               className="text-[9px] uppercase tracking-widest text-white/40"
               style={{
                 gridColumn: `${1 + Math.floor(i * 53 / 12)} / span 4`
               }}>
-              
                 {m}
               </div>
             )}
           </div>
 
           <div className="grid grid-rows-7 grid-flow-col gap-[3px] min-w-[680px]">
-            {days.map((v, i) =>
+            {days.map((day, i) =>
             <motion.div
-              key={i}
+              key={`${day.date}-${i}`}
               initial={{
                 opacity: 0,
                 scale: 0.4
@@ -1170,27 +1129,11 @@ function CalendarHeatmap() {
               }}
               className="aspect-square rounded-[2px] hover:ring-2 hover:ring-white/50 transition-all"
               style={{
-                backgroundColor: `rgba(29,185,84,${v})`,
-                width: 12
+                backgroundColor: `rgba(29,185,84,${Math.max(0.06, day.intensity)})`,
+                boxShadow: day.intensity > 0.5 ? '0 0 10px rgba(29,185,84,0.16)' : undefined
               }}
-              title={`Day ${i + 1}`} />
-
+              title={`${day.date} · ${day.plays} plays`} />
             )}
-          </div>
-
-          {/* Legend */}
-          <div className="relative flex items-center justify-end gap-2 text-[10px] text-white/40 mt-4">
-            less
-            {[0.15, 0.35, 0.55, 0.75, 0.9].map((o) =>
-            <span
-              key={o}
-              className="w-3 h-3 rounded-sm"
-              style={{
-                backgroundColor: `rgba(29,185,84,${o})`
-              }} />
-
-            )}
-            more
           </div>
         </div>
       </div>
@@ -1490,6 +1433,7 @@ function TimelineInsights({ insights }: {insights?: TimelinePageInsight[];}) {
 export default function TimelinePage() {
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
   const { data, error } = useTimelinePage();
+  const { data: explorerData } = useTimelineExplorer();
   const periods = data?.periods.length ? data.periods : PERIODS;
 
 
@@ -1522,7 +1466,7 @@ export default function TimelinePage() {
               
               <SnapshotViewer activeIdx={safeActiveIdx} periods={periods} />
               <TimeMachineStories />
-              <CalendarHeatmap />
+              <CalendarHeatmap cells={explorerData?.cells ?? []} selectedRangeLabel={explorerData?.selectedRange.label} />
               <TimeComparison periods={periods} />
               <RandomNostalgia setActiveIdx={setActiveIdx} periods={periods} />
               <TimelineInsights insights={data?.insights} />
