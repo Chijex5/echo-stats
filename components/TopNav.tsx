@@ -1,20 +1,31 @@
 "use client";
 
 import React, { useRef, useState, useEffect } from "react";
-import { Search, Bell, ChevronDown, RefreshCw, User, LogOut, ExternalLink } from "lucide-react";
+import {
+  Search,
+  Bell,
+  ChevronDown,
+  RefreshCw,
+  User,
+  LogOut,
+  ExternalLink,
+  Menu,
+} from "lucide-react";
 import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
+import { useMobileNav } from "./mobile-nav-context";
 
 export function TopNav() {
   const { data: session } = useSession();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const { toggle } = useMobileNav();
 
   const name = session?.user?.name ?? "User";
   const email = session?.user?.email ?? "";
   const initial = name.trim()[0]?.toUpperCase() ?? "?";
 
-  // Close on outside click
+  // Close dropdown on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -26,7 +37,16 @@ export function TopNav() {
   }, []);
 
   return (
-    <header className="sticky top-0 z-30 h-20 bg-background/80 backdrop-blur-xl border-b border-white/5 flex items-center justify-between px-8">
+    <header className="sticky top-0 z-30 h-16 lg:h-20 bg-background/80 backdrop-blur-xl border-b border-white/5 flex items-center gap-3 px-4 lg:px-8">
+      {/* Hamburger — mobile only */}
+      <button
+        onClick={toggle}
+        aria-label="Open navigation menu"
+        className="lg:hidden flex items-center justify-center w-9 h-9 rounded-xl text-white/60 hover:text-white hover:bg-white/5 transition-colors shrink-0"
+      >
+        <Menu size={20} />
+      </button>
+
       {/* Search */}
       <div className="flex-1 max-w-md relative">
         <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" />
@@ -38,14 +58,14 @@ export function TopNav() {
       </div>
 
       {/* Right Actions */}
-      <div className="flex items-center gap-6">
-        {/* Date Range */}
+      <div className="flex items-center gap-3 lg:gap-6 ml-auto">
+        {/* Date Range — desktop only */}
         <button className="hidden md:flex items-center gap-2 text-sm font-medium text-white/70 hover:text-white transition-colors bg-white/5 px-4 py-2 rounded-full border border-white/10">
           Last 30 Days
           <ChevronDown size={14} />
         </button>
 
-        {/* Sync Status */}
+        {/* Sync Status — desktop only */}
         <div className="hidden md:flex items-center gap-2 text-xs text-white/40">
           <RefreshCw size={12} className="animate-spin-slow" />
           Synced 2h ago
@@ -63,7 +83,7 @@ export function TopNav() {
         <div className="relative" ref={dropdownRef}>
           <button
             onClick={() => setDropdownOpen((o) => !o)}
-            className="flex items-center gap-3 group"
+            className="flex items-center gap-2 lg:gap-3 group"
             aria-haspopup="true"
             aria-expanded={dropdownOpen}
           >
@@ -74,7 +94,9 @@ export function TopNav() {
             </div>
             <ChevronDown
               size={14}
-              className={`text-white/40 group-hover:text-white transition-all duration-200 ${dropdownOpen ? "rotate-180" : ""}`}
+              className={`text-white/40 group-hover:text-white transition-all duration-200 hidden sm:block ${
+                dropdownOpen ? "rotate-180" : ""
+              }`}
             />
           </button>
 
