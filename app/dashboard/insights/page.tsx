@@ -34,6 +34,11 @@ import {
 'recharts';
 import { Sidebar } from '@/components/Sidebar';
 import { TopNav } from '@/components/TopNav';
+import {
+  useInsights,
+  useStoryPreview,
+  useVisualAnalytics,
+} from '@/lib/hooks/useDashboard';
 // ---------- DATA ----------
 const MOOD_RADAR = [
 {
@@ -539,6 +544,22 @@ function InsightsHero() {
 
 }
 function PrimaryInsightCards() {
+  const { data: insights } = useInsights();
+  const { data: analytics } = useVisualAnalytics();
+  const eraData = analytics?.yearData.map((item) => ({
+    label: item.year,
+    value: item.value,
+    active: item.value === Math.max(...analytics.yearData.map((year) => year.value)),
+  })) ?? ERA_DATA;
+  const moodRadar = insights ? [
+    { axis: 'Energy', value: insights.emotionalProfile.energetic },
+    { axis: 'Calm', value: insights.emotionalProfile.calm },
+    { axis: 'Nostalgia', value: insights.favoriteDecade.topPct },
+    { axis: 'Joy', value: insights.emotionalProfile.neutral },
+    { axis: 'Late', value: insights.emotionalProfile.intense },
+  ] : MOOD_RADAR;
+  const topEra = insights?.favoriteDecade.topDecade ?? '2010s';
+  const topEraPct = insights?.favoriteDecade.topPct ?? 42;
   return (
     <section>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -731,7 +752,7 @@ function PrimaryInsightCards() {
 
             <div className="h-56 -mx-4">
               <ResponsiveContainer width="100%" height="100%">
-                <RadarChart data={MOOD_RADAR} outerRadius="72%">
+                <RadarChart data={moodRadar} outerRadius="72%">
                   <PolarGrid stroke="rgba(255,255,255,0.08)" />
                   <PolarAngleAxis
                     dataKey="axis"
@@ -781,18 +802,17 @@ function PrimaryInsightCards() {
             <h3 className="text-2xl font-bold mb-1">
               You belong in the{' '}
               <span className="font-serif-display italic text-spotify/90">
-                2010s
+                {topEra}
               </span>
               .
             </h3>
             <p className="text-sm text-white/60 mb-6">
-              42% of your listening lives in this decade — the golden age of
-              indie soul and hip-hop revival.
+              {topEraPct}% of your listening lives in this decade.
             </p>
 
             {/* Decade timeline */}
             <div className="flex items-end gap-2 h-24 mb-3">
-              {ERA_DATA.map((e) =>
+              {eraData.map((e) =>
               <div
                 key={e.label}
                 className="flex-1 flex flex-col items-center justify-end gap-1">
@@ -840,6 +860,47 @@ function PrimaryInsightCards() {
 
 }
 function PersonalityInsights() {
+  const { data } = useInsights();
+  const cards = data ? [
+    {
+      icon: Compass,
+      title: 'Artist drift',
+      accent: 'text-emerald-300',
+      tint: 'from-emerald-500/15 to-transparent',
+      value: data.genreDrift.to ?? 'Still emerging',
+      sub: data.genreDrift.drifted
+        ? `Your top artist shifted from ${data.genreDrift.from ?? 'unknown'} to ${data.genreDrift.to ?? 'unknown'}.`
+        : "You're staying loyal to the same top artist.",
+    },
+    {
+      icon: Heart,
+      title: 'Emotional profile',
+      accent: 'text-rose-300',
+      tint: 'from-rose-500/15 to-transparent',
+      value: data.emotionalProfile.dominantLabel,
+      sub: 'Your listening clusters strongest around this time-of-day mood.',
+    },
+    {
+      icon: Repeat,
+      title: 'Longest streak',
+      accent: 'text-blue-300',
+      tint: 'from-blue-500/15 to-transparent',
+      value: data.longestStreak?.trackName ?? 'No streak yet',
+      sub: data.longestStreak
+        ? `${data.longestStreak.artistName} stayed with you for ${data.longestStreak.days} days in a row.`
+        : 'Repeat streaks will appear once enough history is imported.',
+    },
+    {
+      icon: Gem,
+      title: 'Hidden gem',
+      accent: 'text-amber-300',
+      tint: 'from-amber-500/15 to-transparent',
+      value: data.hiddenGem?.trackName ?? 'Still emerging',
+      sub: data.hiddenGem
+        ? `${data.hiddenGem.artistName} is one of your lower-play recent discoveries.`
+        : 'Hidden discoveries will appear with more listening history.',
+    },
+  ] : PERSONALITY_CARDS;
   return (
     <section>
       <div className="mb-6 flex items-end justify-between">
@@ -857,7 +918,7 @@ function PersonalityInsights() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-        {PERSONALITY_CARDS.map((card, i) =>
+        {cards.map((card, i) =>
         <motion.div
           key={card.title}
           initial={{
@@ -1268,6 +1329,30 @@ function TasteEvolution() {
 
 }
 function HiddenGems() {
+  const { data } = useInsights();
+  const gems = data?.hiddenGem ? [
+    {
+      tag: 'Hidden gem',
+      title: data.hiddenGem.trackName,
+      artist: data.hiddenGem.artistName,
+      meta: `${data.hiddenGem.plays} recent plays — a quieter corner of your listening.`,
+      color: 'from-emerald-400 to-cyan-500',
+    },
+    ...(data.firstSong ? [{
+      tag: 'First play',
+      title: data.firstSong.trackName,
+      artist: data.firstSong.artistName,
+      meta: `First song recorded this year.`,
+      color: 'from-amber-400 to-orange-500',
+    }] : []),
+    ...(data.longestStreak ? [{
+      tag: 'Repeat streak',
+      title: data.longestStreak.trackName,
+      artist: data.longestStreak.artistName,
+      meta: `${data.longestStreak.days} days in a row.`,
+      color: 'from-blue-500 to-violet-600',
+    }] : []),
+  ] : HIDDEN_GEMS;
   return (
     <section>
       <div className="mb-6">
@@ -1278,7 +1363,7 @@ function HiddenGems() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5">
-        {HIDDEN_GEMS.map((g, i) =>
+        {gems.map((g, i) =>
         <motion.div
           key={g.title}
           initial={{
@@ -1325,6 +1410,29 @@ function HiddenGems() {
 
 }
 function FunInsights() {
+  const { data } = useInsights();
+  const cards = data ? [
+    {
+      icon: Star,
+      big: data.favoriteDecade.topDecade,
+      label: 'Favorite decade',
+      sub: `${data.favoriteDecade.topPct}% of dated listening comes from this era.`,
+    },
+    {
+      icon: Clock,
+      big: data.firstSong?.trackName ?? 'No track yet',
+      label: 'First song this year',
+      sub: data.firstSong ? `${data.firstSong.artistName} opened your year.` : 'No plays recorded yet this year.',
+    },
+    {
+      icon: TrendingUp,
+      big: data.genreDrift.drifted ? 'Shifted' : 'Steady',
+      label: 'Artist drift',
+      sub: data.genreDrift.drifted
+        ? `From ${data.genreDrift.from ?? 'unknown'} to ${data.genreDrift.to ?? 'unknown'}.`
+        : 'Your top artist stayed consistent across the last two windows.',
+    },
+  ] : FUN_CARDS;
   return (
     <section>
       <div className="mb-6">
@@ -1333,7 +1441,7 @@ function FunInsights() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {FUN_CARDS.map((c, i) =>
+        {cards.map((c, i) =>
         <motion.div
           key={c.label}
           initial={{
@@ -1373,7 +1481,26 @@ function FunInsights() {
 }
 function EmotionalStorytelling() {
   const [idx, setIdx] = useState(0);
-  const slide = STORY_SLIDES[idx];
+  const { data: insights } = useInsights();
+  const { data: story } = useStoryPreview();
+  const slides = insights ? [
+    {
+      headline: `Your sound leans ${insights.emotionalProfile.dominantLabel.toLowerCase()}.`,
+      body: `The strongest signal in your listening is ${insights.emotionalProfile.dominantLabel.toLowerCase()}, based on when your plays cluster.`,
+      accent: 'from-emerald-500/25 via-violet-500/15 to-transparent',
+    },
+    {
+      headline: `${insights.favoriteDecade.topDecade} keeps pulling you back.`,
+      body: `${insights.favoriteDecade.topPct}% of your dated listening comes from this decade.`,
+      accent: 'from-violet-500/25 via-blue-500/15 to-transparent',
+    },
+    {
+      headline: `You discovered ${story?.newArtists ?? 0} new artists this year.`,
+      body: 'Your year so far still has room to shift as new listening data arrives.',
+      accent: 'from-pink-500/25 via-orange-500/15 to-transparent',
+    },
+  ] : STORY_SLIDES;
+  const slide = slides[idx] ?? slides[0];
   return (
     <section className="pb-4">
       <div className="mb-6">
@@ -1405,7 +1532,7 @@ function EmotionalStorytelling() {
 
         <div className="relative max-w-2xl">
           <div className="flex items-center gap-1.5 mb-8">
-            {STORY_SLIDES.map((_, i) =>
+            {slides.map((_, i) =>
             <button
               key={i}
               onClick={() => setIdx(i)}
@@ -1441,7 +1568,7 @@ function EmotionalStorytelling() {
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-white/15 bg-white/[0.05] text-[10px] uppercase tracking-widest text-white/70 mb-6">
                 <CalendarHeart size={11} className="text-white/80" />
                 Chapter {String(idx + 1).padStart(2, '0')} /{' '}
-                {String(STORY_SLIDES.length).padStart(2, '0')}
+                {String(slides.length).padStart(2, '0')}
               </div>
               <h3 className="text-3xl md:text-5xl font-bold tracking-tight leading-[1.05] mb-6">
                 {slide.headline}
@@ -1454,7 +1581,7 @@ function EmotionalStorytelling() {
 
           <div className="mt-10 flex items-center gap-3">
             <button
-              onClick={() => setIdx((i) => (i + 1) % STORY_SLIDES.length)}
+              onClick={() => setIdx((i) => (i + 1) % slides.length)}
               className="inline-flex items-center gap-2 bg-white text-black text-sm font-semibold px-5 py-2.5 rounded-full transition-all hover:-translate-y-0.5">
               
               Next chapter

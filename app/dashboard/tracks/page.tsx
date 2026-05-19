@@ -35,6 +35,14 @@ import {
 'recharts';
 import { Sidebar } from '@/components/Sidebar';
 import { TopNav } from '@/components/TopNav';
+import {
+  useDashboardStats,
+  useInsights,
+  useRediscovery,
+  useTopTracks,
+  useVisualAnalytics,
+  type TopTrack,
+} from '@/lib/hooks/useDashboard';
 // ---------- MOCK DATA ----------
 const TRACKS = [
 {
@@ -508,6 +516,45 @@ const SORT_OPTIONS = [
 'Oldest favorite'];
 
 const RANGE_OPTIONS = ['7 days', '30 days', '3 months', '1 year', 'Custom'];
+
+type PageTrack = typeof TRACKS[number];
+
+function trackSpark(track: TopTrack) {
+  const prev = track.previousPlayCount;
+  const current = track.playCount;
+  const mid = Math.round((prev + current) / 2);
+  return [prev, mid, current, Math.max(current - 1, 0), current, current + Math.max(current - prev, 0), current].map((v) =>
+    Math.max(1, v)
+  );
+}
+
+function mapApiTrack(track: TopTrack, index: number): PageTrack {
+  const delta = track.previousPlayCount
+    ? Math.round(((track.playCount - track.previousPlayCount) / track.previousPlayCount) * 100)
+    : track.playCount > 0
+      ? 100
+      : 0;
+
+  return {
+    rank: index + 1,
+    title: track.trackName,
+    artist: track.artistName,
+    plays: track.playCount,
+    delta,
+    trend: track.trend,
+    color: track.color,
+    spark: trackSpark(track),
+  };
+}
+
+function usePageTracks(limit = 25) {
+  const { data, isLoading, error } = useTopTracks(limit);
+  return {
+    tracks: data?.tracks.length ? data.tracks.map(mapApiTrack) : TRACKS,
+    isLoading,
+    error,
+  };
+}
 // ---------- HELPERS ----------
 function Sparkline({ data, color }: {data: number[];color: string;}) {
   return (
@@ -561,22 +608,23 @@ function TracksHero({
 }: {range: string;setRange: (v: string) => void;sort: string;setSort: (v: string) => void;}) {
   const [rangeOpen, setRangeOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
+  const { data } = useDashboardStats();
   const stats = [
   {
     label: 'Tracks played',
-    value: '14,205'
+    value: (data?.totalPlays ?? 0).toLocaleString()
   },
   {
     label: 'Total hours',
-    value: '487'
+    value: (data?.totalHours ?? 0).toLocaleString()
   },
   {
     label: 'Unique artists',
-    value: '1,283'
+    value: (data?.uniqueArtistCount ?? 0).toLocaleString()
   },
   {
-    label: 'Avg song length',
-    value: '3:42'
+    label: 'Unique tracks',
+    value: (data?.uniqueTrackCount ?? 0).toLocaleString()
   }];
 
   return (
@@ -790,6 +838,7 @@ function TrackLeaderboard({
 
 
 }: {selected: number;setSelected: (n: number) => void;}) {
+  const { tracks, isLoading, error } = usePageTracks(25);
   return (
     <section>
       <div className="flex items-center justify-between mb-6">
@@ -800,9 +849,10 @@ function TrackLeaderboard({
           </p>
         </div>
         <span className="text-xs uppercase tracking-widest text-white/40">
-          25 tracks
+          {tracks.length} tracks
         </span>
       </div>
+      {error && <p className="text-sm text-red-400/70 mb-4">Could not load tracks. Showing local defaults.</p>}
 
       <div className="glass-card overflow-hidden">
         <div className="hidden md:grid grid-cols-[40px_1fr_120px_100px_80px_56px] gap-4 px-6 py-3 border-b border-white/5 text-[10px] uppercase tracking-widest text-white/40 font-medium">
@@ -815,7 +865,11 @@ function TrackLeaderboard({
         </div>
 
         <div className="divide-y divide-white/5">
-          {TRACKS.map((t, i) => {
+          {isLoading
+            ? Array.from({ length: 10 }, (_, i) => (
+              <div key={i} className="h-[73px] animate-pulse bg-white/[0.02] border-b border-white/5" />
+            ))
+            : tracks.map((t, i) => {
             const isActive = selected === t.rank;
             return (
               <motion.button
@@ -917,7 +971,8 @@ function TrackLeaderboard({
 
 }
 function TrackSpotlight({ rank }: {rank: number;}) {
-  const t = TRACKS.find((x) => x.rank === rank) || TRACKS[0];
+  const { tracks } = usePageTracks(25);
+  const t = tracks.find((x) => x.rank === rank) || tracks[0] || TRACKS[0];
   const radial = [
   {
     name: 'streak',
@@ -1102,6 +1157,17 @@ function TrackSpotlight({ rank }: {rank: number;}) {
 
 }
 function TrackCharts() {
+  const { tracks } = usePageTracks(25);
+  const { data } = useVisualAnalytics();
+  const monthlyTrend = data?.streamData.map((point) => ({ plays: point.value })) ?? MONTHLY_TREND;
+  const genreMix = data?.genreData.length
+    ? data.genreData.map((item, index) => ({
+      name: item.name,
+      value: item.value,
+      color: ['#1DB954', '#7C3AED', '#3B82F6', '#F472B6'][index % 4],
+    }))
+    : GENRE_MIX;
+  const releaseYears = data?.yearData.map((item) => ({ decade: item.year, value: item.value })) ?? RELEASE_YEARS;
   return (
     <section>
       <div className="mb-6">
@@ -1122,7 +1188,7 @@ function TrackCharts() {
           </div>
           <div className="flex-1 -mx-3 -mb-2">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={MONTHLY_TREND}>
+              <AreaChart data={monthlyTrend}>
                 <defs>
                   <linearGradient
                     id="monthly-trend"
@@ -1156,14 +1222,14 @@ function TrackCharts() {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={GENRE_MIX}
+                    data={genreMix}
                     dataKey="value"
                     innerRadius={42}
                     outerRadius={60}
                     paddingAngle={2}
                     stroke="none">
                     
-                    {GENRE_MIX.map((g) =>
+                    {genreMix.map((g) =>
                     <Cell key={g.name} fill={g.color} />
                     )}
                   </Pie>
@@ -1177,7 +1243,7 @@ function TrackCharts() {
               </div>
             </div>
             <ul className="flex-1 space-y-2 ml-4">
-              {GENRE_MIX.map((g) =>
+              {genreMix.map((g) =>
               <li
                 key={g.name}
                 className="flex items-center justify-between text-xs">
@@ -1206,7 +1272,7 @@ function TrackCharts() {
           <div className="flex-1">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
-                data={TRACKS.slice(0, 10).map((t) => ({
+                data={tracks.slice(0, 10).map((t) => ({
                   name: t.rank,
                   plays: t.plays
                 }))}>
@@ -1224,13 +1290,13 @@ function TrackCharts() {
           </div>
           <div className="flex-1">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={RELEASE_YEARS}>
+              <BarChart data={releaseYears}>
                 <Bar dataKey="value" radius={[4, 4, 0, 0]} fill="#7C3AED" />
               </BarChart>
             </ResponsiveContainer>
           </div>
           <div className="flex justify-between text-[10px] text-white/40 mt-1">
-            {RELEASE_YEARS.map((r) =>
+            {releaseYears.map((r) =>
             <span key={r.decade}>{r.decade}</span>
             )}
           </div>
@@ -1343,6 +1409,33 @@ function TrackFilters() {
 
 }
 function TrackInsights() {
+  const { data } = useInsights();
+  const insights = data ? [
+    {
+      icon: Sparkles,
+      label: 'Hidden gem',
+      title: data.hiddenGem?.trackName ?? 'Still emerging',
+      sub: data.hiddenGem ? `${data.hiddenGem.artistName} · ${data.hiddenGem.plays} plays` : 'Not enough data yet',
+      color: 'text-emerald-300',
+      tint: 'bg-emerald-500/15',
+    },
+    {
+      icon: Moon,
+      label: 'Profile',
+      title: data.emotionalProfile.dominantLabel,
+      sub: 'Your strongest listening time pattern.',
+      color: 'text-violet-300',
+      tint: 'bg-violet-500/15',
+    },
+    {
+      icon: Repeat,
+      label: 'Streak',
+      title: data.longestStreak?.trackName ?? 'No streak yet',
+      sub: data.longestStreak ? `${data.longestStreak.days} days in a row` : 'Repeat streaks will appear here.',
+      color: 'text-blue-300',
+      tint: 'bg-blue-500/15',
+    },
+  ] : INSIGHTS;
   return (
     <section>
       <div className="mb-6">
@@ -1353,7 +1446,7 @@ function TrackInsights() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {INSIGHTS.map((ins, i) =>
+        {insights.map((ins, i) =>
         <motion.div
           key={ins.label}
           initial={{
@@ -1393,6 +1486,14 @@ function TrackInsights() {
 
 }
 function RediscoveryStrip() {
+  const { data } = useRediscovery();
+  const rediscover = data?.cards.map((card) => ({
+    tag: card.title,
+    title: card.count.toLocaleString(),
+    artist: card.desc,
+    meta: card.title,
+    color: card.color,
+  })) ?? REDISCOVER;
   return (
     <section>
       <div className="flex items-end justify-between mb-6">
@@ -1406,7 +1507,7 @@ function RediscoveryStrip() {
       </div>
 
       <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-2 -mx-6 px-6 md:mx-0 md:px-0 snap-x snap-mandatory">
-        {REDISCOVER.map((r, i) =>
+        {rediscover.map((r, i) =>
         <motion.div
           key={i}
           initial={{

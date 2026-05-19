@@ -330,6 +330,57 @@ export function useStoryPreview() {
   );
 }
 
+// ─── Dedicated Timeline Page ───────────────────────────────────────────────
+
+export interface TimelinePageTrack {
+  title: string;
+  artist: string;
+  color: string;
+}
+
+export interface TimelinePagePeriod {
+  id: string;
+  label: string;
+  year: number;
+  monthIdx: number;
+  monthName: string;
+  topGenre: string;
+  mood: string;
+  moodScore: number;
+  totalHours: number;
+  uniqueArtists: number;
+  topArtist: string;
+  topArtistColor: string;
+  accent: string;
+  tracks: TimelinePageTrack[];
+  story?: {
+    tag: string;
+    line: string;
+  };
+}
+
+export interface TimelinePageInsight {
+  label: string;
+  title: string;
+  sub: string;
+  accent: string;
+}
+
+export interface TimelinePageResponse {
+  periods: TimelinePagePeriod[];
+  yearLabels: string[];
+  yearHours: Array<{ v: number }>;
+  insights: TimelinePageInsight[];
+}
+
+export function useTimelinePage() {
+  return useSWR<TimelinePageResponse>(
+    "/api/dashboard/timeline-page",
+    fetcher<TimelinePageResponse>,
+    { revalidateOnFocus: false }
+  );
+}
+
 // ─── Story Mode ───────────────────────────────────────────────────────────
 
 export interface StoryModeResponse {

@@ -25,6 +25,10 @@ import {
 import { AreaChart, Area, ResponsiveContainer } from 'recharts';
 import { Sidebar } from '@/components/Sidebar';
 import { TopNav } from '@/components/TopNav';
+import {
+  useTimelinePage,
+  type TimelinePageInsight,
+} from '@/lib/hooks/useDashboard';
 // ---------- DATA ----------
 type Period = {
   id: string;
@@ -581,11 +585,15 @@ function TimelineHero() {
 }
 function TimelineControl({
   activeIdx,
-  setActiveIdx
+  setActiveIdx,
+  periods,
+  yearHours,
+  yearLabels
 
 
 
-}: {activeIdx: number;setActiveIdx: (n: number) => void;}) {
+}: {activeIdx: number;setActiveIdx: (n: number) => void;periods: Period[];yearHours: {v: number}[];yearLabels: string[];}) {
+  const activePeriod = periods[activeIdx] ?? periods[0] ?? PERIODS[0];
   return (
     <section>
       <div className="glass-card p-6 md:p-8 relative overflow-hidden">
@@ -598,7 +606,7 @@ function TimelineControl({
               Now exploring
             </div>
             <div className="text-lg font-semibold truncate">
-              {PERIODS[activeIdx].monthName} {PERIODS[activeIdx].year}
+              {activePeriod.monthName} {activePeriod.year}
             </div>
           </div>
 
@@ -644,8 +652,8 @@ function TimelineControl({
             onClick={() => {
               if (i === 0) {
                 // random
-                const r = Math.floor(Date.now() / 1000 % PERIODS.length);
-                setActiveIdx(r === activeIdx ? (r + 1) % PERIODS.length : r);
+                const r = Math.floor(Date.now() / 1000 % periods.length);
+                setActiveIdx(r === activeIdx ? (r + 1) % periods.length : r);
               }
             }}
             className="inline-flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 px-3.5 py-2 rounded-full text-xs font-medium text-white/80 transition-colors focus:outline-none focus:ring-2 focus:ring-spotify/40">
@@ -663,7 +671,7 @@ function TimelineControl({
 
           {/* Year labels */}
           <div className="flex justify-between text-[10px] uppercase tracking-widest text-white/40 mb-3">
-            {[2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025].map((y) =>
+            {yearLabels.map((y) =>
             <span key={y}>{y}</span>
             )}
           </div>
@@ -680,7 +688,7 @@ function TimelineControl({
             </div>
 
             {/* Period markers */}
-            {PERIODS.map((p, i) => {
+            {periods.map((p, i) => {
               // Map period to horizontal position (Jan 2018 = 0%, Dec 2025 = 100%)
               const startYear = 2018;
               const monthsTotal = 8 * 12;
@@ -728,7 +736,7 @@ function TimelineControl({
           {/* Year hours mini area underneath */}
           <div className="mt-12 -mx-2 h-14">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={YEAR_HOURS}>
+              <AreaChart data={yearHours.length ? yearHours : YEAR_HOURS}>
                 <defs>
                   <linearGradient id="tl-hours" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#1DB954" stopOpacity={0.35} />
@@ -757,8 +765,8 @@ function TimelineControl({
     </section>);
 
 }
-function SnapshotViewer({ activeIdx }: {activeIdx: number;}) {
-  const p = PERIODS[activeIdx];
+function SnapshotViewer({ activeIdx, periods }: {activeIdx: number;periods: Period[];}) {
+  const p = periods[activeIdx] ?? periods[0] ?? PERIODS[0];
   const heat = makeMonthHeat(p.monthIdx + p.year);
   return (
     <section>
@@ -1150,9 +1158,9 @@ function CalendarHeatmap() {
     </section>);
 
 }
-function TimeComparison() {
-  const A = PERIODS.find((x) => x.id === 'jan-2024')!;
-  const B = PERIODS.find((x) => x.id === 'jan-2025')!;
+function TimeComparison({ periods }: {periods: Period[];}) {
+  const A = periods[0] ?? PERIODS[0];
+  const B = periods.at(-1) ?? PERIODS.at(-1)!;
   
   // Use a top-level component for the comparison cell to avoid creating
   // components during render (preserves state and avoids React warnings).
@@ -1284,10 +1292,11 @@ function ComparisonCell({ p, side }: { p: Period; side: 'left' | 'right' }) {
   );
 }
 function RandomNostalgia({
-  setActiveIdx
+  setActiveIdx,
+  periods
 
 
-}: {setActiveIdx: (n: number) => void;}) {
+}: {setActiveIdx: (n: number) => void;periods: Period[];}) {
   return (
     <section>
       <motion.div
@@ -1360,7 +1369,7 @@ function RandomNostalgia({
           </p>
           <button
             onClick={() => {
-              const r = Math.floor(Date.now() / 7 % PERIODS.length);
+              const r = Math.floor(Date.now() / 7 % periods.length);
               setActiveIdx(r);
               if (typeof window !== 'undefined') {
                 window.scrollTo({
@@ -1379,7 +1388,16 @@ function RandomNostalgia({
     </section>);
 
 }
-function TimelineInsights() {
+function TimelineInsights({ insights }: {insights?: TimelinePageInsight[];}) {
+  const cards = insights?.length
+    ? insights.map((ins, index) => ({
+      label: ins.label,
+      value: ins.title,
+      sub: ins.sub,
+      accent: ins.accent,
+      icon: [TrendingUp, Music2, Moon][index % 3],
+    }))
+    : INSIGHTS;
   return (
     <section className="pb-4">
       <div className="mb-6">
@@ -1388,7 +1406,7 @@ function TimelineInsights() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {INSIGHTS.map((ins, i) =>
+        {cards.map((ins, i) =>
         <motion.div
           key={ins.label}
           initial={{
@@ -1432,6 +1450,10 @@ function TimelineInsights() {
 // ---------- PAGE ----------
 export default function TimelinePage() {
   const [activeIdx, setActiveIdx] = useState(4); // Sep 2024
+  const { data, error } = useTimelinePage();
+  const periods = data?.periods.length ? data.periods : PERIODS;
+  const safeActiveIdx = Math.min(activeIdx, periods.length - 1);
+  const yearLabels = data?.yearLabels.length ? data.yearLabels : ['2018', '2019', '2020', '2021', '2022', '2023', '2024', '2025'];
   return (
     <div className="min-h-screen bg-background text-white selection:bg-spotify/30 selection:text-white flex overflow-x-hidden">
       <Sidebar />
@@ -1445,17 +1467,21 @@ export default function TimelinePage() {
             <div className="absolute bottom-0 right-[-10%] w-[700px] h-[700px] bg-pink-500/10 rounded-full blur-[150px] pointer-events-none mix-blend-screen" />
 
             <div className="relative z-10 flex flex-col gap-14">
+              {error && <p className="text-sm text-red-400/70">Could not load timeline data. Showing local defaults.</p>}
               <TimelineHero />
               <TimelineControl
-                activeIdx={activeIdx}
-                setActiveIdx={setActiveIdx} />
+                activeIdx={safeActiveIdx}
+                setActiveIdx={setActiveIdx}
+                periods={periods}
+                yearHours={data?.yearHours ?? YEAR_HOURS}
+                yearLabels={yearLabels} />
               
-              <SnapshotViewer activeIdx={activeIdx} />
+              <SnapshotViewer activeIdx={safeActiveIdx} periods={periods} />
               <TimeMachineStories />
               <CalendarHeatmap />
-              <TimeComparison />
-              <RandomNostalgia setActiveIdx={setActiveIdx} />
-              <TimelineInsights />
+              <TimeComparison periods={periods} />
+              <RandomNostalgia setActiveIdx={setActiveIdx} periods={periods} />
+              <TimelineInsights insights={data?.insights} />
             </div>
           </div>
         </main>
