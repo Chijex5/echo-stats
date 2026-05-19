@@ -580,6 +580,7 @@ function TimelineHero() {
     </section>);
 
 }
+
 function TimelineControl({
   activeIdx,
   setActiveIdx,
@@ -587,165 +588,191 @@ function TimelineControl({
   yearHours,
   yearLabels,
   startYear,
-  endYear
-
-
-
-}: {activeIdx: number;setActiveIdx: (n: number) => void;periods: Period[];yearHours: {year?: string; v: number}[];yearLabels: string[];startYear: number;endYear: number;}) {
+  endYear,
+}: {
+  activeIdx: number;
+  setActiveIdx: (n: number) => void;
+  periods: Period[];
+  yearHours: { year?: string; v: number }[];
+  yearLabels: string[];
+  startYear: number;
+  endYear: number;
+}) {
   const activePeriod = periods[activeIdx] ?? periods[0] ?? PERIODS[0];
-  const years = useMemo(() => [...new Set(periods.map((period) => period.year))].sort((a, b) => a - b), [periods]);
+  const years = useMemo(
+    () => [...new Set(periods.map((p) => p.year))].sort((a, b) => a - b),
+    [periods]
+  );
   const selectedYear = activePeriod.year;
-  const monthsForYear = useMemo(() =>
-    periods.filter((period) => period.year === selectedYear).sort((a, b) => a.monthIdx - b.monthIdx),
-  [periods, selectedYear]);
+  const monthsForYear = useMemo(
+    () =>
+      periods
+        .filter((p) => p.year === selectedYear)
+        .sort((a, b) => a.monthIdx - b.monthIdx),
+    [periods, selectedYear]
+  );
   const selectedMonthId = activePeriod.id;
+
+  // How many total months the scrubber spans
+  const monthsTotal = Math.max(1, (endYear - startYear + 1) * 12);
 
   return (
     <section>
       <div className="glass-card p-6 md:p-8 relative overflow-hidden">
         <div className="absolute -top-32 -right-32 w-[420px] h-[420px] bg-spotify/15 rounded-full blur-[120px] pointer-events-none" />
 
-        {/* Top row: controls */}
+        {/* ── Top row: label + dropdowns ── */}
         <div className="relative flex flex-wrap items-center justify-between gap-4 mb-8">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="text-[10px] uppercase tracking-widest text-white/40 shrink-0">
+            <span className="text-[10px] uppercase tracking-widest text-white/40 shrink-0">
               Now exploring
-            </div>
-            <div className="text-lg font-semibold truncate">
+            </span>
+            <span className="text-lg font-semibold truncate">
               {activePeriod.monthName} {activePeriod.year}
-            </div>
+            </span>
           </div>
 
           <div className="flex w-full md:w-auto items-center gap-2.5 md:gap-3">
+            {/* Year dropdown */}
             <div className="flex-1 md:flex-none rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5">
-              <label className="block text-[10px] uppercase tracking-widest text-white/40 mb-1">Year</label>
+              <label className="block text-[10px] uppercase tracking-widest text-white/40 mb-1">
+                Year
+              </label>
               <select
                 value={String(selectedYear)}
-                onChange={(event) => {
-                  const nextYear = Number(event.target.value);
-                  const firstMonthInYear = periods.find((period) => period.year === nextYear);
-                  if (!firstMonthInYear) return;
-                  const nextIndex = periods.findIndex((period) => period.id === firstMonthInYear.id);
-                  if (nextIndex >= 0) setActiveIdx(nextIndex);
+                onChange={(e) => {
+                  const nextYear = Number(e.target.value);
+                  const first = periods.find((p) => p.year === nextYear);
+                  if (!first) return;
+                  const idx = periods.findIndex((p) => p.id === first.id);
+                  if (idx >= 0) setActiveIdx(idx);
                 }}
-                className="w-full bg-transparent text-sm font-medium text-white focus:outline-none">
-                {years.map((year) =>
-                <option key={year} value={String(year)} className="bg-[#0D1117] text-white">
-                    {year}
+                className="w-full bg-transparent text-sm font-medium text-white focus:outline-none"
+              >
+                {years.map((y) => (
+                  <option key={y} value={String(y)} className="bg-[#0D1117] text-white">
+                    {y}
                   </option>
-                )}
+                ))}
               </select>
             </div>
 
+            {/* Month dropdown */}
             <div className="flex-1 md:flex-none rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5">
-              <label className="block text-[10px] uppercase tracking-widest text-white/40 mb-1">Month</label>
+              <label className="block text-[10px] uppercase tracking-widest text-white/40 mb-1">
+                Month
+              </label>
               <select
                 value={selectedMonthId}
-                onChange={(event) => {
-                  const nextIndex = periods.findIndex((period) => period.id === event.target.value);
-                  if (nextIndex >= 0) setActiveIdx(nextIndex);
+                onChange={(e) => {
+                  const idx = periods.findIndex((p) => p.id === e.target.value);
+                  if (idx >= 0) setActiveIdx(idx);
                 }}
-                className="w-full bg-transparent text-sm font-medium text-white focus:outline-none">
-                {monthsForYear.map((period) =>
-                <option key={period.id} value={period.id} className="bg-[#0D1117] text-white">
-                    {period.monthName}
+                className="w-full bg-transparent text-sm font-medium text-white focus:outline-none"
+              >
+                {monthsForYear.map((p) => (
+                  <option key={p.id} value={p.id} className="bg-[#0D1117] text-white">
+                    {p.monthName}
                   </option>
-                )}
+                ))}
               </select>
             </div>
           </div>
         </div>
 
-        {/* Quick jumps */}
-        <div className="relative flex flex-wrap items-center gap-2 mb-8">
-          {QUICK_JUMPS.map((q, i) =>
-          <button
-            key={q.label}
-            onClick={() => {
-              if (i === 0) {
-                // random
-                const r = Math.floor(Date.now() / 1000 % periods.length);
-                setActiveIdx(r === activeIdx ? (r + 1) % periods.length : r);
-              }
-            }}
-            className="inline-flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 px-3.5 py-2 rounded-full text-xs font-medium text-white/80 transition-colors focus:outline-none focus:ring-2 focus:ring-spotify/40">
-            
+        {/* ── Quick jumps ── */}
+        <div className="relative flex flex-wrap items-center gap-2 mb-10">
+          {QUICK_JUMPS.map((q, i) => (
+            <button
+              key={q.label}
+              onClick={() => {
+                if (i === 0) {
+                  const r = Math.floor((Date.now() / 1000) % periods.length);
+                  setActiveIdx(r === activeIdx ? (r + 1) % periods.length : r);
+                }
+              }}
+              className="inline-flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 px-3.5 py-2 rounded-full text-xs font-medium text-white/80 transition-colors focus:outline-none focus:ring-2 focus:ring-spotify/40"
+            >
               <q.icon size={12} className="text-white/60" />
               {q.label}
             </button>
-          )}
+          ))}
         </div>
 
-        {/* Timeline strip */}
+        {/* ── Timeline scrubber ── */}
         <div className="relative">
-          {/* baseline */}
-          <div className="absolute left-0 right-0 top-[40px] h-px bg-white/10" />
-
-          {/* Year labels */}
-          <div className="flex justify-between text-[10px] uppercase tracking-widest text-white/40 mb-3">
-            {yearLabels.map((y) =>
-            <span key={y}>{y}</span>
-            )}
+          {/* Year axis labels — spaced by actual year position */}
+          <div className="relative h-5 mb-1">
+            {years.map((y) => {
+              const monthsFromStart = (y - startYear) * 12;
+              const pct = monthsTotal <= 1 ? 0 : (monthsFromStart / (monthsTotal - 1)) * 100;
+              return (
+                <span
+                  key={y}
+                  className="absolute text-[10px] uppercase tracking-widest text-white/35 -translate-x-1/2"
+                  style={{ left: `${pct}%` }}
+                >
+                  {y}
+                </span>
+              );
+            })}
           </div>
 
-          {/* Scrubber dots row */}
-          <div className="relative h-6 mb-6">
-            <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 grid grid-cols-12 gap-0">
-              {/* faint month ticks */}
-              {Array.from({
-                length: Math.max(12, (endYear - startYear + 1) * 12)
-              }).map((_, i) =>
-              <div key={i} className="h-1.5 border-l border-white/5" />
-              )}
-            </div>
+          {/* Baseline */}
+          <div className="relative h-px bg-white/10 mb-0" />
 
-            {/* Period markers */}
+          {/* Period dots — NO labels rendered inline */}
+          <div className="relative h-10">
             {periods.map((p, i) => {
-              // Map period to horizontal position across available Spotify years
-              const monthsTotal = Math.max(1, (endYear - startYear + 1) * 12);
               const monthsFromStart = (p.year - startYear) * 12 + p.monthIdx;
-              const left = monthsTotal === 1 ? 50 : monthsFromStart / Math.max(monthsTotal - 1, 1) * 100;
-              const active = activeIdx === i;
+              const pct =
+                monthsTotal <= 1 ? 50 : (monthsFromStart / (monthsTotal - 1)) * 100;
+              const isActive = activeIdx === i;
+
               return (
                 <button
                   key={p.id}
                   onClick={() => setActiveIdx(i)}
-                  className="absolute -translate-x-1/2 group"
-                  style={{
-                    left: `${left}%`,
-                    top: 0
-                  }}
-                  aria-label={`Jump to ${p.label}`}>
-                  
-                  <div className="flex flex-col items-center">
-                    <div
-                      className={`w-3 h-3 rounded-full transition-all ${active ? 'bg-spotify scale-125' : 'bg-white/30 group-hover:bg-white/70 group-hover:scale-110'}`}>
-                      
-                      {active &&
+                  aria-label={`Jump to ${p.label}`}
+                  className="absolute top-2 -translate-x-1/2 group focus:outline-none"
+                  style={{ left: `${pct}%` }}
+                >
+                  {/* dot */}
+                  <div
+                    className={`w-3 h-3 rounded-full transition-all duration-200 ${
+                      isActive
+                        ? 'bg-spotify scale-[1.4] shadow-[0_0_8px_rgba(29,185,84,0.8)]'
+                        : 'bg-white/25 group-hover:bg-white/70 group-hover:scale-110'
+                    }`}
+                  >
+                    {isActive && (
                       <motion.div
                         layoutId="timeline-active"
                         className="absolute inset-0 rounded-full ring-2 ring-spotify/50"
-                        transition={{
-                          type: 'spring',
-                          stiffness: 300,
-                          damping: 28
-                        }} />
-
-                      }
-                    </div>
-                    <div
-                      className={`mt-2 text-[10px] font-medium transition-colors whitespace-nowrap ${active ? 'text-spotify' : 'text-white/40 group-hover:text-white/70'}`}>
-                      
-                      {p.label}
-                    </div>
+                        transition={{ type: 'spring', stiffness: 300, damping: 28 }}
+                      />
+                    )}
                   </div>
-                </button>);
 
+                  {/* Label only on active dot — appears above the dot */}
+                  {isActive && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 whitespace-nowrap"
+                    >
+                      <span className="bg-spotify text-black text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                        {p.label}
+                      </span>
+                    </motion.div>
+                  )}
+                </button>
+              );
             })}
           </div>
 
-          {/* Year hours mini area underneath */}
-          <div className="mt-12 -mx-2 h-14">
+          {/* Area chart */}
+          <div className="-mx-2 h-16 mt-2">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={yearHours.length ? yearHours : YEAR_HOURS}>
                 <defs>
@@ -758,24 +785,25 @@ function TimelineControl({
                   dataKey="v"
                   stroke="#1DB954"
                   strokeWidth={1.5}
-                  fill="url(#tl-hours)" />
-                
+                  fill="url(#tl-hours)"
+                />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Custom date picker hint */}
-        <div className="relative flex items-center gap-3 mt-6 text-xs text-white/40">
+        {/* Hint */}
+        <div className="relative flex items-center gap-3 mt-5 text-xs text-white/40">
           <Calendar size={12} />
           <span>
             Pick a year first, then choose from months that exist in your Spotify timeline.
           </span>
         </div>
       </div>
-    </section>);
-
+    </section>
+  );
 }
+
 function SnapshotViewer({ activeIdx, periods }: {activeIdx: number;periods: Period[];}) {
   const p = periods[activeIdx] ?? periods[0] ?? PERIODS[0];
   const heat = makeMonthHeat(p.monthIdx + p.year);
