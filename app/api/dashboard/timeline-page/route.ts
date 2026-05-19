@@ -87,7 +87,7 @@ export async function GET() {
         },
       },
       { $sort: { "_id.year": 1, "_id.month": 1 } },
-      { $limit: 24 },
+      { $limit: 96 },
     ]),
     StreamEntry.aggregate<{ _id: { year: number; month: number }; v: number }>([
       { $match: { userId } },
@@ -101,7 +101,7 @@ export async function GET() {
     ]),
   ]);
 
-  const periods = months.slice(-10).map((period, index) => {
+  const periods = months.slice(-24).map((period, index) => {
     const { year, month } = period._id;
     const moodIndex = (month + year + index) % MOODS.length;
     return {

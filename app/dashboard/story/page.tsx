@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Pause, Play, Share2, Download, RotateCcw, ChevronLeft, ChevronRight, CalendarRange, Sparkles } from "lucide-react";
+import { Pause, Play, Share2, Download, RotateCcw, ChevronLeft, ChevronRight, CalendarRange, Sparkles, ArrowRight } from "lucide-react";
 import { useStoryMode } from "@/lib/hooks/useDashboard";
 
 type StorySlide = { id: number; label: string; title: string; subtitle: string; accent: string };
@@ -52,7 +52,32 @@ export default function StoryModePage() {
         </section>
         <aside className="hidden w-[360px] space-y-4 lg:block">
           <div className="rounded-3xl border border-white/15 bg-white/5 p-5 backdrop-blur-xl"><p className="text-xs uppercase tracking-[0.25em] text-white/60">Story Mode</p><h1 className="mt-2 text-3xl font-black leading-tight">Your music story, cinematic and alive.</h1>{error ? <p className="mt-3 text-sm text-rose-200">Failed to load story data.</p> : null}<div className="mt-5 grid grid-cols-2 gap-2">{slides.map((slide, i) => <button key={slide.id} onClick={() => setActive(i)} className={`rounded-xl border p-3 text-left text-sm ${i === active ? "border-white/50 bg-white/20" : "border-white/10 bg-white/5"}`}>{slide.label}</button>)}</div></div>
-          <div className="rounded-3xl border border-white/15 bg-white/5 p-5 backdrop-blur-xl"><p className="mb-3 flex items-center gap-2 text-sm text-white/70"><CalendarRange size={16} /> Custom date range</p><div className="grid grid-cols-2 gap-2"><input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm" /><input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm" /></div><div className="mt-4 grid grid-cols-2 gap-2"><button className="rounded-xl bg-white px-3 py-2 text-sm font-semibold text-black"><Share2 size={14} className="mr-1 inline" /> Share</button><button className="rounded-xl bg-white/10 px-3 py-2 text-sm"><Download size={14} className="mr-1 inline" /> Export</button><button className="col-span-2 rounded-xl bg-gradient-to-r from-fuchsia-500 via-purple-500 to-indigo-500 px-3 py-2 text-sm font-semibold"><Sparkles size={14} className="mr-1 inline" /> Share your music story</button><button onClick={() => setActive(0)} className="col-span-2 rounded-xl border border-white/15 px-3 py-2 text-sm"><RotateCcw size={14} className="mr-1 inline" /> Replay Story</button></div></div>
+          <div className="rounded-3xl border border-white/15 bg-white/5 p-5 backdrop-blur-xl">
+            <div className="flex items-start justify-between gap-3">
+              <p className="mb-3 flex items-center gap-2 text-sm text-white/70"><CalendarRange size={16} /> Custom date range</p>
+              <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] uppercase tracking-[0.16em] text-white/50">Story filter</span>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
+              <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-2">
+                <label className="space-y-1.5">
+                  <span className="text-[10px] uppercase tracking-[0.2em] text-white/45">From</span>
+                  <input type="date" value={from} max={to} onChange={(e) => setFrom(e.target.value)} className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm text-white/90 outline-none transition focus:border-fuchsia-400/60 focus:bg-black/40" />
+                </label>
+                <ArrowRight size={14} className="mb-3 text-white/35" />
+                <label className="space-y-1.5">
+                  <span className="text-[10px] uppercase tracking-[0.2em] text-white/45">To</span>
+                  <input type="date" value={to} min={from} onChange={(e) => setTo(e.target.value)} className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm text-white/90 outline-none transition focus:border-fuchsia-400/60 focus:bg-black/40" />
+                </label>
+              </div>
+            </div>
+            <p className="mt-2 text-xs text-white/45">The story and emotional highlights update instantly for this selected range.</p>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <button className="rounded-xl bg-white px-3 py-2 text-sm font-semibold text-black"><Share2 size={14} className="mr-1 inline" /> Share</button>
+              <button className="rounded-xl bg-white/10 px-3 py-2 text-sm"><Download size={14} className="mr-1 inline" /> Export</button>
+              <button className="col-span-2 rounded-xl bg-gradient-to-r from-fuchsia-500 via-purple-500 to-indigo-500 px-3 py-2 text-sm font-semibold"><Sparkles size={14} className="mr-1 inline" /> Share your music story</button>
+              <button onClick={() => setActive(0)} className="col-span-2 rounded-xl border border-white/15 px-3 py-2 text-sm"><RotateCcw size={14} className="mr-1 inline" /> Replay Story</button>
+            </div>
+          </div>
         </aside>
       </div>
     </main>);
