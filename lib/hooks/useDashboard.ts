@@ -329,3 +329,28 @@ export function useStoryPreview() {
     { revalidateOnFocus: false }
   );
 }
+
+// ─── Story Mode ───────────────────────────────────────────────────────────
+
+export interface StoryModeResponse {
+  from: string;
+  to: string;
+  topSong: { title: string; subtitle: string };
+  topArtist: { title: string; subtitle: string };
+  musicAge: { year: string; subtitle: string };
+  emotionalMonth: { month: number | null; subtitle: string };
+  hiddenGem: { trackName: string; artistName: string; plays: number } | null;
+}
+
+export function useStoryMode(from?: string, to?: string) {
+  const qs = new URLSearchParams();
+  if (from) qs.set("from", from);
+  if (to) qs.set("to", to);
+  const suffix = qs.toString() ? `?${qs.toString()}` : "";
+
+  return useSWR<StoryModeResponse>(
+    `/api/dashboard/story${suffix}`,
+    fetcher<StoryModeResponse>,
+    { revalidateOnFocus: false }
+  );
+}
