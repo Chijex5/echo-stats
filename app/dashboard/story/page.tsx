@@ -23,11 +23,11 @@ export default function StoryModePage() {
       { id: 1, label: "Top Song", title: data?.topSong.title ?? "Loading your anthem", subtitle: data?.topSong.subtitle ?? "Analyzing play history", accent: "from-fuchsia-500 via-purple-500 to-blue-500" },
       { id: 2, label: "Top Artist", title: data?.topArtist.title ?? "Loading top artist", subtitle: data?.topArtist.subtitle ?? "Calculating listening minutes", accent: "from-emerald-500 via-cyan-500 to-indigo-500" },
       { id: 3, label: "Music Age", title: data?.musicAge.year ?? "Unknown", subtitle: data?.musicAge.subtitle ?? "Your listening center of gravity", accent: "from-violet-600 via-pink-500 to-amber-400" },
-      { id: 4, label: "Favorite Era", title: "Late-Night 2010s", subtitle: "Neon nostalgia, midnight drives", accent: "from-blue-600 via-violet-500 to-fuchsia-500" },
-      { id: 5, label: "Forgotten Favorite", title: "Paper Planes", subtitle: "A memory you should revisit", accent: "from-amber-400 via-orange-500 to-pink-500" },
+      { id: 4, label: "Favorite Era", title: data?.favoriteEra.title ?? "Favorite era loading", subtitle: data?.favoriteEra.subtitle ?? "Scanning your listening hours", accent: "from-blue-600 via-violet-500 to-fuchsia-500" },
+      { id: 5, label: "Forgotten Favorite", title: data?.forgottenFavorite.title ?? "Hidden memory loading", subtitle: data?.forgottenFavorite.subtitle ?? "Looking for long-gap rediscoveries", accent: "from-amber-400 via-orange-500 to-pink-500" },
       { id: 6, label: "Emotional Month", title: emotionalMonth, subtitle: data?.emotionalMonth.subtitle ?? "Not enough data in selected range", accent: "from-indigo-600 via-cyan-500 to-emerald-400" },
       { id: 7, label: "Hidden Gem", title: data?.hiddenGem?.trackName ?? "No hidden gem yet", subtitle: data?.hiddenGem ? `${data.hiddenGem.artistName} · ${data.hiddenGem.plays} plays` : "Play more tracks to unlock this", accent: "from-purple-600 via-indigo-600 to-sky-500" },
-      { id: 8, label: "Personality", title: "The Night Explorer", subtitle: "A constellation of moody gems and starlit bangers", accent: "from-fuchsia-500 via-indigo-600 to-blue-600" },
+      { id: 8, label: "Personality", title: data?.personality.title ?? "Personality loading", subtitle: data?.personality.subtitle ?? "Calibrating your listening fingerprint", accent: "from-fuchsia-500 via-indigo-600 to-blue-600" },
     ];
   }, [data]);
 
