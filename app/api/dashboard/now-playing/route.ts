@@ -256,6 +256,7 @@ export async function GET() {
   await connectDB();
   const result =
     ops.length > 0 ? await StreamEntry.bulkWrite(ops, { ordered: false }) : null;
+  
 
   return NextResponse.json({
     nowPlaying,

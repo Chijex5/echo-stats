@@ -1,4 +1,5 @@
 import useSWR from "swr";
+import { UserMusicAnalysis } from "../musicAnalysis";
 
 // ─── Shared fetcher ────────────────────────────────────────────────────────
 
@@ -25,6 +26,7 @@ export interface TopTrack {
   trend: Trend;
   color: string;
 }
+
 
 export interface TopTracksResponse {
   tracks: TopTrack[];
@@ -161,6 +163,7 @@ export interface InsightsResponse {
   emotionalProfile: EmotionalProfile;
   favoriteDecade: FavoriteDecade;
   firstSong: FirstSong | null;
+  analysisResult: UserMusicAnalysis;
   longestStreak: LongestStreak | null;
 }
 

@@ -5,6 +5,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { connectDB } from "@/lib/db";
 import StreamEntry from "@/lib/models/StreamEntry";
 import User from "@/lib/models/User";
+import { analyzeUserMusic } from "@/lib/musicAnalysis";
 import UserImport from "@/lib/models/UserImport";
 
 function formatMonthYear(date: Date | null | undefined) {
@@ -51,6 +52,7 @@ export async function GET() {
   const now = new Date();
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+
 
   const [
     user,

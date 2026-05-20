@@ -9,6 +9,7 @@ export interface IStreamEntry extends Document {
   artistName: string;
   albumName: string;
   spotifyTrackUri: string;
+  genre: string;
   reasonStart: string;
   reasonEnd: string;
   shuffle: boolean;
@@ -30,6 +31,7 @@ const StreamEntrySchema = new Schema<IStreamEntry>(
     albumName:       { type: String },
     spotifyTrackUri: { type: String, required: true },
     reasonStart:     { type: String },
+    genre:           { type: String },
     reasonEnd:       { type: String },
     shuffle:         { type: Boolean },
     skipped:         { type: Boolean },

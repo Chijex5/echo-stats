@@ -4,6 +4,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { connectDB } from "@/lib/db";
 import StreamEntry from "@/lib/models/StreamEntry";
 import mongoose from "mongoose";
+import { analyzeUserMusic } from "@/lib/musicAnalysis";
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
@@ -223,11 +224,24 @@ export async function GET() {
     }
   }
 
+  const allStreams = await StreamEntry.find({ userId }).sort({ ts: 1 }).lean();
+    if (allStreams.length === 0) {
+      return NextResponse.json({ error: "No stream data found for user" }, { status: 404 });
+    }
+    const normalizedStreams = allStreams.map(stream => ({
+      ...stream,
+      releaseYearConfidence: stream.releaseYearConfidence ?? undefined,
+      releaseDatePrecision: stream.releaseDatePrecision ?? undefined,
+    })) as Parameters<typeof analyzeUserMusic>[1];
+
+  const analysisResult = analyzeUserMusic(userId, normalizedStreams as Parameters<typeof analyzeUserMusic>[1]);
+
   return NextResponse.json({
     hiddenGem,
     genreDrift,
     emotionalProfile,
     favoriteDecade,
+    analysisResult,
     firstSong,
     longestStreak: longestStreak.days > 0 ? longestStreak : null,
   });
