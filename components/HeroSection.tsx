@@ -105,36 +105,72 @@ export function HeroSection() {
           </div>
 
           {/* Now Playing Pill */}
+
           <div className="glass-card px-4 py-3 rounded-2xl flex items-center gap-3 border-white/10 bg-white/[0.02]">
+
+            {/* Static Disc */}
             <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}>
+              animate={
+                nowPlayingData?.nowPlaying
+                  ? { rotate: 360 }
+                  : { rotate: 0 }
+              }
+              transition={
+                nowPlayingData?.nowPlaying
+                  ? {
+                      duration: 8,
+                      repeat: Infinity,
+                      ease: 'linear',
+                    }
+                  : {
+                      duration: 0,
+                    }
+              }
+            >
               <Disc3 size={28} className="text-spotify shrink-0" />
             </motion.div>
 
             <div className="flex flex-col min-w-0 flex-1">
               <span className="text-[10px] uppercase tracking-widest text-spotify/70 font-semibold">
-                {nowPlayingData?.nowPlaying ? 'Now listening' : nowPlayingData?.lastPlayed ? 'Last played' : 'Offline'}
+                {nowPlayingData?.nowPlaying
+                  ? 'Now Playing'
+                  : nowPlayingData?.lastPlayed
+                  ? 'Last Played'
+                  : 'Offline'}
               </span>
+
               <span className="text-xs font-medium text-white/80 truncate">
                 {nowPlayingData?.nowPlaying
                   ? `${nowPlayingData.nowPlaying.trackName} — ${nowPlayingData.nowPlaying.artistName}`
+
                   : nowPlayingData?.lastPlayed
                   ? `${nowPlayingData.lastPlayed.trackName} — ${nowPlayingData.lastPlayed.artistName}`
-                  : 'Not playing right now'}
+
+                  : 'Nothing playing right now'}
               </span>
             </div>
 
-            <div className="flex items-end gap-[2px] h-4 shrink-0">
-              {Array.from({ length: 16 }).map((_, i) =>
-                <motion.div
-                  key={i}
-                  className="w-[2px] bg-spotify rounded-t-sm"
-                  animate={{ height: ['20%', '100%', '40%', '80%', '20%'] }}
-                  transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut', delay: i * 0.1 }} />
-              )}
-            </div>
-          </div>
+  {/* Equalizer ONLY when actively playing */}
+  {nowPlayingData?.nowPlaying && (
+    <div className="flex items-end gap-[2px] h-4 shrink-0">
+      {Array.from({ length: 12 }).map((_, i) => (
+        <motion.div
+          key={i}
+          className="w-[2px] bg-spotify rounded-t-sm"
+          animate={{
+            height: ['20%', '100%', '40%', '80%', '20%'],
+          }}
+          transition={{
+            duration: 1.2,
+            repeat: Infinity,
+            ease: 'easeInOut',
+            delay: i * 0.08,
+          }}
+        />
+      ))}
+    </div>
+  )}
+</div>
         </motion.div>
 
         {/* Hero Cards Grid */}
