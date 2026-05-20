@@ -39,40 +39,6 @@ function TrackSkeleton({ index }: { index: number }) {
   );
 }
 
-// ─── Sparkline ─────────────────────────────────────────────────────────────
-
-interface SparklineProps {
-  trend: Trend;
-}
-
-/**
- * A tiny inline SVG path whose curvature matches the trend direction.
- * Not real time-series data — purely decorative, consistent with the mock.
- */
-function Sparkline({ trend }: SparklineProps) {
-  const paths: Record<Trend, string> = {
-    up: "M0,18 Q15,14 30,10 T60,2",
-    down: "M0,4 Q15,8 30,12 T60,18",
-    same: "M0,10 Q15,8 30,10 T60,10",
-  };
-
-  const colors: Record<Trend, string> = {
-    up: "text-emerald-400",
-    down: "text-red-400",
-    same: "text-white/30",
-  };
-
-  return (
-    <svg
-      viewBox="0 0 60 20"
-      className={`w-full h-full stroke-current ${colors[trend]}`}
-      aria-hidden="true"
-    >
-      <path d={paths[trend]} fill="none" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
-  );
-}
-
 // ─── Single Track Row ──────────────────────────────────────────────────────
 
 interface TrackRowProps {
@@ -121,11 +87,6 @@ function TrackRow({ track, index }: TrackRowProps) {
 
       {/* Right-side controls */}
       <div className="flex items-center gap-4">
-        {/* Sparkline */}
-        <div className="w-16 h-6 hidden sm:block opacity-50 group-hover:opacity-100 transition-opacity">
-          <Sparkline trend={track.trend} />
-        </div>
-
         {/* Trend icon */}
         <div className="flex items-center gap-1 w-12 justify-end">
           {trendIcon[track.trend]}

@@ -5,35 +5,12 @@ import { Clock, Disc3, Sparkles, TrendingUp } from 'lucide-react';
 import { AreaChart, Area, ResponsiveContainer } from 'recharts';
 import { getGreeting } from '@/lib/greetings';
 import { useSession } from 'next-auth/react';
-import { useNowPlayingSync } from '@/lib/hooks/useDashboard';
+import { useInsights, useNowPlayingSync, useVisualAnalytics } from '@/lib/hooks/useDashboard';
 import { useSongOfTheDay } from '@/lib/hooks/useSongOfTheDay';
-import { number } from 'zod';
 import { useStoryMode } from '@/lib/hooks/useDashboard';
-import { s } from 'framer-motion/client';
-const moodData = [
-{
-  value: 20
-},
-{
-  value: 40
-},
-{
-  value: 30
-},
-{
-  value: 70
-},
-{
-  value: 50
-},
-{
-  value: 90
-},
-{
-  value: 80
-}];
 
 export const getLastPlayedText = (lastPlayed: number) => {
+  if (!Number.isFinite(lastPlayed) || lastPlayed <= 0) return "No recent play";
   const now = Date.now();
   const diff = now - lastPlayed;
   const minutes = Math.floor(diff / (1000 * 60));
@@ -54,11 +31,21 @@ export function HeroSection() {
   const { data: nowPlayingData } = useNowPlayingSync();
   const { data: songOfTheDayData } = useSongOfTheDay();
   const { data: storyData } = useStoryMode();
-  const nowPlayingText = nowPlayingData?.nowPlaying ?
-  `~ Now listening · ${nowPlayingData.nowPlaying.trackName} — ${nowPlayingData.nowPlaying.artistName}` :
-  nowPlayingData?.lastPlayed ?
-  `~ Last played · ${nowPlayingData.lastPlayed.trackName} — ${nowPlayingData.lastPlayed.artistName}` :
-  "~ Not playing right now";
+  const { data: insightsData } = useInsights();
+  const { data: visualData } = useVisualAnalytics();
+
+  const moodData =
+    visualData?.streamData?.slice(-8).map((point) => ({ value: point.value })) ?? [];
+
+  const personalityTitle = insightsData?.emotionalProfile?.dominantLabel ?? "Still evolving";
+  const personalityBars = insightsData
+    ? [
+        { label: "Calm", value: insightsData.emotionalProfile.calm },
+        { label: "Neutral", value: insightsData.emotionalProfile.neutral },
+        { label: "Energy", value: insightsData.emotionalProfile.energetic },
+        { label: "Late", value: insightsData.emotionalProfile.intense },
+      ]
+    : [];
   return (
     <section className="relative mb-12">
       {/* Ambient Glow */}
@@ -193,7 +180,7 @@ export function HeroSection() {
               </ResponsiveContainer>
             </div>
             <p className="text-xs text-white/40 mt-2">
-              Trending younger this week
+              {storyData?.musicAge?.subtitle ?? "Inferred from your release-date metadata."}
             </p>
           </motion.div>
 
@@ -271,14 +258,18 @@ export function HeroSection() {
             </div>
 
             <h3 className="text-2xl font-serif-display italic text-violet-300 mb-2">
-              The Night Explorer
+              {personalityTitle}
             </h3>
             <p className="text-sm text-white/50 mb-6">
-              68% of your discovery happens after 10 PM.
+              {insightsData
+                ? `Calm ${insightsData.emotionalProfile.calm}% · Neutral ${insightsData.emotionalProfile.neutral}% · High energy ${insightsData.emotionalProfile.energetic}% · Late night ${insightsData.emotionalProfile.intense}%.`
+                : "Personality appears as more listening data is imported."}
             </p>
 
             <div className="flex items-center gap-1 h-8">
-              {[20, 30, 40, 60, 80, 100, 90, 70, 50, 30, 20, 40].map((h, i) =>
+              {(personalityBars.length
+                ? personalityBars.map((bar) => Math.max(8, bar.value))
+                : [25, 45, 35, 30]).map((h, i) =>
               <div
                 key={i}
                 className="flex-1 bg-white/10 rounded-t-sm relative group-hover:bg-white/20 transition-colors">
@@ -293,8 +284,10 @@ export function HeroSection() {
               )}
             </div>
             <div className="flex justify-between text-[10px] text-white/40 mt-2">
-              <span>6 AM</span>
-              <span>12 AM</span>
+              <span>Calm</span>
+              <span>Neutral</span>
+              <span>Energy</span>
+              <span>Late</span>
             </div>
           </motion.div>
         </div>
