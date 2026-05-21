@@ -1,16 +1,9 @@
 "use client";
 
-import { ArrowRight, Lock, Music2, Sparkles } from "lucide-react";
+import { ArrowRight, AudioLines, Lock, Music2, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-
-const PILLS = [
-  { label: "Top tracks",       color: "before:bg-[#53e076] before:shadow-[0_0_6px_#53e076]" },
-  { label: "Listening timeline", color: "before:bg-[#47d6ff] before:shadow-[0_0_6px_#47d6ff]" },
-  { label: "Story mode",       color: "before:bg-[#ddb7ff] before:shadow-[0_0_6px_#ddb7ff]" },
-  { label: "Artist trends",    color: "before:bg-[#53e076] before:shadow-[0_0_6px_#53e076]" },
-  { label: "Rediscovery",      color: "before:bg-[#47d6ff] before:shadow-[0_0_6px_#47d6ff]" },
-];
+import { motion } from "framer-motion";
 
 const SCOPES = [
   "user-read-email",
@@ -21,59 +14,169 @@ const SCOPES = [
   "user-library-read",
 ];
 
+// Floating decoration cards — visual continuity with the homepage
+function MusicAgeCard() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16, rotate: -2 }}
+      animate={{ opacity: 1, y: 0, rotate: -3 }}
+      transition={{ duration: 1, delay: 0.9, ease: [0.16, 1, 0.3, 1] }}
+      className="absolute left-[2px] top-[80px] hidden lg:block -translate-x-full w-[190px] rounded-2xl border border-white/10 bg-black/60 backdrop-blur-md p-4 pointer-events-none select-none"
+    >
+      <div className="flex items-center gap-2 mb-3">
+        <div className="w-6 h-6 rounded-full bg-violet-500/20 flex items-center justify-center">
+          <span className="text-[10px] text-violet-300">♪</span>
+        </div>
+        <span className="text-[11px] text-white/40">Your music age</span>
+      </div>
+      <p className="text-3xl font-bold text-white tracking-tight">23</p>
+      <p className="text-[11px] text-white/40 mt-0.5">years old</p>
+      <div className="mt-3 h-1 rounded-full bg-white/10 overflow-hidden">
+        <div className="h-full w-3/4 rounded-full bg-gradient-to-r from-violet-500 to-blue-400" />
+      </div>
+    </motion.div>
+  );
+}
+
+function ForgottenFavoriteCard() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16, rotate: 2 }}
+      animate={{ opacity: 1, y: 0, rotate: 3 }}
+      transition={{ duration: 1, delay: 1.1, ease: [0.16, 1, 0.3, 1] }}
+      className="absolute right-[2px] top-[60px] hidden lg:block -translate-y-0 translate-x-full w-[170px] rounded-2xl border border-white/10 bg-black/60 backdrop-blur-md p-4 pointer-events-none select-none"
+    >
+      <p className="text-[9px] font-semibold tracking-[0.1em] text-white/30 uppercase mb-2">
+        Forgotten Favorite
+      </p>
+      <div className="w-full aspect-square rounded-xl bg-gradient-to-br from-orange-400 to-pink-500 mb-3 flex items-center justify-center">
+        <span className="text-white text-lg">♫</span>
+      </div>
+      <p className="text-[12px] font-semibold text-white/80 leading-tight">Midnight City</p>
+      <p className="text-[10px] text-white/40">M83</p>
+    </motion.div>
+  );
+}
+
+function GenreCard() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 1, delay: 1.3, ease: [0.16, 1, 0.3, 1] }}
+      className="absolute left-[2px] bottom-[100px] hidden lg:block -translate-x-full w-[175px] rounded-2xl border border-white/10 bg-black/60 backdrop-blur-md p-4 pointer-events-none select-none"
+    >
+      <div className="flex items-center gap-1.5 mb-3">
+        <span className="text-[10px] text-white/40">↗</span>
+        <span className="text-[11px] text-white/40">Genre Evolution</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="px-2 py-1 rounded-lg bg-white/[0.06] text-[11px] text-white/60">Afrobeats</span>
+        <span className="text-white/20 text-xs">→</span>
+        <span className="px-2 py-1 rounded-lg bg-white/[0.06] text-[11px] text-white/60">Indie Soul</span>
+      </div>
+    </motion.div>
+  );
+}
+
 export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
   return (
-    <main className="relative min-h-screen overflow-hidden flex items-center justify-center px-6 py-12 md:px-12 md:py-16 [background:radial-gradient(ellipse_80%_60%_at_10%_20%,rgba(29,185,84,0.13)_0%,transparent_55%),radial-gradient(ellipse_60%_50%_at_90%_85%,rgba(71,214,255,0.09)_0%,transparent_50%),radial-gradient(ellipse_50%_40%_at_75%_10%,rgba(221,183,255,0.07)_0%,transparent_45%),#091009] font-[Geist,sans-serif] text-[#dde5d9]">
+    <main className="relative min-h-screen overflow-hidden flex items-center justify-center px-6 py-12 bg-[#060b10]">
 
-      {/* ── Atmospheric orbs ── */}
-      <div className="pointer-events-none absolute -top-20 -left-16 w-[380px] h-[380px] rounded-full bg-[rgba(29,185,84,0.11)] blur-[80px] animate-[drift_14s_ease-in-out_infinite_alternate]" />
-      <div className="pointer-events-none absolute -bottom-10 -right-5 w-[300px] h-[300px] rounded-full bg-[rgba(71,214,255,0.07)] blur-[80px] animate-[drift_14s_5s_ease-in-out_infinite_alternate]" />
-      <div className="pointer-events-none absolute top-1/2 left-[55%] -translate-x-1/2 -translate-y-1/2 w-[220px] h-[220px] rounded-full bg-[rgba(221,183,255,0.06)] blur-[80px] animate-[drift_14s_9s_ease-in-out_infinite_alternate]" />
+      {/* Ambient blobs — identical to homepage */}
+      <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-spotify/20 rounded-full blur-[120px] mix-blend-screen animate-pulse-slow" />
+      <div
+        className="absolute top-1/3 right-1/4 w-[600px] h-[600px] bg-violet-600/20 rounded-full blur-[150px] mix-blend-screen animate-pulse-slow"
+        style={{ animationDelay: "1s" }}
+      />
+      <div
+        className="absolute bottom-1/4 left-1/3 w-[400px] h-[400px] bg-blue-600/20 rounded-full blur-[100px] mix-blend-screen animate-pulse-slow"
+        style={{ animationDelay: "2s" }}
+      />
 
-      {/* ── Two-column grid ── */}
-      <div className="relative z-10 w-full max-w-[1100px] grid grid-cols-1 gap-10 md:grid-cols-[1.1fr_0.9fr] md:gap-14 items-center">
+      {/* Waveform — identical to homepage */}
+      <div className="absolute inset-0 opacity-20 pointer-events-none flex items-center justify-center">
+        <svg width="100%" height="100%" viewBox="0 0 1440 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <motion.path
+            initial={{ pathLength: 0, opacity: 0 }}
+            animate={{ pathLength: 1, opacity: 1 }}
+            transition={{ duration: 3, ease: "easeInOut" }}
+            d="M0 200C240 200 240 100 480 100C720 100 720 300 960 300C1200 300 1200 200 1440 200"
+            stroke="url(#paint0_linear)"
+            strokeWidth="2"
+          />
+          <motion.path
+            initial={{ pathLength: 0, opacity: 0 }}
+            animate={{ pathLength: 1, opacity: 0.5 }}
+            transition={{ duration: 4, ease: "easeInOut", delay: 0.5 }}
+            d="M0 250C240 250 240 50 480 50C720 50 720 350 960 350C1200 350 1200 250 1440 250"
+            stroke="url(#paint1_linear)"
+            strokeWidth="1"
+          />
+          <defs>
+            <linearGradient id="paint0_linear" x1="0" y1="200" x2="1440" y2="200" gradientUnits="userSpaceOnUse">
+              <stop stopColor="#1DB954" stopOpacity="0" />
+              <stop offset="0.5" stopColor="#1DB954" />
+              <stop offset="1" stopColor="#7C3AED" stopOpacity="0" />
+            </linearGradient>
+            <linearGradient id="paint1_linear" x1="0" y1="200" x2="1440" y2="200" gradientUnits="userSpaceOnUse">
+              <stop stopColor="#7C3AED" stopOpacity="0" />
+              <stop offset="0.5" stopColor="#3B82F6" />
+              <stop offset="1" stopColor="#1DB954" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
 
-        {/* ── CARD: top on mobile, right on desktop ── */}
-        <aside className="order-first md:order-last relative animate-[fadeUp_0.65s_0.12s_ease_both]">
+      {/* Centered auth card + floating decorations */}
+      {/* Outer wrapper — wide enough for floating decorations to breathe */}
+      <div className="relative z-10 w-full max-w-[820px] flex items-center justify-center">
+        <MusicAgeCard />
+        <ForgottenFavoriteCard />
+        <GenreCard />
 
+        {/* Card constrained to 440px, centred inside the outer wrapper */}
+        <div className="w-full max-w-[440px]">
+        <motion.div
+          initial={{ y: 30, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.8, delay: 0.12, ease: [0.16, 1, 0.3, 1] }}
+          className="relative"
+        >
           {/* Glow halo */}
-          <div className="absolute -inset-px -z-10 rounded-[32px] bg-[linear-gradient(135deg,rgba(83,224,118,0.12),transparent_50%,rgba(71,214,255,0.08))] blur-[20px]" />
+          <div className="absolute -inset-px -z-10 rounded-[32px] bg-gradient-to-br from-spotify/15 via-transparent to-blue-500/10 blur-[20px]" />
 
-          <div className="relative overflow-hidden rounded-[32px] border border-white/[0.14] bg-[rgba(14,21,14,0.78)] backdrop-blur-[48px] p-6 sm:p-9">
-
-            {/* Glass edge — top */}
-            <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(83,224,118,0.5),rgba(71,214,255,0.3),transparent)]" />
-            {/* Glass edge — left */}
-            <div className="absolute inset-y-0 left-0 w-px bg-[linear-gradient(180deg,rgba(83,224,118,0.4),transparent_60%)]" />
+          <div className="relative overflow-hidden rounded-[32px] border border-white/10 bg-black/50 backdrop-blur-[48px] p-8 sm:p-10">
+            {/* Glass edge accents */}
+            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-spotify/50 to-transparent" />
+            <div className="absolute inset-y-0 left-0 w-px bg-gradient-to-b from-spotify/40 to-transparent" />
 
             {/* Brand header */}
-            <div className="flex items-center gap-3.5 mb-7">
-              <div className="flex-shrink-0 flex items-center justify-center w-12 h-12 rounded-2xl bg-[linear-gradient(135deg,#1db954,#0fa344)] shadow-[0_0_28px_rgba(29,185,84,0.5),inset_0_0_8px_rgba(29,185,84,0.25)]">
-                <Music2 className="w-5 h-5 text-black" />
+            <div className="flex items-center gap-3.5 mb-8">
+              <div className="flex-shrink-0 flex items-center justify-center w-12 h-12 rounded-2xl bg-white/5 border border-white/10">
+                <AudioLines className="w-5 h-5 text-white/70" />
               </div>
               <div>
-                <p className="font-[Sora,sans-serif] font-semibold text-base text-[#e8f0e4]">Echo Stats</p>
-                <p className="text-xs text-[#bccbb9] mt-0.5">Spotify-powered dashboard</p>
+                <p className="font-semibold text-base text-white/90">Echo Stats</p>
+                <p className="text-xs text-white/40 mt-0.5">Spotify-powered dashboard</p>
               </div>
             </div>
 
-            <hr className="border-white/[0.08] mb-5" />
+            <hr className="border-white/[0.08] mb-7" />
 
-            {/* Section meta */}
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-[13px] font-medium text-[#bccbb9]">Secure sign-in</span>
-              <span className="px-2.5 py-1 rounded-full bg-[rgba(83,224,118,0.1)] border border-[rgba(83,224,118,0.2)] text-[10px] font-bold tracking-[0.06em] text-[#53e076] uppercase">
-                OAuth 2.0
+            {/* Headline — matches homepage typographic energy */}
+            <h1 className="text-[clamp(26px,4vw,34px)] font-bold leading-[1.1] tracking-tight text-white/90 mb-3">
+              Your music,{" "}
+              <span className="font-serif italic font-normal text-white/60">
+                finally visible.
               </span>
-            </div>
+            </h1>
 
-            <h2 className="font-[Sora,sans-serif] text-[clamp(20px,3vw,26px)] font-bold tracking-[-0.025em] text-[#e8f0e4] mb-2">
-              Continue with Spotify
-            </h2>
-            <p className="text-sm leading-[1.65] text-[#bccbb9] mb-6">
-              We read your listening history and generate your personalized stats — nothing is stored or shared.
+            <p className="text-[14px] leading-[1.65] text-white/45 mb-7">
+              Connect your Spotify account once. We read your listening history and surface insights — nothing is stored or shared.
             </p>
 
             {/* CTA */}
@@ -88,15 +191,15 @@ export default function LoginPage() {
                     { scope: SCOPES.join(" "), show_dialog: "true" }
                   );
                 } catch (e) {
-                  setError(`Something went wrong. Please try again. ${e}`);
+                  setError(`Something went wrong. Please try again.`);
                   setLoading(false);
                 }
               }}
-              className="w-full flex items-center justify-center gap-2.5 rounded-full px-7 py-[15px] bg-[#1db954] [background-image:linear-gradient(135deg,rgba(255,255,255,0.14)_0%,transparent_60%)] text-black font-bold text-[15px] tracking-[0.02em] border-0 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_0_36px_rgba(29,185,84,0.45),0_8px_20px_rgba(0,0,0,0.4)] active:translate-y-0 active:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53e076]/40"
+              className="w-full flex items-center justify-center gap-2.5 rounded-full px-7 py-[15px] bg-white/10 hover:bg-white/15 border border-white/10 text-white font-bold text-[15px] tracking-[0.02em] cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)] active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20"
             >
-              <SpotifyWordmark />
-              {loading ? "Signing in..." : "Sign in with Spotify"}
-              <ArrowRight className="w-4 h-4 ml-auto" />
+              <Sparkles className="w-4 h-4 opacity-70" />
+              {loading ? "Signing in…" : "Continue with Spotify"}
+              <ArrowRight className="w-4 h-4 ml-auto opacity-60" />
             </button>
 
             {error && (
@@ -105,102 +208,17 @@ export default function LoginPage() {
               </p>
             )}
 
-            {/* Scopes */}
-            <div className="flex flex-wrap gap-1.5 mt-5">
-              {SCOPES.map(s => (
-                <span
-                  key={s}
-                  className="px-3 py-1 rounded-lg border border-white/[0.08] bg-white/[0.025] text-[10px] font-semibold tracking-[0.05em] text-[#bccbb9] uppercase"
-                >
-                  {s}
-                </span>
-              ))}
-            </div>
-
-            {/* Disclaimer */}
-            <div className="flex items-start gap-2.5 mt-5">
-              <Lock className="w-3 h-3 flex-shrink-0 opacity-30 mt-0.5" />
-              <p className="text-[11px] text-[rgba(188,203,185,0.45)] leading-[1.5]">
-                By continuing, you grant Echo Stats read-only access to your Spotify data. We never post on your behalf.
+            {/* Disclaimer — the only fine-print that earns its place */}
+            <div className="flex items-start gap-2.5 mt-6">
+              <Lock className="w-3 h-3 flex-shrink-0 opacity-25 mt-0.5" />
+              <p className="text-[11px] text-white/25 leading-[1.5]">
+                Read-only access. We never post, store, or sell your data.
               </p>
             </div>
           </div>
-        </aside>
-
-        {/* ── HERO ── */}
-        <section className="animate-[fadeUp_0.65s_ease_both]">
-
-          {/* Badge */}
-          <div className="inline-flex items-center gap-2 mb-7 px-4 py-1.5 rounded-full border border-[rgba(83,224,118,0.25)] bg-[rgba(83,224,118,0.06)] text-[12px] font-semibold tracking-[0.07em] uppercase text-[#53e076]">
-            <Sparkles className="w-3.5 h-3.5" />
-            Powered by Spotify
-          </div>
-
-          {/* Headline */}
-          <h1 className="font-[Sora,sans-serif] text-[clamp(32px,5.5vw,58px)] font-bold leading-[1.08] tracking-[-0.04em] text-[#e8f0e4] mb-4">
-            Your music,{" "}
-            <span className="bg-[linear-gradient(135deg,#53e076_0%,#a8f5bc_55%,#47d6ff_100%)] bg-clip-text text-transparent">
-              finally visible.
-            </span>
-          </h1>
-
-          <p className="text-[clamp(15px,2vw,17px)] leading-[1.7] text-[#bccbb9] max-w-[440px] mb-8">
-            Connect once and unlock a living dashboard of your listening history — top tracks, artist trends, rediscovery queues, and timeline views, all built around you.
-          </p>
-
-          {/* Feature pills */}
-          <div className="flex flex-wrap gap-2">
-            {PILLS.map(({ label, color }) => (
-              <span
-                key={label}
-                className={`inline-flex items-center gap-2 rounded-full px-[15px] py-[7px] border border-white/[0.14] bg-white/[0.04] text-[13px] font-medium text-[#bccbb9] before:content-[''] before:w-[7px] before:h-[7px] before:rounded-full before:flex-shrink-0 ${color}`}
-              >
-                {label}
-              </span>
-            ))}
-          </div>
-
-          {/* Stats — hidden on xs, shown sm+ */}
-          <div className="hidden sm:flex flex-wrap gap-x-10 gap-y-4 mt-9 pt-8 border-t border-white/[0.08]">
-            {[
-              { num: "50k+", label: "Tracks analysed" },
-              { num: "12",   label: "Insight views" },
-              { num: "Free", label: "Always" },
-            ].map(({ num, label }) => (
-              <div key={label} className="flex flex-col gap-1">
-                <span className="font-[Sora,sans-serif] text-[clamp(20px,2.5vw,26px)] font-bold text-[#e8f0e4] tracking-[-0.02em]">
-                  {num}
-                </span>
-                <span className="text-[11px] font-semibold text-[#bccbb9] tracking-[0.05em] uppercase">
-                  {label}
-                </span>
-              </div>
-            ))}
-          </div>
-        </section>
-
+        </motion.div>
+        </div>
       </div>
-
-      {/* Keyframes — injected once, no extra dep */}
-      <style>{`
-        @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(20px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes drift {
-          from { transform: translate(0, 0) scale(1); }
-          to   { transform: translate(28px, 18px) scale(1.08); }
-        }
-      `}</style>
     </main>
-  );
-}
-
-/** Inline Spotify wordmark SVG — no extra package needed */
-function SpotifyWordmark() {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 flex-shrink-0">
-      <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" />
-    </svg>
   );
 }

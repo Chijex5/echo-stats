@@ -1,267 +1,471 @@
 /**
  * enrichStreamEntries.ts
  *
- * Enriches StreamEntry documents with `genre` and `releaseYear` (+ precision/confidence)
- * by fetching from Spotify only when the data is missing.
+ * Backfills `genre`, `releaseYear`, and `albumImageUrl` on StreamEntry documents.
  *
- * Strategy:
- *  1. Build a de-duplicated set of spotifyTrackURIs that still need enrichment.
- *  2. For each unique URI, check an in-memory cache first (populated as we go),
- *     so each track is fetched at most once per run.
- *  3. Fetch tracks in batches of 50 (Spotify's max) using /v1/tracks.
- *  4. For genres, collect unique artist IDs from those tracks and batch-fetch
- *     artists (50 at a time) via /v1/artists.
- *  5. Apply a token-bucket rate limiter: Spotify allows ~180 req/min on most
- *     endpoints; we cap at 150 req/min to stay safe.
- *  6. On 429, honour Retry-After and back off exponentially.
- *  7. Write results back with a single bulkWrite per batch.
+ * Strategy per unique spotifyTrackUri:
+ *   1. If ANY document for that URI already has all fields filled → copy them
+ *      to all other documents missing them (no Spotify call needed).
+ *   2. Otherwise → fetch from Spotify, then write to ALL documents for that URI.
+ *
+ * Resilience:
+ *   - ETIMEDOUT / network errors → retried with exponential backoff
+ *   - 429 rate-limit             → respects Retry-After header, then exponential backoff
+ *   - Progress written to DB incrementally — safe to kill and resume
+ *
+ * Usage:
+ *   MONGODB_URI=mongodb://...      \
+ *   SPOTIFY_CLIENT_ID=...          \
+ *   SPOTIFY_CLIENT_SECRET=...      \
+ *   npx tsx enrichStreamEntries.ts
+ *
+ * Optional env vars:
+ *   BATCH_SIZE          – MongoDB bulk-write batch size        (default: 100)
+ *   SPOTIFY_CONCURRENCY – parallel Spotify requests at a time  (default: 1)
+ *   IMAGE_SIZE          – "large" (640px) | "medium" (300px) | "small" (64px) (default: large)
+ *   DRY_RUN             – set to "true" to skip writes         (default: false)
  */
 
-import mongoose from "mongoose";
-import { connectDB } from "./db";
+import mongoose, { AnyBulkWriteOperation } from "mongoose";
 import StreamEntry, { IStreamEntry } from "./models/StreamEntry";
-import { getValidSpotifyToken } from "./spotify-token";
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
-const MONGO_USER_ID = process.env.ENRICH_USER_ID!; // the user whose entries to enrich
-const TRACK_BATCH   = 50;   // Spotify /v1/tracks max
-const ARTIST_BATCH  = 50;   // Spotify /v1/artists max
-const DB_WRITE_BATCH = 500; // bulkWrite chunk size
+const MONGODB_URI           = process.env.MONGODB_URI!;
+const SPOTIFY_CLIENT_ID     = process.env.SPOTIFY_CLIENT_ID!;
+const SPOTIFY_CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET!;
+const BATCH_SIZE            = parseInt(process.env.BATCH_SIZE ?? "100", 10);
+const CONCURRENCY           = parseInt(process.env.SPOTIFY_CONCURRENCY ?? "1", 10);
+const DRY_RUN               = process.env.DRY_RUN === "true";
+const IMAGE_SIZE            = (process.env.IMAGE_SIZE ?? "large") as "large" | "medium" | "small";
 
-// Token bucket: max 150 requests/min → 1 token every 400 ms
-const RATE_LIMIT_RPS        = 150 / 60;       // tokens per second
-const RATE_LIMIT_INTERVAL_MS = Math.ceil(1000 / RATE_LIMIT_RPS); // ~400 ms
-const MAX_RETRIES            = 5;
+const IMAGE_SIZE_INDEX: Record<"large" | "medium" | "small", number> = {
+  large:  0, // 640 × 640
+  medium: 1, // 300 × 300
+  small:  2, // 64  × 64
+};
 
-// ─── Token bucket ─────────────────────────────────────────────────────────────
+// ─── Types ───────────────────────────────────────────────────────────────────
 
-let _lastRequestAt = 0;
-
-async function rateLimit(): Promise<void> {
-  const now  = Date.now();
-  const wait = _lastRequestAt + RATE_LIMIT_INTERVAL_MS - now;
-  if (wait > 0) await sleep(wait);
-  _lastRequestAt = Date.now();
+interface TrackMeta {
+  genre:                 string;
+  releaseYear:           number;
+  releaseDatePrecision:  "year" | "month" | "day";
+  releaseYearConfidence: number;
+  albumImageUrl:         string | null;
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((r) => setTimeout(r, ms));
+interface SpotifyToken {
+  access_token: string;
+  expires_at:   number; // epoch ms
 }
 
-// ─── Spotify fetch with retry ─────────────────────────────────────────────────
+interface SpotifyImage  { url: string; width: number; height: number; }
+interface SpotifyArtist { id: string; name: string; genres: string[]; }
+interface SpotifyTrack {
+  id:      string;
+  artists: Array<{ id: string; name: string }>;
+  album: {
+    release_date:           string;
+    release_date_precision: string;
+    images:                 SpotifyImage[];
+  };
+}
 
-async function spotifyFetch(
+// ─── Spotify helpers ─────────────────────────────────────────────────────────
+
+function sleep(ms: number) {
+  return new Promise<void>(resolve => setTimeout(resolve, ms));
+}
+
+/** Error codes that indicate a transient network failure worth retrying. */
+const RETRYABLE_CODES = new Set([
+  "ETIMEDOUT", "ECONNRESET", "ECONNREFUSED", "ENOTFOUND", "EAI_AGAIN",
+]);
+
+function getRetryableCode(err: unknown): string | null {
+  // Node wraps the real error inside err.cause for fetch failures
+  const code =
+    (err as NodeJS.ErrnoException & { cause?: NodeJS.ErrnoException })?.cause?.code ??
+    (err as NodeJS.ErrnoException)?.code ??
+    "";
+  if (RETRYABLE_CODES.has(code)) return code;
+  // Fallback: undici throws TypeError("fetch failed") without a code sometimes
+  if (String(err).includes("fetch failed")) return "fetch failed";
+  return null;
+}
+
+/**
+ * fetch() wrapper that retries on transient network errors with exponential backoff.
+ * Used for ALL outgoing requests so both token fetches and API calls are covered.
+ */
+async function fetchWithRetry(
   url: string,
-  token: string,
-  retries = MAX_RETRIES
-): Promise<any> {
-  await rateLimit();
+  init: RequestInit,
+  attempt = 0,
+): Promise<Response> {
+  const MAX_RETRIES = 8;
 
-  const res = await fetch(url, {
-    headers: { Authorization: `Bearer ${token}` },
-    cache: "no-store",
+  try {
+    return await fetch(url, init);
+  } catch (err: unknown) {
+    if (attempt >= MAX_RETRIES) throw err;
+
+    const code = getRetryableCode(err);
+    if (!code) throw err; // non-retryable error, bail immediately
+
+    const waitMs = Math.min(2_000 * 2 ** attempt, 60_000); // 2s, 4s, 8s … 60s
+    process.stdout.write(
+      `\n  ⚠  Network error (${code}) — waiting ${(waitMs / 1000).toFixed(0)}s then retry ${attempt + 1}/${MAX_RETRIES}…`
+    );
+    await sleep(waitMs);
+    process.stdout.write(" retrying\n");
+
+    return fetchWithRetry(url, init, attempt + 1);
+  }
+}
+
+let _token: SpotifyToken | null = null;
+
+async function getSpotifyToken(): Promise<string> {
+  if (_token && Date.now() < _token.expires_at - 10_000) return _token.access_token;
+
+  const creds = Buffer.from(`${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`).toString("base64");
+  const res = await fetchWithRetry("https://accounts.spotify.com/api/token", {
+    method: "POST",
+    headers: {
+      Authorization:  `Basic ${creds}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: "grant_type=client_credentials",
   });
 
+  if (!res.ok) throw new Error(`Spotify auth failed: ${res.status} ${await res.text()}`);
+  const json = await res.json() as { access_token: string; expires_in: number };
+
+  _token = { access_token: json.access_token, expires_at: Date.now() + json.expires_in * 1000 };
+  return _token.access_token;
+}
+
+function parseTrackId(uri: string): string {
+  return uri.startsWith("spotify:track:") ? uri.split(":")[2] : uri;
+}
+
+/**
+ * Fetches a Spotify API URL with retry for both network errors and 429 rate-limits.
+ * Network errors are handled by fetchWithRetry; 429s are handled here.
+ */
+async function spotifyFetch(url: string, token: string, attempt = 0): Promise<Response> {
+  const MAX_RETRIES = 8;
+
+  // fetchWithRetry handles ETIMEDOUT / network-level failures
+  const res = await fetchWithRetry(url, { headers: { Authorization: `Bearer ${token}` } });
+
+  // HTTP 429 — rate limited
   if (res.status === 429) {
-    const retryAfter = Number(res.headers.get("Retry-After") ?? "2");
-    const backoff    = retryAfter * 1000 + Math.random() * 500;
-    console.warn(`[rate-limit] 429 — waiting ${backoff.toFixed(0)} ms`);
-    await sleep(backoff);
-    if (retries === 0) throw new Error("Exceeded retries after 429");
-    return spotifyFetch(url, token, retries - 1);
+    if (attempt >= MAX_RETRIES) throw new Error(`Spotify rate limit persists after ${MAX_RETRIES} retries: ${url}`);
+
+    const retryAfterSec = parseInt(res.headers.get("Retry-After") ?? "0", 10);
+    const waitMs = retryAfterSec > 0
+      ? retryAfterSec * 1000 + 200
+      : Math.min(1_000 * 2 ** attempt, 60_000);
+
+    process.stdout.write(
+      `\n  ⏳ 429 rate-limited — waiting ${(waitMs / 1000).toFixed(1)}s (attempt ${attempt + 1}/${MAX_RETRIES})…`
+    );
+    await sleep(waitMs);
+    process.stdout.write(" retrying\n");
+
+    const freshToken = await getSpotifyToken();
+    return spotifyFetch(url, freshToken, attempt + 1);
   }
 
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`Spotify ${res.status} for ${url}: ${body}`);
+  return res;
+}
+
+/**
+ * Fetch metadata for up to 50 track URIs in one Spotify /tracks call.
+ * Album images are included in that response — no extra request needed.
+ * Artist genres require one /artists call per 50 unique artists in the batch.
+ */
+async function fetchSpotifyBatch(uris: string[]): Promise<Map<string, TrackMeta>> {
+  const token = await getSpotifyToken();
+  const ids   = uris.map(parseTrackId).join(",");
+
+  // ── Tracks (also contains album images) ───────────────────────────────────
+  const tracksRes = await spotifyFetch(`https://api.spotify.com/v1/tracks?ids=${ids}`, token);
+  if (!tracksRes.ok) throw new Error(`Spotify /tracks failed: ${tracksRes.status}`);
+  const tracksJson = await tracksRes.json() as { tracks: Array<SpotifyTrack | null> };
+
+  // ── Artists (for genres) ───────────────────────────────────────────────────
+  const artistIdSet = new Set<string>();
+  for (const t of tracksJson.tracks) {
+    if (t) t.artists.forEach(a => artistIdSet.add(a.id));
   }
 
-  return res.json();
-}
-
-// ─── Spotify batch helpers ────────────────────────────────────────────────────
-
-interface TrackInfo {
-  releaseYear: number;
-  releaseDatePrecision: "year" | "month" | "day";
-  artistIds: string[];
-}
-
-async function fetchTracks(
-  trackIds: string[],
-  token: string
-): Promise<Map<string, TrackInfo>> {
-  const result = new Map<string, TrackInfo>();
-
-  for (let i = 0; i < trackIds.length; i += TRACK_BATCH) {
-    const chunk = trackIds.slice(i, i + TRACK_BATCH);
-    const url   = `https://api.spotify.com/v1/tracks?ids=${chunk.join(",")}`;
-    const data  = await spotifyFetch(url, token);
-
-    for (const track of data.tracks ?? []) {
-      if (!track) continue;
-      const rawDate  = track.album?.release_date as string | undefined;
-      const prec     = (track.album?.release_date_precision ?? "year") as
-                         "year" | "month" | "day";
-      const year     = rawDate ? parseInt(rawDate.split("-")[0], 10) : NaN;
-      const artistIds: string[] = (track.artists ?? []).map((a: any) => a.id as string);
-
-      if (!isNaN(year)) {
-        result.set(track.id as string, { releaseYear: year, releaseDatePrecision: prec, artistIds });
-      }
+  const artistGenreMap = new Map<string, string[]>();
+  const artistIds = [...artistIdSet];
+  for (let i = 0; i < artistIds.length; i += 50) {
+    const chunk  = artistIds.slice(i, i + 50).join(",");
+    const artRes = await spotifyFetch(`https://api.spotify.com/v1/artists?ids=${chunk}`, token);
+    if (!artRes.ok) throw new Error(`Spotify /artists failed: ${artRes.status}`);
+    const artJson = await artRes.json() as { artists: Array<SpotifyArtist | null> };
+    for (const a of artJson.artists) {
+      if (a) artistGenreMap.set(a.id, a.genres);
     }
+  }
+
+  // ── Assemble result ────────────────────────────────────────────────────────
+  const imgIdx = IMAGE_SIZE_INDEX[IMAGE_SIZE];
+  const result = new Map<string, TrackMeta>();
+
+  for (let i = 0; i < tracksJson.tracks.length; i++) {
+    const track = tracksJson.tracks[i];
+    if (!track) continue;
+
+    let genre = "unknown";
+    for (const artist of track.artists) {
+      const genres = artistGenreMap.get(artist.id) ?? [];
+      if (genres.length > 0) { genre = genres[0]; break; }
+    }
+
+    const raw           = track.album.release_date;
+    const precision     = track.album.release_date_precision as "year" | "month" | "day";
+    const year          = parseInt(raw.slice(0, 4), 10);
+    const confidence    = precision === "day" ? 1.0 : precision === "month" ? 0.9 : 0.7;
+    const images        = track.album.images ?? [];
+    const albumImageUrl = (images[imgIdx] ?? images[0])?.url ?? null;
+
+    result.set(uris[i], {
+      genre,
+      releaseYear:           year,
+      releaseDatePrecision:  precision,
+      releaseYearConfidence: confidence,
+      albumImageUrl,
+    });
   }
 
   return result;
 }
 
-async function fetchArtistGenres(
-  artistIds: string[],
-  token: string
-): Promise<Map<string, string[]>> {
-  const result = new Map<string, string[]>();
-  const unique  = [...new Set(artistIds)];
+// ─── Concurrency helper ───────────────────────────────────────────────────────
 
-  for (let i = 0; i < unique.length; i += ARTIST_BATCH) {
-    const chunk = unique.slice(i, i + ARTIST_BATCH);
-    const url   = `https://api.spotify.com/v1/artists?ids=${chunk.join(",")}`;
-    const data  = await spotifyFetch(url, token);
-
-    for (const artist of data.artists ?? []) {
-      if (!artist) continue;
-      result.set(artist.id as string, artist.genres as string[] ?? []);
+async function pMap<T, R>(items: T[], fn: (item: T) => Promise<R>, concurrency: number): Promise<R[]> {
+  const results: R[] = [];
+  let idx = 0;
+  async function worker() {
+    while (idx < items.length) {
+      const i = idx++;
+      results[i] = await fn(items[i]);
     }
   }
-
-  return result;
+  await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, worker));
+  return results;
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
-  await connectDB();
+  if (!MONGODB_URI)           throw new Error("MONGODB_URI is required");
+  if (!SPOTIFY_CLIENT_ID)     throw new Error("SPOTIFY_CLIENT_ID is required");
+  if (!SPOTIFY_CLIENT_SECRET) throw new Error("SPOTIFY_CLIENT_SECRET is required");
 
-  const userId = new mongoose.Types.ObjectId(MONGO_USER_ID);
-  const token  = await getValidSpotifyToken(MONGO_USER_ID);
+  console.log("Connecting to MongoDB…");
+  await mongoose.connect(MONGODB_URI);
+  console.log("Connected.\n");
 
-  // ── 1. Find all entries that still need enrichment ──────────────────────────
-  const needsEnrichment = await StreamEntry.find(
-    {
-      userId,
-      $or: [
-        { genre:       { $in: [null, undefined, ""] } },
-        { releaseYear: { $in: [null, undefined]     } },
-      ],
-    },
-    { spotifyTrackUri: 1 }   // projection: only fetch the URI field
-  ).lean();
+  // ── Step 1: find all unique URIs missing any of the three fields ───────────
+  console.log("Finding URIs with missing metadata…");
 
-  if (needsEnrichment.length === 0) {
-    console.log("Nothing to enrich.");
-    process.exit(0);
+  const incompleteUris: string[] = await StreamEntry.distinct("spotifyTrackUri", {
+    $or: [
+      { genre:         { $in: [null, "", "unknown"] } },
+      { releaseYear:   { $exists: false } },
+      { releaseYear:   null },
+      { albumImageUrl: { $exists: false } },
+      { albumImageUrl: null },
+    ],
+  });
+
+  console.log(`Found ${incompleteUris.length} unique URIs that need backfilling.\n`);
+  if (incompleteUris.length === 0) {
+    console.log("Nothing to do. Exiting.");
+    await mongoose.disconnect();
+    return;
   }
 
-  // ── 2. Unique track IDs that need fetching ──────────────────────────────────
-  type EnrichedPayload = {
-    genre: string;
-    releaseYear: number;
-    releaseDatePrecision: "year" | "month" | "day";
+  // ── Step 2: check which URIs already have complete data in another doc ─────
+  console.log("Checking which URIs already have metadata in the DB…");
+
+  type AggResult = {
+    _id:                   string;
+    genre:                 string;
+    releaseYear:           number;
+    releaseDatePrecision:  string;
     releaseYearConfidence: number;
+    albumImageUrl:         string | null;
   };
 
-  const uriToTrackId = (uri: string): string => uri.split(":").pop()!;
+  const existing: AggResult[] = await StreamEntry.aggregate([
+    {
+      $match: {
+        spotifyTrackUri: { $in: incompleteUris },
+        genre:           { $nin: [null, "", "unknown"] },
+        releaseYear:     { $exists: true, $ne: null },
+        albumImageUrl:   { $exists: true, $ne: null },
+      },
+    },
+    {
+      $group: {
+        _id:                   "$spotifyTrackUri",
+        genre:                 { $first: "$genre" },
+        releaseYear:           { $first: "$releaseYear" },
+        releaseDatePrecision:  { $first: "$releaseDatePrecision" },
+        releaseYearConfidence: { $first: "$releaseYearConfidence" },
+        albumImageUrl:         { $first: "$albumImageUrl" },
+      },
+    },
+  ]);
 
-  const uniqueTrackIds = [
-    ...new Set(
-      needsEnrichment
-        .map((e) => e.spotifyTrackUri)
-        .filter(Boolean)
-        .map(uriToTrackId)
-    ),
-  ];
-
-  console.log(
-    `Enriching ${needsEnrichment.length} entries across ${uniqueTrackIds.length} unique tracks…`
+  const cachedMeta = new Map<string, TrackMeta>(
+    existing.map(r => [r._id, {
+      genre:                 r.genre,
+      releaseYear:           r.releaseYear,
+      releaseDatePrecision:  r.releaseDatePrecision as "year" | "month" | "day",
+      releaseYearConfidence: r.releaseYearConfidence,
+      albumImageUrl:         r.albumImageUrl,
+    }])
   );
 
-  // ── 3. Fetch all track metadata in batches ──────────────────────────────────
-  const trackInfoMap = await fetchTracks(uniqueTrackIds, token);
+  const urisNeedingSpotify = incompleteUris.filter(u => !cachedMeta.has(u));
 
-  // ── 4. Collect all artist IDs and fetch genres ──────────────────────────────
-  const allArtistIds = [...trackInfoMap.values()].flatMap((t) => t.artistIds);
-  const artistGenreMap = await fetchArtistGenres(allArtistIds, token);
+  console.log(`  ${cachedMeta.size} URIs already have data in DB (will copy)`);
+  console.log(`  ${urisNeedingSpotify.length} URIs need a Spotify fetch`);
+  console.log(`  Image size:  ${IMAGE_SIZE} (${["640px","300px","64px"][IMAGE_SIZE_INDEX[IMAGE_SIZE]]})`);
+  console.log(`  Concurrency: ${CONCURRENCY}  |  Batch size: ${BATCH_SIZE}\n`);
 
-  // ── 5. Build final enriched map  trackId → payload ─────────────────────────
-  const enrichedMap = new Map<string, EnrichedPayload>();
+  // ── Step 3: fetch from Spotify, write to DB incrementally ─────────────────
+  // Writing after each Spotify batch means progress survives a crash/kill.
+  // The next run skips already-written URIs automatically.
 
-  for (const [trackId, info] of trackInfoMap) {
-    const genres = info.artistIds.flatMap(
-      (aid) => artistGenreMap.get(aid) ?? []
-    );
-    const genre = genres[0] ?? "unknown";
+  if (urisNeedingSpotify.length > 0) {
+    console.log("Fetching from Spotify and writing incrementally…");
 
-    const confidenceByPrecision: Record<string, number> = {
-      day: 1.0, month: 0.9, year: 0.75,
-    };
+    const chunks: string[][] = [];
+    for (let i = 0; i < urisNeedingSpotify.length; i += 50) {
+      chunks.push(urisNeedingSpotify.slice(i, i + 50));
+    }
 
-    enrichedMap.set(trackId, {
-      genre,
-      releaseYear: info.releaseYear,
-      releaseDatePrecision: info.releaseDatePrecision,
-      releaseYearConfidence: confidenceByPrecision[info.releaseDatePrecision] ?? 0.5,
-    });
-  }
+    let fetched      = 0;
+    let totalWritten = 0;
+    let pendingOps: AnyBulkWriteOperation<IStreamEntry>[] = [];
 
-  // ── 6. BulkWrite back to DB in chunks ──────────────────────────────────────
-  const docs = needsEnrichment as (IStreamEntry & { _id: mongoose.Types.ObjectId })[];
-  let updated = 0;
-  let skipped = 0;
+    async function flushPending() {
+      if (pendingOps.length === 0 || DRY_RUN) {
+        if (DRY_RUN && pendingOps.length > 0) console.log(`  [DRY RUN] Would write ${pendingOps.length} ops`);
+        pendingOps = [];
+        return;
+      }
+      const res = await StreamEntry.bulkWrite(pendingOps, { ordered: false });
+      totalWritten += res.modifiedCount;
+      pendingOps = [];
+    }
 
-  for (let i = 0; i < docs.length; i += DB_WRITE_BATCH) {
-    const chunk = docs.slice(i, i + DB_WRITE_BATCH);
+    await pMap(chunks, async (chunk) => {
+      const batchResult = await fetchSpotifyBatch(chunk);
 
-    const ops = chunk
-      .map((doc) => {
-        const trackId = uriToTrackId(doc.spotifyTrackUri);
-        const payload = enrichedMap.get(trackId);
-        if (!payload) return null;
-
-        return {
-          updateOne: {
-            filter: { _id: doc._id },
+      for (const [uri, meta] of batchResult) {
+        cachedMeta.set(uri, meta);
+        pendingOps.push({
+          updateMany: {
+            filter: {
+              spotifyTrackUri: uri,
+              $or: [
+                { genre:         { $in: [null, "", "unknown"] } },
+                { releaseYear:   { $exists: false } },
+                { releaseYear:   null },
+                { albumImageUrl: { $exists: false } },
+                { albumImageUrl: null },
+              ],
+            },
             update: {
               $set: {
-                genre:                 payload.genre,
-                releaseYear:           payload.releaseYear,
-                releaseDatePrecision:  payload.releaseDatePrecision,
-                releaseYearConfidence: payload.releaseYearConfidence,
+                genre:                 meta.genre,
+                releaseYear:           meta.releaseYear,
+                releaseDatePrecision:  meta.releaseDatePrecision,
+                releaseYearConfidence: meta.releaseYearConfidence,
+                albumImageUrl:         meta.albumImageUrl ?? undefined,
               },
             },
           },
-        };
-      })
-      .filter(Boolean) as mongoose.mongo.AnyBulkWriteOperation<IStreamEntry>[];
+        });
+      }
 
-    skipped += chunk.length - ops.length;
+      fetched += chunk.length;
+      process.stdout.write(`\r  Fetched ${fetched}/${urisNeedingSpotify.length} tracks, written ~${totalWritten} docs…`);
 
-    if (ops.length > 0) {
-      const result = await StreamEntry.bulkWrite(
-        ops as mongoose.AnyBulkWriteOperation<IStreamEntry>[],
-        { ordered: false }
-      );
-      updated += result.modifiedCount;
-    }
+      if (pendingOps.length >= BATCH_SIZE) await flushPending();
+    }, CONCURRENCY);
 
-    const pct = (((i + chunk.length) / docs.length) * 100).toFixed(1);
-    console.log(`  Progress: ${pct}% (${updated} updated, ${skipped} skipped so far)`);
+    await flushPending();
+    console.log(`\n\nSpotify fetch + write done. Total docs updated: ~${totalWritten}\n`);
   }
 
-  console.log(`\nDone. Updated: ${updated}, Skipped (no Spotify data): ${skipped}`);
+  // ── Step 4: copy cached data to any remaining incomplete docs ─────────────
+  // Handles the case where a URI had data in DB already but some docs were still missing it.
+  if (cachedMeta.size > 0) {
+    console.log("Copying cached metadata to remaining incomplete docs…");
+
+    let copyOps: AnyBulkWriteOperation<IStreamEntry>[] = [];
+    let copyTotal = 0;
+
+    async function flushCopy() {
+      if (copyOps.length === 0 || DRY_RUN) { copyOps = []; return; }
+      const res = await StreamEntry.bulkWrite(copyOps, { ordered: false });
+      copyTotal += res.modifiedCount;
+      copyOps = [];
+    }
+
+    for (const uri of incompleteUris) {
+      const meta = cachedMeta.get(uri);
+      if (!meta) continue;
+
+      copyOps.push({
+        updateMany: {
+          filter: {
+            spotifyTrackUri: uri,
+            $or: [
+              { genre:         { $in: [null, "", "unknown"] } },
+              { releaseYear:   { $exists: false } },
+              { releaseYear:   null },
+              { albumImageUrl: { $exists: false } },
+              { albumImageUrl: null },
+            ],
+          },
+          update: {
+            $set: {
+              genre:                 meta.genre,
+              releaseYear:           meta.releaseYear,
+              releaseDatePrecision:  meta.releaseDatePrecision,
+              releaseYearConfidence: meta.releaseYearConfidence,
+              albumImageUrl:         meta.albumImageUrl ?? undefined,
+            },
+          },
+        },
+      });
+
+      if (copyOps.length >= BATCH_SIZE) await flushCopy();
+    }
+
+    await flushCopy();
+    if (copyTotal > 0) console.log(`  Copied to ${copyTotal} additional docs.\n`);
+  }
+
+  console.log(`✅  Done.${DRY_RUN ? " (DRY RUN — no writes)" : ""}`);
   await mongoose.disconnect();
 }
 
-main().catch((err) => {
-  console.error(err);
+main().catch(err => {
+  console.error("Fatal error:", err);
   process.exit(1);
 });

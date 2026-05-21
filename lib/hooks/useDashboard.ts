@@ -176,10 +176,10 @@ export function useInsights() {
 }
 
 // ─── Now Playing + Sync ──────────────────────────────────────────────────────
-
 export interface NowPlayingSyncTrack {
   trackName: string;
   artistName: string;
+  albumImageUrl: string | null;
 }
 
 export interface NowPlayingSyncResponse {

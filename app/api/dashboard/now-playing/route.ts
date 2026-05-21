@@ -6,6 +6,12 @@ import { connectDB } from "@/lib/db";
 import StreamEntry from "@/lib/models/StreamEntry";
 import { getValidSpotifyToken } from "@/lib/spotify-token";
 
+type SpotifyImage = {
+  url: string;
+  height: number | null;
+  width: number | null;
+};
+
 type SpotifyTrack = {
   type?: string;
   name: string;
@@ -16,6 +22,7 @@ type SpotifyTrack = {
     name: string;
     release_date?: string;
     release_date_precision?: "year" | "month" | "day";
+    images?: SpotifyImage[]; // ← NEW
   };
 };
 
@@ -34,6 +41,7 @@ type RecentlyPlayedResponse = {
 type TrackSummary = {
   trackName: string;
   artistName: string;
+  albumImageUrl: string | null; // ← NEW
 };
 
 type SpotifyErrorInfo = {
@@ -65,6 +73,14 @@ function releaseYearFromTrack(track: SpotifyTrack) {
     releaseDatePrecision: precision ?? null,
     releaseYearConfidence: releaseConfidence(precision),
   };
+}
+
+// ── Picks the largest album art Spotify provides (first in the array) ──────────
+function albumImageUrl(track: SpotifyTrack): string | null {
+  const images = track.album?.images;
+  if (!images?.length) return null;
+  // Spotify sorts images largest → smallest; index 0 is the best quality
+  return images[0].url ?? null;
 }
 
 async function fetchSpotifyPlayback(accessToken: string) {
@@ -107,6 +123,7 @@ function toTrackSummary(track: SpotifyTrack): TrackSummary {
   return {
     trackName: track.name,
     artistName: track.artists?.map((a) => a.name).filter(Boolean).join(", ") || "Unknown Artist",
+    albumImageUrl: albumImageUrl(track), // ← NEW
   };
 }
 
@@ -125,7 +142,6 @@ export async function GET() {
     return NextResponse.json({ error: "Invalid user id" }, { status: 400 });
   }
 
-  // ── Always get a fresh token from DB, never trust session.accessToken ──
   let accessToken: string;
   try {
     accessToken = await getValidSpotifyToken(session.user.id);
@@ -138,6 +154,11 @@ export async function GET() {
   }
 
   let [nowPlayingRes, recentlyPlayedRes] = await fetchSpotifyPlayback(accessToken);
+  console.log("[sync] Initial Spotify fetch results", {
+    userId: session.user.id,
+    nowPlayingStatus: nowPlayingRes,
+    recentlyPlayedStatus: recentlyPlayedRes
+  });
 
   if (recentlyPlayedRes.status === 401) {
     try {
@@ -185,6 +206,7 @@ export async function GET() {
   } else if (nowPlayingRes.status === 200) {
     const payload = (await nowPlayingRes.json()) as CurrentlyPlayingResponse;
     if (payload.is_playing && payload.item?.type === "track") {
+      // toTrackSummary now captures albumImageUrl from the full item payload
       nowPlaying = toTrackSummary(payload.item);
     }
   } else if (nowPlayingRes.status !== 204 && !nowPlayingRes.ok) {
@@ -223,6 +245,11 @@ export async function GET() {
           ? { releaseYearConfidence: releaseMeta.releaseYearConfidence }
           : {}),
       };
+
+      // Only include albumImageUrl in the document if Spotify actually returned one
+      const imageUrl = albumImageUrl(track);
+      const imageFields = imageUrl ? { albumImageUrl: imageUrl } : {};
+
       return {
         updateOne: {
           filter: {
@@ -241,6 +268,7 @@ export async function GET() {
               albumName:       track.album?.name || "Unknown Album",
               spotifyTrackUri: track.uri,
               ...releaseFields,
+              ...imageFields, // ← NEW
               reasonStart:     "",
               reasonEnd:       "",
               shuffle:         false,
@@ -256,7 +284,6 @@ export async function GET() {
   await connectDB();
   const result =
     ops.length > 0 ? await StreamEntry.bulkWrite(ops, { ordered: false }) : null;
-  
 
   return NextResponse.json({
     nowPlaying,
