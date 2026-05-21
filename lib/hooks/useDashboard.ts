@@ -21,6 +21,7 @@ export interface TopTrack {
   playCount: number;
   previousPlayCount: number;
   totalMs: number;
+  albumImageUrl: string | null;
   lastPlayed: string;
   firstPlayed: string;
   trend: Trend;
@@ -113,6 +114,7 @@ export function useHeatmap() {
 export interface HiddenGem {
   _id: string;
   trackName: string;
+  albumImageUrl: string | null;
   artistName: string;
   plays: number;
 }
@@ -148,12 +150,14 @@ export interface FavoriteDecade {
 export interface FirstSong {
   trackName: string;
   artistName: string;
+  albumImageUrl: string | null;
   ts: string; // ISO date string
 }
 
 export interface LongestStreak {
   trackName: string;
   artistName: string;
+  albumImageUrl: string | null;
   days: number;
 }
 

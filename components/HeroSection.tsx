@@ -260,17 +260,47 @@ export function HeroSection() {
             </div>
 
             <div className="flex items-center gap-4 relative z-10">
-              <div className="w-20 h-20 rounded-xl bg-gradient-to-br from-pink-500 to-orange-400 shadow-lg shadow-pink-500/30 relative overflow-hidden shrink-0">
-                <div className="absolute inset-0 bg-black/20" />
-                <Disc3 className="absolute inset-0 m-auto text-white/40" size={28} />
+              <div
+                className="w-20 h-20 rounded-xl shadow-lg relative overflow-hidden shrink-0"
+                style={{
+                  boxShadow: songOfTheDayData?.song.gradientFrom
+                    ? `0 8px 24px ${songOfTheDayData.song.gradientFrom}4D`
+                    : undefined,
+                }}
+              >
+                {songOfTheDayData?.song.AlbumImageUrl ? (
+                  <img
+                    src={songOfTheDayData.song.AlbumImageUrl}
+                    alt={songOfTheDayData.song.title ?? "Album art"}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <>
+                    <div
+                      className="absolute inset-0"
+                      style={{
+                        background: `linear-gradient(to bottom right, ${
+                          songOfTheDayData?.song.gradientFrom ?? "#EC4899"
+                        }, ${songOfTheDayData?.song.gradientTo ?? "#F97316"})`,
+                      }}
+                    />
+                    <div className="absolute inset-0 bg-black/20" />
+                    <Disc3 className="absolute inset-0 m-auto text-white/40" size={28} />
+                  </>
+                )}
               </div>
+
               <div>
                 <h3 className="font-bold text-lg leading-tight mb-1">
                   {songOfTheDayData?.song.title || "Unknown Track"}
                 </h3>
-                <p className="text-sm text-white/60 mb-2">{songOfTheDayData?.song.artist || "Unknown Artist"}</p>
+                <p className="text-sm text-white/60 mb-2">
+                  {songOfTheDayData?.song.artist || "Unknown Artist"}
+                </p>
                 <p className="text-xs text-pink-400 font-medium">
-                  {getLastPlayedText(new Date(songOfTheDayData?.stats.lastPlayedDate || "").getTime())}
+                  {getLastPlayedText(
+                    new Date(songOfTheDayData?.stats.lastPlayedDate || "").getTime()
+                  )}
                 </p>
               </div>
             </div>

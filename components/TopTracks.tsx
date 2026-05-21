@@ -69,9 +69,21 @@ function TrackRow({ track, index }: TrackRowProps) {
 
       {/* Album art */}
       <div
-        className={`w-12 h-12 rounded-lg bg-gradient-to-br ${track.color} relative overflow-hidden shrink-0 shadow-md`}
+        className={`w-12 h-12 rounded-lg relative overflow-hidden shrink-0 shadow-md ${
+          track.albumImageUrl ? "" : `bg-gradient-to-br ${track.color}`
+        }`}
       >
-        <div className="absolute inset-0 bg-black/20" />
+        {track.albumImageUrl ? (
+          <img
+            src={track.albumImageUrl}
+            alt={track.trackName}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="absolute inset-0 bg-black/20" />
+        )}
+
+        {/* Hover play overlay — always on top */}
         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black/40 transition-opacity cursor-pointer">
           <Play size={16} fill="currentColor" className="ml-0.5" />
         </div>

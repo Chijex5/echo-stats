@@ -40,6 +40,7 @@ import {
   useStoryPreview,
   useVisualAnalytics,
 } from '@/lib/hooks/useDashboard';
+import { image } from 'framer-motion/client';
 // ---------- DATA ----------
 const MOOD_RADAR = [
 {
@@ -78,7 +79,7 @@ const DNA_EDGES: [string, string, number][] = [
 ];
 
 
-const HIDDEN_GEMS = [
+const HIDDEN_GEMS : { tag: string; title: string; artist: string; meta: string; color: string; imageUrl?: string }[] = [
 {
   tag: 'Least popular favorite',
   title: 'Water Underground',
@@ -903,6 +904,7 @@ function PersonalityInsights() {
       icon: Repeat,
       title: 'Longest streak',
       accent: 'text-blue-300',
+      imageUrl: data.longestStreak?.albumImageUrl,
       tint: 'from-blue-500/15 to-transparent',
       value: data.longestStreak?.trackName ?? 'No streak yet',
       sub: data.longestStreak
@@ -913,6 +915,7 @@ function PersonalityInsights() {
       icon: Gem,
       title: 'Hidden gem',
       accent: 'text-amber-300',
+      imageUrl: data.hiddenGem?.albumImageUrl,
       tint: 'from-amber-500/15 to-transparent',
       value: data.hiddenGem?.trackName ?? 'Still emerging',
       sub: data.hiddenGem
@@ -963,22 +966,28 @@ function PersonalityInsights() {
           
             <div className="relative">
               <div className="flex items-center justify-between mb-6">
-                <div
-                className={`w-9 h-9 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center ${card.accent}`}>
-                
-                  <card.icon size={16} strokeWidth={1.8} />
-                </div>
+                {/* Icon / Album art */}
+                {'imageUrl' in card && card.imageUrl ? (
+                  <div className="w-9 h-9 rounded-xl overflow-hidden shrink-0 ring-1 ring-white/10">
+                    <img
+                      src={card.imageUrl}
+                      alt={card.value}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div
+                    className={`w-9 h-9 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center ${card.accent}`}
+                  >
+                    <card.icon size={16} strokeWidth={1.8} />
+                  </div>
+                )}
+
                 <span className="text-[10px] uppercase tracking-widest text-white/35">
                   {card.title}
                 </span>
               </div>
-              <div className={`text-xl font-semibold mb-2 ${card.accent}`}>
-                {card.value}
               </div>
-              <p className="text-xs text-white/55 leading-relaxed">
-                {card.sub}
-              </p>
-            </div>
           </motion.div>
         )}
       </div>
@@ -1536,6 +1545,7 @@ function HiddenGems() {
       tag: 'Hidden gem',
       title: data.hiddenGem.trackName,
       artist: data.hiddenGem.artistName,
+      imageUrl: data.hiddenGem.albumImageUrl,
       meta: `${data.hiddenGem.plays} recent plays — a quieter corner of your listening.`,
       color: 'from-emerald-400 to-cyan-500',
     },
@@ -1543,6 +1553,7 @@ function HiddenGems() {
       tag: 'First play',
       title: data.firstSong.trackName,
       artist: data.firstSong.artistName,
+      imageUrl: data.firstSong.albumImageUrl,
       meta: `First song recorded this year.`,
       color: 'from-amber-400 to-orange-500',
     }] : []),
@@ -1550,6 +1561,7 @@ function HiddenGems() {
       tag: 'Repeat streak',
       title: data.longestStreak.trackName,
       artist: data.longestStreak.artistName,
+      imageUrl: data.longestStreak.albumImageUrl,
       meta: `${data.longestStreak.days} days in a row.`,
       color: 'from-blue-500 to-violet-600',
     }] : []),
@@ -1586,13 +1598,22 @@ function HiddenGems() {
           className="glass-card p-5 hover:-translate-y-1 transition-transform">
           
             <div
-            className={`relative w-full aspect-square rounded-xl bg-gradient-to-br ${g.color} mb-4 overflow-hidden ring-1 ring-white/10 shadow-md`}>
-            
-              <div className="absolute inset-0 bg-black/15" />
-              <Gem
-              size={16}
-              className="absolute bottom-3 right-3 text-white/70" />
-            
+              className={`relative w-full aspect-square rounded-xl mb-4 overflow-hidden ring-1 ring-white/10 shadow-md ${
+                g.imageUrl ? "" : `bg-gradient-to-br ${g.color}`
+              }`}
+            >
+              {g.imageUrl ? (
+                <img
+                  src={g.imageUrl}
+                  alt={g.title}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="absolute inset-0 bg-black/15" />
+              )}
+
+              {/* These sit on top regardless */}
+              <Gem size={16} className="absolute bottom-3 right-3 text-white/70 drop-shadow" />
               <span className="absolute top-3 left-3 text-[9px] uppercase tracking-widest font-medium px-2 py-1 rounded-full bg-black/40 backdrop-blur-md text-white/90">
                 {g.tag}
               </span>

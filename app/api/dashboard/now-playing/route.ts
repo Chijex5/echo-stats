@@ -154,11 +154,6 @@ export async function GET() {
   }
 
   let [nowPlayingRes, recentlyPlayedRes] = await fetchSpotifyPlayback(accessToken);
-  console.log("[sync] Initial Spotify fetch results", {
-    userId: session.user.id,
-    nowPlayingStatus: nowPlayingRes,
-    recentlyPlayedStatus: recentlyPlayedRes
-  });
 
   if (recentlyPlayedRes.status === 401) {
     try {

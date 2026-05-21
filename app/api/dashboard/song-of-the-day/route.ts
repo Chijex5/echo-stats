@@ -97,6 +97,7 @@ export async function GET() {
     trackName: string;
     artistName: string;
     albumName: string;
+    albumImageUrl?: string;
     playCount: number;
     totalMs: number;
     lastPlayed: Date;
@@ -108,6 +109,7 @@ export async function GET() {
     {
       $group: {
         _id: "$spotifyTrackUri",
+        albumImageUrl: { $first: "$albumImageUrl" },
         trackName: { $first: "$trackName" },
         artistName: { $first: "$artistName" },
         albumName: { $first: "$albumName" },
@@ -382,6 +384,7 @@ export async function GET() {
       gradientFrom: gradient.from,
       gradientTo: gradient.to,
       gradientClass: gradient.cls,
+      AlbumImageUrl: picked.albumImageUrl, // will be filled in client-side after fetching from Spotify API
     },
     stats: {
       pastPlays: picked.playCount,

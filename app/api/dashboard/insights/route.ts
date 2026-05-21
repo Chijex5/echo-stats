@@ -5,6 +5,7 @@ import { connectDB } from "@/lib/db";
 import StreamEntry from "@/lib/models/StreamEntry";
 import mongoose from "mongoose";
 import { analyzeUserMusic } from "@/lib/musicAnalysis";
+import { a } from "framer-motion/client";
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
@@ -36,12 +37,13 @@ export async function GET() {
   ] = await Promise.all([
 
     // ── 1. Current 30-day track plays (for Hidden Gem: lowest global-ish play count) ──
-    StreamEntry.aggregate<{ _id: string; trackName: string; artistName: string; plays: number }>([
+    StreamEntry.aggregate<{ _id: string; trackName: string; artistName: string; albumImageUrl: string | null; plays: number }>([
       { $match: { userId, ts: { $gte: thirtyDaysAgo } } },
       {
         $group: {
           _id: "$spotifyTrackUri",
           trackName: { $first: "$trackName" },
+          albumImageUrl: { $first: "$albumImageUrl" },
           artistName: { $first: "$artistName" },
           plays: { $sum: 1 },
         },
@@ -53,15 +55,15 @@ export async function GET() {
     // ── 2. Previous 30-day genre breakdown (for Genre Drift) ──
     // We proxy "genre" through artistName — top artist name of each window
     Promise.all([
-      StreamEntry.aggregate<{ _id: string; plays: number }>([
+      StreamEntry.aggregate<{ _id: string; plays: number; albumImageUrl: string | null }>([
         { $match: { userId, ts: { $gte: thirtyDaysAgo } } },
-        { $group: { _id: "$artistName", plays: { $sum: 1 } } },
+        { $group: { _id: "$artistName", plays: { $sum: 1 }, albumImageUrl: { $first: "$albumImageUrl" } } },
         { $sort: { plays: -1 } },
         { $limit: 1 },
       ]),
-      StreamEntry.aggregate<{ _id: string; plays: number }>([
+      StreamEntry.aggregate<{ _id: string; plays: number; albumImageUrl: string | null }>([
         { $match: { userId, ts: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo } } },
-        { $group: { _id: "$artistName", plays: { $sum: 1 } } },
+        { $group: { _id: "$artistName", plays: { $sum: 1 }, albumImageUrl: { $first: "$albumImageUrl" } } },
         { $sort: { plays: -1 } },
         { $limit: 1 },
       ]),
@@ -87,7 +89,7 @@ export async function GET() {
     ]),
 
     // ── 5. First song of the current year ──
-    StreamEntry.aggregate<{ _id: string; trackName: string; artistName: string; ts: Date }>([
+    StreamEntry.aggregate<{ _id: string; trackName: string; artistName: string; albumImageUrl: string | null; ts: Date }>([
       { $match: { userId, ts: { $gte: yearStart } } },
       { $sort: { ts: 1 } },
       { $limit: 1 },
@@ -96,6 +98,7 @@ export async function GET() {
           _id: "$spotifyTrackUri",
           trackName: 1,
           artistName: 1,
+          albumImageUrl: 1,
           ts: 1,
         },
       },
@@ -103,7 +106,7 @@ export async function GET() {
 
     // ── 6. All plays for longest single-track consecutive-day streak ──
     // Group by (uri, date) → find longest run of consecutive dates per track
-    StreamEntry.aggregate<{ _id: { uri: string; date: string }; trackName: string; artistName: string }>([
+    StreamEntry.aggregate<{ _id: { uri: string; date: string }; trackName: string; artistName: string; albumImageUrl: string | null }>([
       { $match: { userId } },
       {
         $group: {
@@ -113,6 +116,7 @@ export async function GET() {
           },
           trackName: { $first: "$trackName" },
           artistName: { $first: "$artistName" },
+          albumImageUrl: { $first: "$albumImageUrl" },
         },
       },
       { $sort: { "_id.uri": 1, "_id.date": 1 } },
@@ -124,8 +128,8 @@ export async function GET() {
 
   // ── Post-process: Genre Drift ─────────────────────────────────────────────
   const [currentTopArtists, prevTopArtists] = prevTrackPlays as [
-    { _id: string; plays: number }[],
-    { _id: string; plays: number }[],
+    { _id: string; plays: number; albumImageUrl: string | null }[],
+    { _id: string; plays: number; albumImageUrl: string | null }[],
   ];
   const genreDrift = {
     from: prevTopArtists[0]?._id ?? null,
@@ -184,27 +188,28 @@ export async function GET() {
     ? {
         trackName: firstSongAgg[0].trackName,
         artistName: firstSongAgg[0].artistName,
+        albumImageUrl: firstSongAgg[0].albumImageUrl ?? null, // we don't have this info in the current schema; would require an extra query or storing it in the entry
         ts: firstSongAgg[0].ts,
       }
     : null;
 
   // ── Post-process: Longest Repeat Streak ───────────────────────────────────
   // Group play-days by URI, find max consecutive run
-  type StreakEntry = { trackName: string; artistName: string; days: string[] };
+  type StreakEntry = { trackName: string; artistName: string; albumImageUrl: string | null; days: string[] };
   const streakMap = new Map<string, StreakEntry>();
 
   for (const row of allPlaysForStreak) {
     const uri = row._id.uri;
     const date = row._id.date;
     if (!streakMap.has(uri)) {
-      streakMap.set(uri, { trackName: row.trackName, artistName: row.artistName, days: [] });
+      streakMap.set(uri, { trackName: row.trackName, artistName: row.artistName, albumImageUrl: row.albumImageUrl ?? null, days: [] });
     }
     streakMap.get(uri)!.days.push(date);
   }
 
-  let longestStreak = { trackName: "", artistName: "", days: 0 };
+  let longestStreak: { trackName: string; artistName: string; albumImageUrl: string | null; days: number } = { trackName: "", artistName: "", albumImageUrl: null, days: 0 };
 
-  for (const { trackName, artistName, days } of streakMap.values()) {
+  for (const { trackName, artistName, albumImageUrl, days } of streakMap.values()) {
     // days is already sorted ascending from the aggregation
     let run = 1;
     let best = 1;
@@ -220,7 +225,7 @@ export async function GET() {
       }
     }
     if (best > longestStreak.days) {
-      longestStreak = { trackName, artistName, days: best };
+      longestStreak = { trackName, artistName, albumImageUrl, days: best };
     }
   }
 
