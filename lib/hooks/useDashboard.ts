@@ -342,6 +342,7 @@ export function useStoryPreview() {
 export interface TimelinePageTrack {
   title: string;
   artist: string;
+  albumImageUrl?: string;
   color: string;
 }
 

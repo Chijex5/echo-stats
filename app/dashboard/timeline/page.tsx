@@ -4,10 +4,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles,
   Calendar,
-  ArrowUpRight,
+  Users,
   ArrowRight,
   Shuffle,
-  Volume2,
+  X,
   Moon,
   Sun,
   CloudRain,
@@ -15,13 +15,14 @@ import {
   Heart,
   Music2,
   TrendingUp,
-  TrendingDown,
+  Zap,
   History,
   Clock } from
 'lucide-react';
 import { AreaChart, Area, ResponsiveContainer } from 'recharts';
 import { Sidebar } from '@/components/Sidebar';
 import { TopNav } from '@/components/TopNav';
+import { RandomNostalgiaModal } from '@/components/RandomNolstagiaModal';
 import {
   useTimelineExplorer,
   useTimelinePage,
@@ -45,6 +46,7 @@ type Period = {
   accent: string;
   tracks: {
     title: string;
+    albumImageUrl?: string;
     artist: string;
     color: string;
   }[];
@@ -583,6 +585,204 @@ function TimelineHero() {
 
 }
 
+function TimeWarpLoader() {
+  const rings = [1, 2, 3, 4, 5];
+  return (
+    <div className="flex flex-col items-center justify-center gap-8 py-16 select-none">
+      {/* Concentric pulsing rings */}
+      <div className="relative w-32 h-32 flex items-center justify-center">
+        {rings.map((n) => (
+          <motion.div
+            key={n}
+            className="absolute inset-0 rounded-full border border-spotify/40"
+            initial={{ scale: 0.2, opacity: 0.8 }}
+            animate={{ scale: 1.8 * n * 0.4, opacity: 0 }}
+            transition={{
+              duration: 2.2,
+              repeat: Infinity,
+              delay: n * 0.28,
+              ease: [0.22, 1, 0.36, 1],
+            }}
+          />
+        ))}
+        {/* Center icon that spins and glows */}
+        <motion.div
+          className="w-16 h-16 rounded-full bg-spotify/20 border border-spotify/60 flex items-center justify-center"
+          animate={{ rotate: 360 }}
+          transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+        >
+          <Clock size={24} className="text-spotify" />
+        </motion.div>
+      </div>
+ 
+      {/* Animated text lines */}
+      {["Rewinding your timeline…", "Surfacing a forgotten moment…", "Almost there…"].map(
+        (text, i) => (
+          <motion.p
+            key={text}
+            className="text-sm text-white/50 font-medium tracking-wide"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: [0, 1, 0] }}
+            transition={{ duration: 1.6, delay: i * 1.6, repeat: Infinity }}
+          >
+            {text}
+          </motion.p>
+        )
+      )}
+ 
+      {/* Acceleration bar */}
+      <div className="w-48 h-px bg-white/10 relative overflow-hidden rounded-full">
+        <motion.div
+          className="absolute top-0 left-0 h-full bg-spotify rounded-full"
+          initial={{ x: "-100%" }}
+          animate={{ x: "200%" }}
+          transition={{ duration: 1.4, repeat: Infinity, ease: [0.4, 0, 0.2, 1] }}
+          style={{ width: "50%" }}
+        />
+      </div>
+    </div>
+  );
+}
+ 
+// ── Modal content when a period is loaded ────────────────────
+function MemoryCard({ period, onRetry, onClose }: {
+  period: Period;
+  onRetry: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <motion.div
+      key={period.id}
+      initial={{ opacity: 0, scale: 0.93, y: 24 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.93, y: -24 }}
+      transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+      className="flex flex-col gap-6"
+    >
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <div className="text-[10px] uppercase tracking-[0.2em] text-white/40 mb-1">
+            Random memory
+          </div>
+          <h2 className="text-3xl md:text-4xl font-bold tracking-tight leading-tight">
+            {period.monthName}{" "}
+            <span className="font-serif italic text-white/70">{period.year}</span>
+          </h2>
+          <p className="text-sm text-white/55 mt-1">
+            You felt{" "}
+            <span className="text-white font-medium">{period.mood.toLowerCase()}</span>.
+          </p>
+        </div>
+ 
+        {/* Mood score badge */}
+        <div className="shrink-0 flex flex-col items-center justify-center w-16 h-16 rounded-2xl bg-white/[0.04] border border-white/10">
+          <span className="text-lg font-bold text-spotify leading-none">
+            {period.moodScore.toFixed(1)}
+          </span>
+          <span className="text-[9px] uppercase tracking-widest text-white/40 mt-0.5">mood</span>
+        </div>
+      </div>
+ 
+      {/* Stats row */}
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          { icon: Clock, label: "Hours", value: `${period.totalHours}h` },
+          { icon: Users, label: "Artists", value: period.uniqueArtists },
+          { icon: Zap, label: "Genre", value: period.topGenre },
+        ].map(({ icon: Icon, label, value }) => (
+          <div
+            key={label}
+            className="bg-white/[0.03] border border-white/[0.07] rounded-xl p-3 flex flex-col gap-1.5"
+          >
+            <div className="flex items-center gap-1.5">
+              <Icon size={11} className="text-white/40" />
+              <span className="text-[9px] uppercase tracking-widest text-white/40">{label}</span>
+            </div>
+            <span className="text-sm font-semibold truncate">{value}</span>
+          </div>
+        ))}
+      </div>
+ 
+      {/* Top artist */}
+      <div className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.07]">
+        <div
+          className={`w-10 h-10 rounded-full bg-gradient-to-br ${period.topArtistColor} flex items-center justify-center font-bold text-sm ring-1 ring-white/10 shrink-0`}
+        >
+          {period.topArtist
+            .split(" ")
+            .map((w) => w[0])
+            .slice(0, 2)
+            .join("")}
+        </div>
+        <div>
+          <div className="text-[9px] uppercase tracking-widest text-white/40">Top artist</div>
+          <div className="text-sm font-semibold">{period.topArtist}</div>
+        </div>
+      </div>
+ 
+      {/* Tracks */}
+      {period.tracks.length > 0 && (
+        <div>
+          <div className="text-[9px] uppercase tracking-widest text-white/40 mb-2">
+            Top songs
+          </div>
+          <div className="space-y-2">
+            {period.tracks.slice(0, 3).map((t, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <span className="text-xs text-white/25 w-4 font-mono">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <div
+                  className={`w-8 h-8 rounded-lg shrink-0 overflow-hidden ${
+                    t.albumImageUrl ? "" : `bg-gradient-to-br ${t.color}`
+                  }`}
+                >
+                  {t.albumImageUrl && (
+                    <img src={t.albumImageUrl} alt={t.title} className="w-full h-full object-cover" />
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <div className="text-sm font-medium truncate">{t.title}</div>
+                  <div className="text-xs text-white/45 truncate">{t.artist}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+ 
+      {/* Story tag */}
+      {period.story && (
+        <div className="flex items-center gap-3 pt-4 border-t border-white/[0.06] text-sm">
+          <span className="px-2 py-1 rounded-full bg-white/[0.05] border border-white/10 text-[9px] uppercase tracking-widest text-white/50 shrink-0">
+            {period.story.tag}
+          </span>
+          <span className="text-white/70 italic font-serif">{period.story.line}</span>
+        </div>
+      )}
+ 
+      {/* Actions */}
+      <div className="flex items-center gap-3 pt-2">
+        <button
+          onClick={onRetry}
+          className="flex-1 inline-flex items-center justify-center gap-2 bg-spotify hover:bg-[#1ed760] text-black text-sm font-semibold px-5 py-3 rounded-full transition-all shadow-[0_0_28px_-4px_rgba(29,185,84,0.65)] hover:-translate-y-0.5 active:scale-95"
+        >
+          <Shuffle size={14} />
+          Another random memory
+        </button>
+        <button
+          onClick={onClose}
+          className="inline-flex items-center justify-center gap-2 bg-white/[0.06] hover:bg-white/10 border border-white/10 text-white/80 text-sm font-medium px-5 py-3 rounded-full transition-all"
+        >
+          <X size={14} />
+          Close
+        </button>
+      </div>
+    </motion.div>
+  );
+}
+
 function TimelineControl({
   activeIdx,
   setActiveIdx,
@@ -634,11 +834,9 @@ function TimelineControl({
           </div>
 
           <div className="flex w-full md:w-auto items-center gap-2.5 md:gap-3">
-            {/* Year dropdown */}
-            <div className="flex-1 md:flex-none rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5">
-              <label className="block text-[10px] uppercase tracking-widest text-white/40 mb-1">
-                Year
-              </label>
+            {/* Year */}
+            <label className="flex-1 md:flex-none flex flex-col gap-1 rounded-2xl border border-white/10 bg-white/[0.04] px-3 pt-2 pb-2.5 cursor-pointer min-w-[90px]">
+              <span className="text-[10px] uppercase tracking-widest text-white/40">Year</span>
               <select
                 value={String(selectedYear)}
                 onChange={(e) => {
@@ -648,36 +846,34 @@ function TimelineControl({
                   const idx = periods.findIndex((p) => p.id === first.id);
                   if (idx >= 0) setActiveIdx(idx);
                 }}
-                className="w-full bg-transparent text-sm font-medium text-white focus:outline-none"
+                className="bg-transparent text-sm font-semibold text-white focus:outline-none w-full appearance-none"
               >
                 {years.map((y) => (
-                  <option key={y} value={String(y)} className="bg-[#0D1117] text-white">
+                  <option key={y} value={String(y)} className="bg-[#0D1117] text-white text-sm">
                     {y}
                   </option>
                 ))}
               </select>
-            </div>
+            </label>
 
-            {/* Month dropdown */}
-            <div className="flex-1 md:flex-none rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5">
-              <label className="block text-[10px] uppercase tracking-widest text-white/40 mb-1">
-                Month
-              </label>
+            {/* Month */}
+            <label className="flex-1 md:flex-none flex flex-col gap-1 rounded-2xl border border-white/10 bg-white/[0.04] px-3 pt-2 pb-2.5 cursor-pointer min-w-[130px]">
+              <span className="text-[10px] uppercase tracking-widest text-white/40">Month</span>
               <select
                 value={selectedMonthId}
                 onChange={(e) => {
                   const idx = periods.findIndex((p) => p.id === e.target.value);
                   if (idx >= 0) setActiveIdx(idx);
                 }}
-                className="w-full bg-transparent text-sm font-medium text-white focus:outline-none"
+                className="bg-transparent text-sm font-semibold text-white focus:outline-none w-full appearance-none"
               >
                 {monthsForYear.map((p) => (
-                  <option key={p.id} value={p.id} className="bg-[#0D1117] text-white">
+                  <option key={p.id} value={p.id} className="bg-[#0D1117] text-white text-sm">
                     {p.monthName}
                   </option>
                 ))}
               </select>
-            </div>
+            </label>
           </div>
         </div>
 
@@ -756,15 +952,30 @@ function TimelineControl({
 
                   {/* Label only on active dot — appears above the dot */}
                   {isActive && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 4 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 whitespace-nowrap"
-                    >
-                      <span className="bg-spotify text-black text-[10px] font-semibold px-2 py-0.5 rounded-full">
-                        {p.label}
-                      </span>
-                    </motion.div>
+                    <>
+                      {/* Desktop: label above dot */}
+                      <motion.div
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="hidden sm:block absolute bottom-full mb-2.5 left-1/2 -translate-x-1/2 whitespace-nowrap z-10"
+                      >
+                        <span className="bg-spotify text-black text-xs font-bold px-2.5 py-1 rounded-full shadow-[0_0_12px_rgba(29,185,84,0.5)]">
+                          {p.label}
+                        </span>
+                      </motion.div>
+                      {/* Mobile: label below dot */}
+                      <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="sm:hidden absolute top-full mt-2 left-1/2 -translate-x-1/2 whitespace-nowrap z-10"
+                      >
+                        <span className="bg-spotify text-black text-xs font-bold px-2.5 py-1 rounded-full shadow-[0_0_12px_rgba(29,185,84,0.5)]">
+                          {p.label}
+                        </span>
+                      </motion.div>
+                    </>
                   )}
                 </button>
               );
@@ -913,26 +1124,36 @@ function SnapshotViewer({ activeIdx, periods }: {activeIdx: number;periods: Peri
                 Top songs then
               </div>
               <div className="space-y-3">
-                {p.tracks.map((t, i) =>
-                <div key={i} className="flex items-center gap-3 group">
+                {p.tracks.map((t, i) => (
+                  <div key={i} className="flex items-center gap-3 group">
                     <span className="text-xs text-white/30 w-5 font-serif-display">
-                      {(i + 1).toString().padStart(2, '0')}
+                      {(i + 1).toString().padStart(2, "0")}
                     </span>
+
                     <div
-                    className={`w-10 h-10 rounded-md bg-gradient-to-br ${t.color} ring-1 ring-white/10 shrink-0`}>
-                    
-                      <div className="w-full h-full rounded-md bg-black/15" />
+                      className={`w-10 h-10 rounded-md ring-1 ring-white/10 shrink-0 overflow-hidden ${
+                        t.albumImageUrl ? "" : `bg-gradient-to-br ${t.color}`
+                      }`}
+                    >
+                      {t.albumImageUrl ? (
+                        <img
+                          src={t.albumImageUrl}
+                          alt={t.title}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-black/15" />
+                      )}
                     </div>
+
                     <div className="min-w-0">
                       <div className="text-sm font-medium truncate group-hover:text-white">
                         {t.title}
                       </div>
-                      <div className="text-xs text-white/50 truncate">
-                        {t.artist}
-                      </div>
+                      <div className="text-xs text-white/50 truncate">{t.artist}</div>
                     </div>
                   </div>
-                )}
+                ))}
               </div>
             </div>
 
@@ -1141,8 +1362,46 @@ function CalendarHeatmap({ cells, selectedRangeLabel }: {cells: TimelineCell[];s
 
 }
 function TimeComparison({ periods }: {periods: Period[];}) {
-  const A = periods[0] ?? PERIODS[0];
-  const B = periods.at(-1) ?? PERIODS.at(-1)!;
+  function getAandDifference(periods: Period[]) {
+    const timeKey = (p: Period) => p.year * 12 + p.monthIdx;
+
+    const B = periods.at(-1)!;
+    const bKey = timeKey(B);
+
+    const map = new Map<number, Period>();
+    for (const p of periods) map.set(timeKey(p), p);
+
+    let A = map.get(bKey - 12);
+
+    if (!A) {
+      const minKey = Math.min(...periods.map(timeKey));
+
+      for (let k = bKey - 1; k >= minKey; k--) {
+        const candidate = map.get(k);
+        if (candidate) {
+          A = candidate;
+          break;
+        }
+      }
+    }
+
+    A ??= periods[0];
+
+    const diffMonths = Math.abs(timeKey(B) - timeKey(A));
+    const years = Math.floor(diffMonths / 12);
+    const months = diffMonths % 12;
+
+    const difference =
+      years > 0 && months > 0
+        ? `${years === 1 ? "A year" : `${years} years`} and ${months} month${months > 1 ? "s" : ""} apart, side by side.`
+        : years > 0
+        ? `${years === 1 ? "A year" : `${years} years`} apart, side by side.`
+        : `${months} month${months > 1 ? "s" : ""} apart, side by side.`;
+
+    return { A, B, difference };
+  }
+
+  const { A, B, difference } = getAandDifference(periods);
   
   // Use a top-level component for the comparison cell to avoid creating
   // components during render (preserves state and avoids React warnings).
@@ -1154,7 +1413,7 @@ function TimeComparison({ periods }: {periods: Period[];}) {
       <div className="mb-6">
         <h2 className="text-2xl font-bold tracking-tight">Then vs now</h2>
         <p className="text-sm text-white/50">
-          A year of difference, side by side.
+          {difference}
         </p>
       </div>
 
@@ -1273,103 +1532,7 @@ function ComparisonCell({ p, side }: { p: Period; side: 'left' | 'right' }) {
     </motion.div>
   );
 }
-function RandomNostalgia({
-  setActiveIdx,
-  periods
 
-
-}: {setActiveIdx: (n: number) => void;periods: Period[];}) {
-  return (
-    <section>
-      <motion.div
-        initial={{
-          opacity: 0,
-          y: 20
-        }}
-        whileInView={{
-          opacity: 1,
-          y: 0
-        }}
-        viewport={{
-          once: true,
-          margin: '-40px'
-        }}
-        transition={{
-          duration: 0.6
-        }}
-        className="glass-card p-8 md:p-12 relative overflow-hidden">
-        
-        {/* magical glow */}
-        <div className="absolute -top-32 left-1/3 w-[500px] h-[400px] bg-spotify/20 rounded-full blur-[140px] pointer-events-none" />
-        <div className="absolute -bottom-32 -right-32 w-[400px] h-[400px] bg-violet-600/20 rounded-full blur-[120px] pointer-events-none" />
-        <div className="absolute -top-32 -left-32 w-[400px] h-[400px] bg-pink-500/15 rounded-full blur-[120px] pointer-events-none" />
-
-        {/* floating mini cards */}
-        <div className="absolute right-6 md:right-12 top-1/2 -translate-y-1/2 pointer-events-none hidden md:flex">
-          {[
-          'from-pink-500 to-orange-400',
-          'from-emerald-400 to-cyan-500',
-          'from-purple-500 to-indigo-500'].
-          map((c, i) =>
-          <motion.div
-            key={i}
-            animate={{
-              y: [0, -10, 0],
-              rotate: i % 2 === 0 ? -6 : 6
-            }}
-            transition={{
-              duration: 4 + i,
-              repeat: Infinity,
-              delay: i * 0.3,
-              ease: 'easeInOut'
-            }}
-            className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${c} shadow-2xl shadow-black/40 ring-1 ring-white/10`}
-            style={{
-              marginLeft: i === 0 ? 0 : -16
-            }}>
-            
-              <div className="w-full h-full rounded-2xl bg-black/15" />
-            </motion.div>
-          )}
-        </div>
-
-        <div className="relative max-w-xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-white/10 bg-white/[0.04] text-[10px] uppercase tracking-widest text-white/60 mb-6">
-            <Shuffle size={11} className="text-spotify" />
-            Surprise me
-          </div>
-          <h3 className="text-3xl md:text-4xl font-bold tracking-tight leading-tight mb-4">
-            Take me somewhere{' '}
-            <span className="font-serif-display italic text-spotify/90">
-              random
-            </span>
-            .
-          </h3>
-          <p className="text-white/60 leading-relaxed mb-8 max-w-md">
-            Close your eyes. We&apos;ll drop you into a forgotten week, with the
-            songs, the mood, and the hidden memories that came with it.
-          </p>
-          <button
-            onClick={() => {
-              const r = Math.floor(Date.now() / 7 % periods.length);
-              setActiveIdx(r);
-              if (typeof window !== 'undefined') {
-                window.scrollTo({
-                  top: 400,
-                  behavior: 'smooth'
-                });
-              }
-            }}
-            className="inline-flex items-center gap-2 bg-spotify hover:bg-spotify-light text-black text-sm font-semibold px-6 py-3 rounded-full transition-all shadow-[0_0_32px_-6px_rgba(29,185,84,0.7)] hover:-translate-y-0.5">
-            
-            <Shuffle size={14} />
-            Jump to a random memory
-          </button>
-        </div>
-      </motion.div>
-    </section>);
-
-}
 function TimelineInsights({ insights }: {insights?: TimelinePageInsight[];}) {
   const cards = insights?.length
     ? insights.map((ins, index) => ({
@@ -1468,7 +1631,7 @@ export default function TimelinePage() {
               <TimeMachineStories />
               <CalendarHeatmap cells={explorerData?.cells ?? []} selectedRangeLabel={explorerData?.selectedRange.label} />
               <TimeComparison periods={periods} />
-              <RandomNostalgia setActiveIdx={setActiveIdx} periods={periods} />
+              <RandomNostalgiaModal periods={periods} />
               <TimelineInsights insights={data?.insights} />
             </div>
           </div>

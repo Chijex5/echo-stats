@@ -4,6 +4,7 @@ import mongoose from "mongoose";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { connectDB } from "@/lib/db";
 import StreamEntry from "@/lib/models/StreamEntry";
+import { a } from "framer-motion/client";
 
 const GRADIENTS = [
   "from-emerald-400 to-cyan-500",
@@ -53,7 +54,7 @@ export async function GET() {
       totalMs: number;
       artists: string[];
       topArtist: string;
-      tracks: Array<{ title: string; artist: string; plays: number }>;
+      tracks: Array<{ title: string; artist: string; plays: number; albumImageUrl?: string }>;
     }>([
       { $match: { userId } },
       {
@@ -65,6 +66,7 @@ export async function GET() {
           },
           trackName: { $first: "$trackName" },
           artistName: { $first: "$artistName" },
+          albumImageUrl: { $first: "$albumImageUrl" },
           plays: { $sum: 1 },
           totalMs: { $sum: "$msPlayed" },
         },
@@ -81,6 +83,7 @@ export async function GET() {
             $push: {
               title: "$trackName",
               artist: "$artistName",
+              albumImageUrl: "$albumImageUrl",
               plays: "$plays",
             },
           },
@@ -121,6 +124,7 @@ export async function GET() {
       tracks: period.tracks.slice(0, 3).map((track) => ({
         title: track.title,
         artist: track.artist,
+        albumImageUrl: track.albumImageUrl,
         color: colorFor(track.title),
       })),
       story: index === months.length - 1
