@@ -25,21 +25,33 @@ type StorySlide = {
   hexVia: string;
   hexTo: string;
   Icon: React.FC<{ size?: number; strokeWidth?: number }>;
+  albumImageUrl?: string;
 };
 
 const DURATION_MS = 5500;
 
 /* ─────────────────────────────────────────────────────────────
    Full-story HTML export — all 8 slides, print-ready
+   Album art featured as full bleed background when present
 ───────────────────────────────────────────────────────────── */
 function buildFullExportHTML(slides: StorySlide[], from: string, to: string): string {
   const cards = slides.map((s) => `
     <div class="card">
       <div class="card-glow" style="background:radial-gradient(circle at 30% 30%,${s.hexVia}55,transparent 60%)"></div>
       <div class="card-inner" style="background:linear-gradient(145deg,${s.hexFrom},${s.hexVia} 52%,${s.hexTo})">
+        ${s.albumImageUrl ? `
+        <div class="album-bg-wrap">
+          <img class="album-bg-img" src="${s.albumImageUrl}" alt="" />
+          <div class="album-bg-scrim"></div>
+        </div>` : ""}
         <div class="noise"></div>
         <div class="card-body">
           <div class="chip">${s.label}</div>
+          ${s.albumImageUrl ? `
+          <div class="album-art-container">
+            <img class="album-art" src="${s.albumImageUrl}" alt="${s.title}" />
+            <div class="album-art-shine"></div>
+          </div>` : ""}
           <h2 class="title">${s.title}</h2>
           <p class="sub">${s.subtitle}</p>
         </div>
@@ -69,12 +81,20 @@ html,body{background:#080808;min-height:100%;font-family:'DM Sans',sans-serif;-w
 .card{position:relative;border-radius:36px;aspect-ratio:9/16;overflow:hidden}
 .card-glow{position:absolute;inset:-20px;pointer-events:none;z-index:0;filter:blur(40px);opacity:.55}
 .card-inner{position:relative;z-index:1;width:100%;height:100%;border-radius:36px;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;border:1px solid rgba(255,255,255,.12)}
-.noise{position:absolute;inset:0;border-radius:inherit;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.06'/%3E%3C/svg%3E");pointer-events:none;z-index:1;mix-blend-mode:overlay}
-.card-body{padding:32px 28px 0;position:relative;z-index:2}
-.chip{display:inline-block;font-size:10px;font-weight:500;letter-spacing:.22em;text-transform:uppercase;color:rgba(255,255,255,.65);background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.18);border-radius:100px;padding:5px 14px;margin-bottom:20px}
-.title{font-family:'Bebas Neue',sans-serif;font-size:clamp(34px,5vw,52px);letter-spacing:.04em;line-height:1;word-break:break-word}
+/* Album background layers */
+.album-bg-wrap{position:absolute;inset:0;z-index:0;pointer-events:none}
+.album-bg-img{width:100%;height:100%;object-fit:cover;opacity:.22;filter:blur(24px) saturate(1.6);transform:scale(1.08)}
+.album-bg-scrim{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.35) 0%,rgba(0,0,0,.1) 40%,rgba(0,0,0,.75) 100%)}
+/* Album art spotlight */
+.album-art-container{position:relative;margin:18px auto 0;width:148px;height:148px;border-radius:20px;flex-shrink:0}
+.album-art{width:100%;height:100%;object-fit:cover;border-radius:20px;border:1px solid rgba(255,255,255,.18);box-shadow:0 8px 40px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.08)}
+.album-art-shine{position:absolute;inset:0;border-radius:20px;background:linear-gradient(135deg,rgba(255,255,255,.18) 0%,transparent 50%);pointer-events:none}
+.noise{position:absolute;inset:0;border-radius:inherit;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.06'/%3E%3C/svg%3E");pointer-events:none;z-index:2;mix-blend-mode:overlay}
+.card-body{padding:32px 28px 0;position:relative;z-index:3;display:flex;flex-direction:column;align-items:flex-start}
+.chip{display:inline-block;font-size:10px;font-weight:500;letter-spacing:.22em;text-transform:uppercase;color:rgba(255,255,255,.65);background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.18);border-radius:100px;padding:5px 14px;margin-bottom:4px}
+.title{font-family:'Bebas Neue',sans-serif;font-size:clamp(34px,5vw,52px);letter-spacing:.04em;line-height:1;word-break:break-word;margin-top:16px}
 .sub{margin-top:14px;font-size:14px;line-height:1.6;color:rgba(255,255,255,.72);font-weight:300}
-.card-footer{position:relative;z-index:2;padding:16px 28px 28px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid rgba(255,255,255,.1);margin-top:24px}
+.card-footer{position:relative;z-index:3;padding:16px 28px 28px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid rgba(255,255,255,.1);margin-top:24px}
 .brand{font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:.1em;color:rgba(255,255,255,.45)}
 .range-text{font-size:11px;color:rgba(255,255,255,.3);letter-spacing:.06em}
 @media print{.grid{page-break-inside:avoid}.card{break-inside:avoid}}
@@ -112,14 +132,65 @@ function ProgressStrip({ count, active, paused }: { count: number; active: numbe
 
 /* ─────────────────────────────────────────────────────────────
    Slide content — uses absolute fill so it CANNOT resize the frame
+   Album art slides get a dedicated visual treatment:
+   full-bleed blurred bg + centered art square + info pill
 ───────────────────────────────────────────────────────────── */
 function SlideContent({ slide }: { slide: StorySlide }) {
   const { Icon } = slide;
+  const hasArt = Boolean(slide.albumImageUrl);
 
+  /* ── Slide 1 (Top Song) — vinyl OR album art hero ── */
   if (slide.id === 1) {
+    if (hasArt) {
+      return (
+        <div className="absolute inset-0 flex flex-col justify-between p-5 pb-4 overflow-hidden">
+          {/* Album art hero — centrepiece */}
+          <div className="flex flex-col items-center gap-3 mt-2 flex-1">
+            <div className="relative w-[168px] h-[168px] shrink-0">
+              {/* Reflection glow */}
+              <div
+                className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-[140px] h-8 blur-xl opacity-60 rounded-full"
+                style={{ background: `radial-gradient(ellipse,${slide.hexVia}cc,transparent 70%)` }}
+              />
+              <motion.img
+                src={slide.albumImageUrl}
+                alt={slide.title}
+                className="w-full h-full rounded-[22px] object-cover border border-white/20 shadow-2xl"
+                initial={{ scale: 0.92, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.45, ease: [0.32, 0.72, 0, 1] }}
+              />
+              {/* Gloss shine */}
+              <div className="absolute inset-0 rounded-[22px] bg-gradient-to-br from-white/20 via-transparent to-transparent pointer-events-none" />
+            </div>
+
+            {/* Waveform beneath art */}
+            <div className="flex items-end justify-center gap-[2px] h-7 px-2 shrink-0 w-full">
+              {Array.from({ length: 36 }, (_, i) => (
+                <motion.div key={i} className="w-[2.5px] rounded-full bg-white/40"
+                  animate={{ height: ["14%", `${22 + Math.abs(Math.sin((i + 1) * 0.65)) * 68}%`, "14%"] }}
+                  transition={{ duration: 1.1 + (i % 5) * 0.13, repeat: Infinity, ease: "easeInOut", delay: i * 0.03 }}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Info card */}
+          <div className="rounded-[18px] border border-white/15 bg-black/40 px-4 py-4 backdrop-blur-md shrink-0">
+            <div className="flex items-center gap-1.5 mb-2">
+              <Icon size={12} strokeWidth={1.8} />
+              <span className="text-[9px] uppercase tracking-[.25em] text-white/50">{slide.label}</span>
+            </div>
+            <h2 className="text-xl font-black leading-tight tracking-tight line-clamp-2">{slide.title}</h2>
+            <p className="mt-1.5 text-[11px] text-white/60 leading-relaxed line-clamp-2">{slide.subtitle}</p>
+          </div>
+        </div>
+      );
+    }
+
+    /* Original vinyl fallback (no art) */
     return (
       <div className="absolute inset-0 flex flex-col justify-between p-6 pb-5 overflow-hidden">
-        {/* Vinyl */}
         <div className="flex justify-center mt-4">
           <div className="relative w-40 h-40 shrink-0">
             <motion.div
@@ -136,7 +207,6 @@ function SlideContent({ slide }: { slide: StorySlide }) {
             ))}
           </div>
         </div>
-        {/* Waveform */}
         <div className="flex items-end justify-center gap-[2px] h-9 px-2 shrink-0">
           {Array.from({ length: 36 }, (_, i) => (
             <motion.div key={i} className="w-[2.5px] rounded-full bg-white/45"
@@ -145,7 +215,6 @@ function SlideContent({ slide }: { slide: StorySlide }) {
             />
           ))}
         </div>
-        {/* Info card */}
         <div className="rounded-[18px] border border-white/15 bg-black/30 px-4 py-4 backdrop-blur-md shrink-0">
           <div className="flex items-center gap-1.5 mb-2">
             <Icon size={12} strokeWidth={1.8} />
@@ -158,9 +227,48 @@ function SlideContent({ slide }: { slide: StorySlide }) {
     );
   }
 
+  /* ── All other slides ── */
+  if (hasArt) {
+    return (
+      <div className="absolute inset-0 flex flex-col justify-between p-5 pb-4 overflow-hidden">
+        {/* Art square — compact, centred at top */}
+        <div className="flex flex-col items-center gap-2 mt-3 shrink-0">
+          <div className="relative w-[132px] h-[132px]">
+            <div
+              className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-[110px] h-6 blur-lg opacity-50 rounded-full"
+              style={{ background: `radial-gradient(ellipse,${slide.hexVia}cc,transparent 70%)` }}
+            />
+            <motion.img
+              src={slide.albumImageUrl}
+              alt={slide.title}
+              className="w-full h-full rounded-[18px] object-cover border border-white/18 shadow-2xl"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
+            />
+            <div className="absolute inset-0 rounded-[18px] bg-gradient-to-br from-white/18 via-transparent to-transparent pointer-events-none" />
+            {/* Label badge on art */}
+            <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-white/20 bg-black/60 px-3 py-[3px] text-[8px] uppercase tracking-[.2em] text-white/70 backdrop-blur-md">
+              <span className="inline-block mr-1 -mt-px">
+                <Icon size={8} strokeWidth={2} />
+              </span>
+              {slide.label}
+            </div>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="rounded-[18px] border border-white/15 bg-black/40 px-5 py-5 backdrop-blur-md shrink-0 mt-auto">
+          <h2 className="mt-1 text-2xl font-black leading-[1.05] tracking-tight line-clamp-3">{slide.title}</h2>
+          <p className="mt-2.5 text-[12px] text-white/65 leading-relaxed line-clamp-3">{slide.subtitle}</p>
+        </div>
+      </div>
+    );
+  }
+
+  /* Original icon-based layout (no art) */
   return (
     <div className="absolute inset-0 flex flex-col justify-center gap-5 p-6 overflow-hidden">
-      {/* Decorative icon */}
       <div className="flex items-center justify-center shrink-0">
         <div className="relative">
           <div className="absolute inset-0 scale-[2] rounded-full bg-white/8 blur-2xl" />
@@ -169,7 +277,6 @@ function SlideContent({ slide }: { slide: StorySlide }) {
           </div>
         </div>
       </div>
-      {/* Content */}
       <div className="rounded-[18px] border border-white/15 bg-black/30 px-5 py-5 backdrop-blur-md shrink-0">
         <span className="text-[9px] uppercase tracking-[.25em] text-white/45">{slide.label}</span>
         <h2 className="mt-2 text-2xl font-black leading-[1.05] tracking-tight line-clamp-3">{slide.title}</h2>
@@ -232,6 +339,22 @@ function PhoneFrame({
               transition={{ duration: 0.32, ease: [0.32, 0.72, 0, 1] }}
               className={`absolute inset-0 rounded-[28px] bg-gradient-to-br ${current.accent} overflow-hidden`}
             >
+              {/* BACKGROUND IMAGE LAYER — full bleed blurred when art present */}
+              {current.albumImageUrl && (
+                <>
+                  <img
+                    src={current.albumImageUrl}
+                    alt={current.title}
+                    className="absolute inset-0 w-full h-full object-cover opacity-30 scale-110 blur-md saturate-150"
+                  />
+                  {/* Extra gradient scrim so gradient identity still reads */}
+                  <div className={`absolute inset-0 bg-gradient-to-br ${current.accent} opacity-60`} />
+                </>
+              )}
+
+              {/* DARKENING LAYER (keeps text readable) */}
+              <div className="absolute inset-0 bg-black/35" />
+
               <SlideContent slide={current} />
             </motion.div>
           </AnimatePresence>
@@ -316,7 +439,7 @@ function DateRangeInputs({
 }
 
 /* ─────────────────────────────────────────────────────────────
-   Export modal
+   Export modal — album art strip preview when present
 ───────────────────────────────────────────────────────────── */
 function ExportModal({
   slides, from, to, onClose,
@@ -378,16 +501,34 @@ function ExportModal({
           </button>
         </div>
 
-        {/* Slide strip preview */}
+        {/* Slide strip preview — album art shown when available, gradient tile fallback */}
         <div className="px-5 pt-4 pb-3 border-b border-white/[0.07]">
           <p className="text-[9px] uppercase tracking-[.22em] text-white/30 mb-2.5">All {slides.length} slides included</p>
           <div className="flex gap-2 overflow-x-auto pb-0.5" style={{ scrollbarWidth: "none" }}>
-            {slides.map((s, i) => (
+            {slides.map((s) => (
               <div key={s.id}
-                className={`shrink-0 w-[46px] h-[66px] rounded-[14px] bg-gradient-to-br ${s.accent} border border-white/12 flex flex-col items-center justify-end pb-2 gap-1`}
+                className={`relative shrink-0 w-[46px] h-[66px] rounded-[14px] overflow-hidden border border-white/12 ${!s.albumImageUrl ? `bg-gradient-to-br ${s.accent}` : ""}`}
               >
-                <s.Icon size={13} strokeWidth={1.6} />
-                <span className="text-[6px] uppercase tracking-wide text-white/65 text-center px-1 leading-tight">{s.label}</span>
+                {s.albumImageUrl ? (
+                  <>
+                    <img
+                      src={s.albumImageUrl}
+                      alt={s.label}
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                    {/* Scrim + label over art */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                    <div className="absolute bottom-0 inset-x-0 pb-1.5 flex flex-col items-center gap-0.5">
+                      <s.Icon size={11} strokeWidth={1.8}  />
+                      <span className="text-[5.5px] uppercase tracking-wide text-white/70 text-center px-0.5 leading-tight">{s.label}</span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="absolute inset-0 flex flex-col items-center justify-end pb-2 gap-1">
+                    <s.Icon size={13} strokeWidth={1.6} />
+                    <span className="text-[6px] uppercase tracking-wide text-white/65 text-center px-1 leading-tight">{s.label}</span>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -443,14 +584,14 @@ export default function StoryModePage() {
       ? new Date(2025, data.emotionalMonth.month - 1, 1).toLocaleString("en-US", { month: "long" })
       : "Unknown";
     return [
-      { id: 1, label: "Top Song",           title: data?.topSong.title ?? "Loading your anthem",            subtitle: data?.topSong.subtitle ?? "Analyzing play history",                         accent: "from-fuchsia-500 via-purple-500 to-blue-500",    hexFrom: "#d946ef", hexVia: "#a855f7", hexTo: "#3b82f6", Icon: Music2      },
-      { id: 2, label: "Top Artist",         title: data?.topArtist.title ?? "Loading top artist",           subtitle: data?.topArtist.subtitle ?? "Calculating listening minutes",                accent: "from-emerald-400 via-cyan-500 to-teal-600",      hexFrom: "#34d399", hexVia: "#06b6d4", hexTo: "#0f766e", Icon: Mic2        },
-      { id: 3, label: "Music Age",          title: data?.musicAge.year ?? "Unknown",                        subtitle: data?.musicAge.subtitle ?? "Inferred from release-date metadata.",          accent: "from-violet-600 via-fuchsia-500 to-pink-400",    hexFrom: "#7c3aed", hexVia: "#d946ef", hexTo: "#f472b6", Icon: Clock       },
-      { id: 4, label: "Favorite Era",       title: data?.favoriteEra.title ?? "Favorite era loading",       subtitle: data?.favoriteEra.subtitle ?? "Scanning your listening hours",              accent: "from-blue-500 via-indigo-500 to-violet-600",     hexFrom: "#3b82f6", hexVia: "#6366f1", hexTo: "#7c3aed", Icon: Layers      },
-      { id: 5, label: "Forgotten Favorite", title: data?.forgottenFavorite.title ?? "Hidden memory",        subtitle: data?.forgottenFavorite.subtitle ?? "Looking for long-gap rediscoveries",   accent: "from-amber-400 via-orange-500 to-rose-500",      hexFrom: "#fbbf24", hexVia: "#f97316", hexTo: "#f43f5e", Icon: RefreshCcw  },
-      { id: 6, label: "Emotional Month",    title: emotionalMonth,                                          subtitle: data?.emotionalMonth.subtitle ?? "Not enough data in selected range",       accent: "from-indigo-600 via-sky-500 to-cyan-400",        hexFrom: "#4f46e5", hexVia: "#0ea5e9", hexTo: "#22d3ee", Icon: HeartPulse  },
-      { id: 7, label: "Hidden Gem",         title: data?.hiddenGem?.trackName ?? "No hidden gem yet",       subtitle: data?.hiddenGem ? `${data.hiddenGem.artistName} · ${data.hiddenGem.plays} plays` : "Play more tracks to unlock this", accent: "from-purple-600 via-indigo-500 to-sky-400", hexFrom: "#9333ea", hexVia: "#6366f1", hexTo: "#38bdf8", Icon: Diamond     },
-      { id: 8, label: "Personality",        title: data?.personality.title ?? "Personality loading",        subtitle: data?.personality.subtitle ?? "Calibrating your listening fingerprint",      accent: "from-rose-500 via-fuchsia-600 to-violet-600",    hexFrom: "#f43f5e", hexVia: "#c026d3", hexTo: "#7c3aed", Icon: Fingerprint },
+      { id: 1, label: "Top Song",           title: data?.topSong.title ?? "Loading your anthem",            subtitle: data?.topSong.subtitle ?? "Analyzing play history",                         accent: "from-fuchsia-500 via-purple-500 to-blue-500",    hexFrom: "#d946ef", hexVia: "#a855f7", hexTo: "#3b82f6", Icon: Music2,      albumImageUrl: data?.topSong.albumImageUrl          },
+      { id: 2, label: "Top Artist",         title: data?.topArtist.title ?? "Loading top artist",           subtitle: data?.topArtist.subtitle ?? "Calculating listening minutes",                accent: "from-emerald-400 via-cyan-500 to-teal-600",      hexFrom: "#34d399", hexVia: "#06b6d4", hexTo: "#0f766e", Icon: Mic2,   },
+      { id: 3, label: "Music Age",          title: data?.musicAge.year ?? "Unknown",                        subtitle: data?.musicAge.subtitle ?? "Inferred from release-date metadata.",          accent: "from-violet-600 via-fuchsia-500 to-pink-400",    hexFrom: "#7c3aed", hexVia: "#d946ef", hexTo: "#f472b6", Icon: Clock                                                  },
+      { id: 4, label: "Favorite Era",       title: data?.favoriteEra.title ?? "Favorite era loading",       subtitle: data?.favoriteEra.subtitle ?? "Scanning your listening hours",              accent: "from-blue-500 via-indigo-500 to-violet-600",     hexFrom: "#3b82f6", hexVia: "#6366f1", hexTo: "#7c3aed", Icon: Layers                                                 },
+      { id: 5, label: "Forgotten Favorite", title: data?.forgottenFavorite.title ?? "Hidden memory",        subtitle: data?.forgottenFavorite.subtitle ?? "Looking for long-gap rediscoveries",   accent: "from-amber-400 via-orange-500 to-rose-500",      hexFrom: "#fbbf24", hexVia: "#f97316", hexTo: "#f43f5e", Icon: RefreshCcw,  albumImageUrl: data?.forgottenFavorite.albumImageUrl },
+      { id: 6, label: "Emotional Month",    title: emotionalMonth,                                          subtitle: data?.emotionalMonth.subtitle ?? "Not enough data in selected range",       accent: "from-indigo-600 via-sky-500 to-cyan-400",        hexFrom: "#4f46e5", hexVia: "#0ea5e9", hexTo: "#22d3ee", Icon: HeartPulse                                             },
+      { id: 7, label: "Hidden Gem",         title: data?.hiddenGem?.trackName ?? "No hidden gem yet",       subtitle: data?.hiddenGem ? `${data.hiddenGem.artistName} · ${data.hiddenGem.plays} plays` : "Play more tracks to unlock this", accent: "from-purple-600 via-indigo-500 to-sky-400", hexFrom: "#9333ea", hexVia: "#6366f1", hexTo: "#38bdf8", Icon: Diamond,    albumImageUrl: data?.hiddenGem?.albumImageUrl       },
+      { id: 8, label: "Personality",        title: data?.personality.title ?? "Personality loading",        subtitle: data?.personality.subtitle ?? "Calibrating your listening fingerprint",      accent: "from-rose-500 via-fuchsia-600 to-violet-600",    hexFrom: "#f43f5e", hexVia: "#c026d3", hexTo: "#7c3aed", Icon: Fingerprint                                            },
     ];
   }, [data]);
 
@@ -597,9 +738,16 @@ export default function StoryModePage() {
                             className={`absolute inset-0 rounded-[18px] bg-gradient-to-br ${slide.accent} opacity-[0.18] -z-10`}
                           />
                         )}
-                        <div className={`shrink-0 rounded-xl p-[7px] transition-colors ${isAct ? "bg-white/14" : "bg-white/[0.07]"}`}>
-                          <slide.Icon size={12} strokeWidth={1.8} />
-                        </div>
+                        {/* Show album art thumbnail in chapter nav when available */}
+                        {slide.albumImageUrl ? (
+                          <div className="shrink-0 w-[26px] h-[26px] rounded-lg overflow-hidden border border-white/15">
+                            <img src={slide.albumImageUrl} alt="" className="w-full h-full object-cover" />
+                          </div>
+                        ) : (
+                          <div className={`shrink-0 rounded-xl p-[7px] transition-colors ${isAct ? "bg-white/14" : "bg-white/[0.07]"}`}>
+                            <slide.Icon size={12} strokeWidth={1.8} />
+                          </div>
+                        )}
                         <span className={`text-[11px] font-medium leading-tight transition-colors ${isAct ? "text-white" : "text-white/50"}`}>
                           {slide.label}
                         </span>

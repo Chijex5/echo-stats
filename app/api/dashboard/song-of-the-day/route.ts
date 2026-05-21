@@ -234,7 +234,7 @@ export async function GET() {
     : "Quiet rediscovery";
 
   // ── 9. Peak-month snapshot: co-played tracks ───────────────────────────
-  type CoPlayEntry = { _id: string; trackName: string; artistName: string; plays: number };
+  type CoPlayEntry = { _id: string; albumImageUrl: string | null; trackName: string; artistName: string; plays: number };
   const peakStart = peakMonthDate;
   const peakEnd = new Date(peakMonthDate.getFullYear(), peakMonthDate.getMonth() + 1, 1);
 
@@ -250,6 +250,7 @@ export async function GET() {
       $group: {
         _id: "$spotifyTrackUri",
         trackName: { $first: "$trackName" },
+        albumImageUrl: { $first: "$albumImageUrl" },
         artistName: { $first: "$artistName" },
         plays: { $sum: 1 },
       },
@@ -279,6 +280,7 @@ export async function GET() {
 
   const snapshotTracks = coPlayed.slice(0, 4).map((t) => ({
     title: t.trackName,
+    albumImageUrl: t.albumImageUrl,
     artist: t.artistName,
     color: strToSnapshotColor(t._id),
   }));
@@ -316,6 +318,7 @@ export async function GET() {
   // Other candidates with similar dormancy (gap within ±60 days of picked)
   type RelatedTrack = {
     title: string;
+    albumImageUrl?: string;
     artist: string;
     color: string;
     tag: string;
@@ -331,6 +334,7 @@ export async function GET() {
       const g = uriToGradient(c._id);
       return {
         title: c.trackName,
+        albumImageUrl: c.albumImageUrl,
         artist: c.artistName,
         color: g.cls,
         tag: TAGS[i % TAGS.length],
@@ -384,7 +388,7 @@ export async function GET() {
       gradientFrom: gradient.from,
       gradientTo: gradient.to,
       gradientClass: gradient.cls,
-      AlbumImageUrl: picked.albumImageUrl, // will be filled in client-side after fetching from Spotify API
+      albumImageUrl: picked.albumImageUrl, // will be filled in client-side after fetching from Spotify API
     },
     stats: {
       pastPlays: picked.playCount,

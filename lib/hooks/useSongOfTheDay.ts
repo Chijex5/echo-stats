@@ -20,7 +20,7 @@ export interface SotdSong {
   uri: string;
   title: string;
   artist: string;
-  AlbumImageUrl: string | null;
+  albumImageUrl: string | null;
   album: string;
   released: string;
   gradientFrom: string; // hex colour, e.g. "#3B82F6"
@@ -48,6 +48,7 @@ export interface StoryBeat {
 
 export interface SnapshotTrack {
   title: string;
+  albumImageUrl?: string;
   artist: string;
   color: string; // Tailwind gradient class
 }
@@ -97,6 +98,7 @@ export interface MoodReconstruction {
 
 export interface RelatedTrack {
   title: string;
+  albumImageUrl?: string;
   artist: string;
   color: string;
   tag: string;

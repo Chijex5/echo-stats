@@ -398,7 +398,7 @@ export function useTimelinePage() {
 export interface StoryModeResponse {
   from: string;
   to: string;
-  topSong: { title: string; subtitle: string };
+  topSong: { title: string; albumImageUrl?: string; subtitle: string };
   topArtist: { title: string; subtitle: string };
   musicAge: {
     year: string;
@@ -409,9 +409,9 @@ export interface StoryModeResponse {
     inferred?: boolean;
   };
   emotionalMonth: { month: number | null; subtitle: string };
-  hiddenGem: { trackName: string; artistName: string; plays: number } | null;
+  hiddenGem: { trackName: string; albumImageUrl?: string; artistName: string; plays: number } | null;
   favoriteEra: { title: string; subtitle: string };
-  forgottenFavorite: { title: string; subtitle: string };
+  forgottenFavorite: { title: string; albumImageUrl?: string; subtitle: string };
   personality: { title: string; subtitle: string };
 }
 

@@ -127,9 +127,9 @@ export async function GET(req: NextRequest) {
   const rangeMatch = { userId, ts: { $gte: from, $lte: to } };
 
   const [topTrack, topArtist, trackReleaseAgg, monthData, hiddenGem, daypartData, forgottenFavorite, totals] = await Promise.all([
-    StreamEntry.aggregate<{ _id: string; artistName: string; plays: number }>([
+    StreamEntry.aggregate<{ _id: string; artistName: string; plays: number; albumImageUrl: string | null }>([
       { $match: rangeMatch },
-      { $group: { _id: "$trackName", artistName: { $first: "$artistName" }, plays: { $sum: 1 } } },
+      { $group: { _id: "$trackName", artistName: { $first: "$artistName" }, plays: { $sum: 1 }, albumImageUrl: { $first: "$albumImageUrl" } } },
       { $sort: { plays: -1 } },
       { $limit: 1 },
     ]),
@@ -161,13 +161,13 @@ export async function GET(req: NextRequest) {
       { $sort: { plays: -1 } },
       { $limit: 1 },
     ]),
-    StreamEntry.aggregate<{ trackName: string; artistName: string; plays: number }>([
+    StreamEntry.aggregate<{ trackName: string; artistName: string; plays: number; albumImageUrl: string | null }>([
       { $match: rangeMatch },
-      { $group: { _id: { trackName: "$trackName", artistName: "$artistName" }, plays: { $sum: 1 } } },
+      { $group: { _id: { trackName: "$trackName", artistName: "$artistName", albumImageUrl: "$albumImageUrl" }, plays: { $sum: 1 } } },
       { $match: { plays: { $gte: 2, $lte: 4 } } },
       { $sort: { plays: -1 } },
       { $limit: 1 },
-      { $project: { _id: 0, trackName: "$_id.trackName", artistName: "$_id.artistName", plays: 1 } },
+      { $project: { _id: 0, trackName: "$_id.trackName", artistName: "$_id.artistName", albumImageUrl: "$_id.albumImageUrl", plays: 1 } },
     ]),
 
     StreamEntry.aggregate<{ _id: string; plays: number }>([
@@ -190,19 +190,19 @@ export async function GET(req: NextRequest) {
       { $group: { _id: "$daypart", plays: { $sum: 1 } } },
       { $sort: { plays: -1 } },
     ]),
-    StreamEntry.aggregate<{ trackName: string; artistName: string; gapDays: number }>([
+    StreamEntry.aggregate<{ trackName: string; artistName: string; gapDays: number; albumImageUrl: string | null }>([
       { $match: rangeMatch },
       { $sort: { ts: 1 } },
       {
         $group: {
-          _id: { trackName: "$trackName", artistName: "$artistName" },
+          _id: { trackName: "$trackName", artistName: "$artistName",  albumImageUrl: "$albumImageUrl" },
           plays: { $sum: 1 },
           firstPlayed: { $first: "$ts" },
           lastPlayed: { $last: "$ts" },
         },
       },
       { $match: { plays: { $gte: 3 } } },
-      { $project: { _id: 0, trackName: "$_id.trackName", artistName: "$_id.artistName", gapDays: { $divide: [{ $subtract: ["$lastPlayed", "$firstPlayed"] }, 1000 * 60 * 60 * 24] } } },
+      { $project: { _id: 0, trackName: "$_id.trackName", artistName: "$_id.artistName", gapDays: { $divide: [{ $subtract: ["$lastPlayed", "$firstPlayed"] }, 1000 * 60 * 60 * 24] }, albumImageUrl: "$_id.albumImageUrl" } },
       { $sort: { gapDays: -1 } },
       { $limit: 1 },
     ]),
@@ -315,6 +315,7 @@ export async function GET(req: NextRequest) {
     to: to.toISOString(),
     topSong: {
       title: topTrack[0]?._id ?? "No track yet",
+      albumImageUrl: topTrack[0]?.albumImageUrl ?? undefined,
       subtitle: topTrack[0] ? `${topTrack[0].artistName} · ${topTrack[0].plays} plays` : "Play more music to unlock this slide",
     },
     topArtist: {
@@ -341,6 +342,7 @@ export async function GET(req: NextRequest) {
     forgottenFavorite: forgotten
       ? {
           title: forgotten.trackName,
+          albumImageUrl: forgotten?.albumImageUrl ?? undefined,
           subtitle: `${forgotten.artistName} · resurfaced after ${Math.round(forgotten.gapDays)} days`,
         }
       : { title: "No rediscovery yet", subtitle: "Keep listening to unlock long-gap rediscoveries" },

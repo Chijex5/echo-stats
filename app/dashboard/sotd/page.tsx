@@ -66,6 +66,15 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
+const loadImage = (src: string) =>
+  new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+
 // ─── Share Card (Canvas) ───────────────────────────────────────────────────
 
 async function drawShareCard(
@@ -74,12 +83,17 @@ async function drawShareCard(
   affinityScore: number,
   affinityLabel: string
 ): Promise<string> {
+  const albumImg = song.albumImageUrl
+    ? await loadImage(song.albumImageUrl).catch(() => null)
+    : null;
   return new Promise((resolve) => {
     const canvas = document.createElement("canvas");
     const W = 1080, H = 1080;
     canvas.width = W;
     canvas.height = H;
     const ctx = canvas.getContext("2d")!;
+
+    
 
     // ── Base fill
     ctx.fillStyle = "#0a0a0a";
@@ -115,14 +129,32 @@ async function drawShareCard(
     const artY = 130;
     ctx.shadowColor = song.gradientFrom + "88";
     ctx.shadowBlur = 90;
-    const artGrad = ctx.createLinearGradient(artX, artY, artX + artSz, artY + artSz);
-    artGrad.addColorStop(0, song.gradientFrom);
-    artGrad.addColorStop(1, song.gradientTo);
     rrPath(artX, artY, artSz, artSz, 32);
-    ctx.fillStyle = artGrad;
-    ctx.fill();
+    ctx.save();
+    ctx.clip();
+
+    if (albumImg) {
+      // IMAGE MODE
+      ctx.drawImage(albumImg, artX, artY, artSz, artSz);
+    } else {
+      // FALLBACK GRADIENT MODE
+      const artGrad = ctx.createLinearGradient(
+        artX,
+        artY,
+        artX + artSz,
+        artY + artSz
+      );
+      artGrad.addColorStop(0, song.gradientFrom);
+      artGrad.addColorStop(1, song.gradientTo);
+
+      ctx.fillStyle = artGrad;
+      ctx.fillRect(artX, artY, artSz, artSz);
+    }
+
+    ctx.restore();
     ctx.shadowBlur = 0;
     // Overlay shimmer
+    
     const shimmer = ctx.createLinearGradient(artX, artY, artX + artSz, artY + artSz);
     shimmer.addColorStop(0, "rgba(255,255,255,0.18)");
     shimmer.addColorStop(0.5, "transparent");
@@ -420,6 +452,7 @@ interface SotdHeroProps {
 }
 
 function SotdHero({ song, stats, affinityScore, affinityLabel, onShare }: SotdHeroProps) {
+  console.log(song)
   return (
     <section className="relative pt-4 pb-2">
       {/* Ambient blobs */}
@@ -497,10 +530,25 @@ function SotdHero({ song, stats, affinityScore, affinityLabel, onShare }: SotdHe
               initial={{ opacity: 0, scale: 0.94 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.7, ease: "easeOut" }}
-              className={`relative w-52 h-52 rounded-2xl bg-gradient-to-br ${song.gradientClass} shadow-2xl shadow-black/60 ring-1 ring-white/10 overflow-hidden`}
+              className="relative w-52 h-52 rounded-2xl shadow-2xl shadow-black/60 ring-1 ring-white/10 overflow-hidden"
             >
+              {song.albumImageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={song.albumImageUrl}
+                  alt={song.title}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div
+                  className={`w-full h-full bg-gradient-to-br ${song.gradientClass}`}
+                />
+              )}
+
+              {/* overlays stay ALWAYS */}
               <div className="absolute inset-0 bg-gradient-to-tr from-black/30 via-transparent to-white/15" />
               <Disc3 className="absolute bottom-4 right-4 text-white/30" size={36} />
+
               <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 hover:opacity-100 active:opacity-100 transition-opacity cursor-pointer group">
                 <div className="w-14 h-14 rounded-full bg-white/95 text-black flex items-center justify-center shadow-xl">
                   <Play size={20} fill="currentColor" className="ml-0.5" />
@@ -573,10 +621,24 @@ function SotdHero({ song, stats, affinityScore, affinityLabel, onShare }: SotdHe
                 initial={{ opacity: 0, y: 16, scale: 0.96 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ duration: 0.7, ease: "easeOut" }}
-                className={`relative w-56 h-56 md:w-64 md:h-64 rounded-2xl bg-gradient-to-br ${song.gradientClass} shadow-2xl shadow-black/60 ring-1 ring-white/10 overflow-hidden`}
+                className="relative w-56 h-56 md:w-64 md:h-64 rounded-2xl shadow-2xl shadow-black/60 ring-1 ring-white/10 overflow-hidden"
               >
+                {/* BASE LAYER (image OR fallback gradient) */}
+                {song.albumImageUrl ? (
+                  <img
+                    src={song.albumImageUrl}
+                    alt={song.title}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className={`w-full h-full bg-gradient-to-br ${song.gradientClass}`} />
+                )}
+
+                {/* overlays stay untouched */}
                 <div className="absolute inset-0 bg-gradient-to-tr from-black/30 via-transparent to-white/15" />
+
                 <Disc3 className="absolute bottom-4 right-4 text-white/30" size={40} />
+
                 <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity bg-black/30 cursor-pointer group">
                   <div className="w-16 h-16 rounded-full bg-white/95 text-black flex items-center justify-center shadow-xl group-hover:scale-105 transition-transform">
                     <Play size={22} fill="currentColor" className="ml-1" />
@@ -769,7 +831,18 @@ function MemorySnapshotSection({ data }: { data: MemorySnapshot }) {
           <div className="space-y-2.5 mt-1">
             {data.snapshotTracks.map((t, i) => (
               <div key={i} className="flex items-center gap-3 group py-1">
-                <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${t.color} ring-1 ring-white/10 shrink-0 relative overflow-hidden`}>
+                <div className="w-10 h-10 rounded-lg ring-1 ring-white/10 shrink-0 relative overflow-hidden bg-black/20">
+                  {t.albumImageUrl ? (
+                    <img
+                      src={t.albumImageUrl}
+                      alt={t.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className={`w-full h-full bg-gradient-to-br ${t.color}`} />
+                  )}
+
+                  {/* subtle dark overlay for consistency */}
                   <div className="absolute inset-0 bg-black/15" />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -1010,17 +1083,32 @@ function RelatedForgotten({ related }: { related: RelatedTrack[] }) {
             transition={{ duration: 0.4, delay: i * 0.06 }}
             className="snap-start shrink-0 w-[200px] sm:w-56 glass-card p-3.5 sm:p-4 hover:-translate-y-1 transition-transform group"
           >
-            <div className={`relative w-full aspect-square rounded-xl bg-gradient-to-br ${r.color} mb-3 sm:mb-4 overflow-hidden ring-1 ring-white/8 shadow-lg`}>
-              <div className="absolute inset-0 bg-black/12" />
-              {/* Overlay gradient for readability */}
-              <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/40 to-transparent" />
-              <span className="absolute top-2.5 left-2.5 text-[9px] uppercase tracking-widest font-semibold px-2 py-1 rounded-full bg-black/45 backdrop-blur-md text-white/90">
-                {r.tag}
-              </span>
-              <div className="absolute bottom-2.5 right-2.5 w-9 h-9 rounded-full bg-white text-black flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity">
-                <Play size={13} fill="currentColor" className="ml-0.5" />
-              </div>
+            <div className="relative w-full aspect-square rounded-xl mb-3 sm:mb-4 overflow-hidden ring-1 ring-white/8 shadow-lg">
+            {/* BASE LAYER */}
+            {r.albumImageUrl ? (
+              <img
+                src={r.albumImageUrl}
+                alt={r.title}
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+            ) : (
+              <div className={`absolute inset-0 bg-gradient-to-br ${r.color}`} />
+            )}
+
+            {/* overlays */}
+            <div className="absolute inset-0 bg-black/12" />
+
+            {/* Overlay gradient for readability */}
+            <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/40 to-transparent" />
+
+            <span className="absolute top-2.5 left-2.5 text-[9px] uppercase tracking-widest font-semibold px-2 py-1 rounded-full bg-black/45 backdrop-blur-md text-white/90">
+              {r.tag}
+            </span>
+
+            <div className="absolute bottom-2.5 right-2.5 w-9 h-9 rounded-full bg-white text-black flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity">
+              <Play size={13} fill="currentColor" className="ml-0.5" />
             </div>
+          </div>
             <div className="text-sm font-semibold truncate leading-tight">{r.title}</div>
             <div className="text-xs text-white/45 truncate mt-0.5 mb-2.5">{r.artist}</div>
             <div className="text-[11px] text-white/35 flex items-center gap-1.5">

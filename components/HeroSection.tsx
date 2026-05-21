@@ -268,9 +268,9 @@ export function HeroSection() {
                     : undefined,
                 }}
               >
-                {songOfTheDayData?.song.AlbumImageUrl ? (
+                {songOfTheDayData?.song.albumImageUrl ? (
                   <img
-                    src={songOfTheDayData.song.AlbumImageUrl}
+                    src={songOfTheDayData.song.albumImageUrl}
                     alt={songOfTheDayData.song.title ?? "Album art"}
                     className="w-full h-full object-cover"
                   />
