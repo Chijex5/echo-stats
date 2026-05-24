@@ -437,53 +437,6 @@ export function TimelineControl({
             ))}
           </div>
         </div>
-
-        {/* ── Quick jumps ── */}
-        <div className="relative flex flex-wrap items-center gap-2 mb-8">
-          {QUICK_JUMPS.map((q, i) => (
-            <button
-              key={q.label}
-              onClick={() => handleQuickJump(i)}
-              className="inline-flex items-center gap-1.5 bg-white/[0.05] hover:bg-white/[0.09] border border-white/10 px-3.5 py-2 rounded-full text-xs font-medium text-white/75 transition-colors focus:outline-none focus:ring-2 focus:ring-spotify/40"
-            >
-              <span aria-hidden="true">{q.emoji}</span>
-              {q.label}
-            </button>
-          ))}
-        </div>
-
-        {/* ── Listening volume area chart ── */}
-        <div>
-          <p className="text-[10px] uppercase tracking-widest text-white/35 mb-3">
-            Listening volume
-          </p>
-          <div className="h-20 -mx-2">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={yearHours.length ? yearHours : YEAR_HOURS}>
-                <defs>
-                  <linearGradient id="tl-hours" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#1DB954" stopOpacity={0.4} />
-                    <stop offset="100%" stopColor="#1DB954" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <Area
-                  dataKey="v"
-                  stroke="#1DB954"
-                  strokeWidth={1.5}
-                  fill="url(#tl-hours)"
-                  dot={false}
-                  activeDot={{ r: 4, fill: "#1DB954", strokeWidth: 0 }}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Hint */}
-        <div className="relative flex items-center gap-2 mt-4 text-xs text-white/35">
-          <Calendar size={11} aria-hidden="true" />
-          <span>Drag the timeline, tap year marks, or click month pills to navigate.</span>
-        </div>
       </div>
     </section>
   );

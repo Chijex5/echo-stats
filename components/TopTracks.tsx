@@ -128,8 +128,8 @@ function TrackRow({ track, index }: TrackRowProps) {
 
 const SKELETON_COUNT = 10;
 
-export function TopTracks() {
-  const { data, isLoading, error } = useTopTracks(10);
+export function TopTracks({limit = 10} : {limit?: number}) {
+  const { data, isLoading, error } = useTopTracks(limit);
   const tracks = data?.tracks ?? [];
 
   return (

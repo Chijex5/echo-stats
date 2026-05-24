@@ -62,12 +62,23 @@ function ArtistCard({ artist, index, isFirst }: ArtistCardProps) {
     >
       {/* Avatar */}
       <div
-        className={`w-20 h-20 rounded-full bg-gradient-to-br ${artist.color} flex items-center justify-center text-2xl font-bold text-white shadow-lg mb-4 relative`}
+        className={`w-20 h-20 rounded-full relative mb-4 shadow-lg shrink-0 ${
+          artist.imageUrl ? "overflow-hidden" : `bg-gradient-to-br ${artist.color} flex items-center justify-center`
+        }`}
       >
         {isFirst && (
-          <div className="absolute -inset-1 rounded-full border-2 border-spotify animate-pulse" />
+          <div className="absolute -inset-1 rounded-full border-2 border-spotify animate-pulse z-10" />
         )}
-        {artist.initials}
+
+        {artist.imageUrl ? (
+          <img
+            src={artist.imageUrl}
+            alt={artist.name}
+            className="w-full h-full object-cover rounded-full"
+          />
+        ) : (
+          <span className="text-2xl font-bold text-white">{artist.initials}</span>
+        )}
       </div>
 
       {/* Name */}

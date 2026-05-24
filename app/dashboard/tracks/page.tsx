@@ -24,7 +24,7 @@ export default function TopTracksPage() {
                 <p className="mt-2 text-white/60">Live listening data from your imported history and Spotify sync.</p>
               </section>
 
-              <TopTracks />
+              <TopTracks limit={50} />
               <VisualAnalyticsSection />
               <Insights />
               <RediscoverySection />

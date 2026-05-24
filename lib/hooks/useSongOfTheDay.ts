@@ -21,6 +21,7 @@ export interface SotdSong {
   title: string;
   artist: string;
   albumImageUrl: string | null;
+  artistImageUrl?: string;
   album: string;
   released: string;
   gradientFrom: string; // hex colour, e.g. "#3B82F6"

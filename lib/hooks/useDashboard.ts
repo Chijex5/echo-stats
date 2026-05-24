@@ -71,6 +71,7 @@ export interface TopArtist {
   name: string;
   initials: string;
   plays: number;
+  imageUrl: string | null;
   delta: number;
   trend: Trend;
   deltaLabel: string;
@@ -204,7 +205,7 @@ export interface NowPlayingSyncResponse {
   };
 }
 
-export function useNowPlayingSync(refreshIntervalMs = 60_000) {
+export function useNowPlayingSync(refreshIntervalMs = 45_000) {
   return useSWR<NowPlayingSyncResponse>(
     "/api/dashboard/now-playing",
     fetcher<NowPlayingSyncResponse>,
@@ -358,6 +359,7 @@ export interface TimelinePagePeriod {
   totalHours: number;
   uniqueArtists: number;
   topArtist: string;
+  topArtistImageUrl?: string;
   topArtistColor: string;
   accent: string;
   tracks: TimelinePageTrack[];

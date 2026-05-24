@@ -42,6 +42,7 @@ export type Period = {
   totalHours: number;
   uniqueArtists: number;
   topArtist: string;
+  topArtistImageUrl?: string;
   topArtistColor: string;
   accent: string;
   tracks: {
@@ -707,13 +708,21 @@ function MemoryCard({ period, onRetry, onClose }: {
       {/* Top artist */}
       <div className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.07]">
         <div
-          className={`w-10 h-10 rounded-full bg-gradient-to-br ${period.topArtistColor} flex items-center justify-center font-bold text-sm ring-1 ring-white/10 shrink-0`}
+          className={`w-10 h-10 rounded-full ring-1 ring-white/10 shrink-0 overflow-hidden ${
+            period.topArtistImageUrl
+              ? ""
+              : `bg-gradient-to-br ${period.topArtistColor} flex items-center justify-center font-bold text-sm`
+          }`}
         >
-          {period.topArtist
-            .split(" ")
-            .map((w) => w[0])
-            .slice(0, 2)
-            .join("")}
+          {period.topArtistImageUrl ? (
+            <img
+              src={period.topArtistImageUrl}
+              alt={period.topArtist}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            period.topArtist.split(" ").map((w) => w[0]).slice(0, 2).join("")
+          )}
         </div>
         <div>
           <div className="text-[9px] uppercase tracking-widest text-white/40">Top artist</div>
@@ -855,17 +864,23 @@ function SnapshotViewer({ activeIdx, periods }: {activeIdx: number;periods: Peri
                   </div>
                   <div className="flex items-center gap-3">
                     <div
-                      className={`w-10 h-10 rounded-full bg-gradient-to-br ${p.topArtistColor} flex items-center justify-center font-bold text-sm ring-1 ring-white/10`}>
-                      
-                      {p.topArtist.
-                      split(' ').
-                      map((w) => w[0]).
-                      slice(0, 2).
-                      join('')}
+                      className={`w-10 h-10 rounded-full ring-1 ring-white/10 shrink-0 overflow-hidden ${
+                        p.topArtistImageUrl
+                          ? ""
+                          : `bg-gradient-to-br ${p.topArtistColor} flex items-center justify-center font-bold text-sm`
+                      }`}
+                    >
+                      {p.topArtistImageUrl ? (
+                        <img
+                          src={p.topArtistImageUrl}
+                          alt={p.topArtist}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        p.topArtist.split(" ").map((w) => w[0]).slice(0, 2).join("")
+                      )}
                     </div>
-                    <div className="text-sm font-medium truncate">
-                      {p.topArtist}
-                    </div>
+                    <div className="text-sm font-medium truncate">{p.topArtist}</div>
                   </div>
                 </div>
                 <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4">
@@ -1237,6 +1252,7 @@ function TimeComparison({ periods }: {periods: Period[];}) {
 
 // Top-level component for the two comparison cells used in TimeComparison
 function ComparisonCell({ p, side }: { p: Period; side: 'left' | 'right' }) {
+  console.log('Rendering ComparisonCell for', p);
   return (
     <motion.div
       initial={{
@@ -1273,8 +1289,21 @@ function ComparisonCell({ p, side }: { p: Period; side: 'left' | 'right' }) {
             </div>
             <div className="flex items-center gap-3">
               <div
-                className={`w-10 h-10 rounded-full bg-gradient-to-br ${p.topArtistColor} ring-1 ring-white/10 flex items-center justify-center font-bold text-sm`}>
-                {p.topArtist.split(' ').map((w) => w[0]).slice(0, 2).join('')}
+                className={`w-10 h-10 rounded-full ring-1 ring-white/10 shrink-0 overflow-hidden ${
+                  p.topArtistImageUrl
+                    ? ""
+                    : `bg-gradient-to-br ${p.topArtistColor} flex items-center justify-center font-bold text-sm`
+                }`}
+              >
+                {p.topArtistImageUrl ? (
+                  <img
+                    src={p.topArtistImageUrl}
+                    alt={p.topArtist}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  p.topArtist.split(" ").map((w) => w[0]).slice(0, 2).join("")
+                )}
               </div>
               <div className="text-sm font-medium">{p.topArtist}</div>
             </div>
@@ -1365,6 +1394,7 @@ export default function TimelinePage() {
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
   const { data, error } = useTimelinePage();
   const { data: explorerData } = useTimelineExplorer();
+  console.log('TimelinePage data:', { data, explorerData, error });
   const periods = data?.periods.length ? data.periods : PERIODS;
 
 

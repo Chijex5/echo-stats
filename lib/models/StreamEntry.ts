@@ -13,6 +13,7 @@ export interface IStreamEntry extends Document {
   reasonStart: string;
   reasonEnd: string;
   albumImageUrl?: string;
+  artistImageUrl?: string;
   shuffle: boolean;
   skipped: boolean;
   offline: boolean;
@@ -37,6 +38,7 @@ const StreamEntrySchema = new Schema<IStreamEntry>(
     shuffle:         { type: Boolean },
     skipped:         { type: Boolean },
     albumImageUrl:   { type: String },
+    artistImageUrl:  { type: String },
     offline:         { type: Boolean },
     releaseYear:     { type: Number },
     releaseDatePrecision: { type: String, enum: ["year", "month", "day", null], default: null },

@@ -4,7 +4,6 @@ import mongoose from "mongoose";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { connectDB } from "@/lib/db";
 import StreamEntry from "@/lib/models/StreamEntry";
-import { a } from "framer-motion/client";
 
 const GRADIENTS = [
   "from-emerald-400 to-cyan-500",
@@ -54,6 +53,7 @@ export async function GET() {
       totalMs: number;
       artists: string[];
       topArtist: string;
+      topArtistImageUrl: string;
       tracks: Array<{ title: string; artist: string; plays: number; albumImageUrl?: string }>;
     }>([
       { $match: { userId } },
@@ -67,6 +67,7 @@ export async function GET() {
           trackName: { $first: "$trackName" },
           artistName: { $first: "$artistName" },
           albumImageUrl: { $first: "$albumImageUrl" },
+          artistImageUrl: { $first: "$artistImageUrl" },
           plays: { $sum: 1 },
           totalMs: { $sum: "$msPlayed" },
         },
@@ -79,6 +80,7 @@ export async function GET() {
           totalMs: { $sum: "$totalMs" },
           artists: { $addToSet: "$artistName" },
           topArtist: { $first: "$artistName" },
+          topArtistImageUrl: { $first: "$artistImageUrl" },
           tracks: {
             $push: {
               title: "$trackName",
@@ -119,6 +121,7 @@ export async function GET() {
       totalHours: Math.round(period.totalMs / 3_600_000),
       uniqueArtists: period.artists.length,
       topArtist: period.topArtist || "Unknown artist",
+      topArtistImageUrl: period.topArtistImageUrl,
       topArtistColor: colorFor(period.topArtist || String(index)),
       accent: colorFor(`${year}-${month}`, ACCENTS),
       tracks: period.tracks.slice(0, 3).map((track) => ({

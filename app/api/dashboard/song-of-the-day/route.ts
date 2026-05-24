@@ -98,6 +98,7 @@ export async function GET() {
     artistName: string;
     albumName: string;
     albumImageUrl?: string;
+    artistImageUrl?: string;
     playCount: number;
     totalMs: number;
     lastPlayed: Date;
@@ -112,6 +113,7 @@ export async function GET() {
         albumImageUrl: { $first: "$albumImageUrl" },
         trackName: { $first: "$trackName" },
         artistName: { $first: "$artistName" },
+        artistImageUrl: { $first: "$artistImageUrl" },
         albumName: { $first: "$albumName" },
         playCount: { $sum: 1 },
         totalMs: { $sum: "$msPlayed" },
@@ -234,7 +236,7 @@ export async function GET() {
     : "Quiet rediscovery";
 
   // ── 9. Peak-month snapshot: co-played tracks ───────────────────────────
-  type CoPlayEntry = { _id: string; albumImageUrl: string | null; trackName: string; artistName: string; plays: number };
+  type CoPlayEntry = { _id: string; albumImageUrl: string | null; trackName: string; artistName: string; artistImageUrl?: string; plays: number };
   const peakStart = peakMonthDate;
   const peakEnd = new Date(peakMonthDate.getFullYear(), peakMonthDate.getMonth() + 1, 1);
 
@@ -282,6 +284,7 @@ export async function GET() {
     title: t.trackName,
     albumImageUrl: t.albumImageUrl,
     artist: t.artistName,
+    artistImageUrl: t.artistImageUrl,
     color: strToSnapshotColor(t._id),
   }));
 
@@ -319,6 +322,7 @@ export async function GET() {
   type RelatedTrack = {
     title: string;
     albumImageUrl?: string;
+    artistImageUrl?: string;
     artist: string;
     color: string;
     tag: string;
@@ -335,6 +339,7 @@ export async function GET() {
       return {
         title: c.trackName,
         albumImageUrl: c.albumImageUrl,
+        artistImageUrl: c.artistImageUrl,
         artist: c.artistName,
         color: g.cls,
         tag: TAGS[i % TAGS.length],
@@ -389,6 +394,7 @@ export async function GET() {
       gradientTo: gradient.to,
       gradientClass: gradient.cls,
       albumImageUrl: picked.albumImageUrl, // will be filled in client-side after fetching from Spotify API
+      artistImageUrl: picked.artistImageUrl, // will be filled in client-side after fetching from Spotify API
     },
     stats: {
       pastPlays: picked.playCount,

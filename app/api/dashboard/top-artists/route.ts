@@ -54,13 +54,13 @@ export async function GET(req: NextRequest) {
 
   // ── Current & previous period totals ──────────────────────────────────────
   const [current, previous] = await Promise.all([
-    StreamEntry.aggregate<{ _id: string; plays: number }>([
+    StreamEntry.aggregate<{ _id: string; artistImageUrl: string; plays: number }>([
       { $match: { userId, ts: { $gte: thirtyDaysAgo } } },
-      { $group: { _id: "$artistName", plays: { $sum: 1 } } },
+      { $group: { _id: "$artistName", artistImageUrl: { $first: "$artistImageUrl" }, plays: { $sum: 1 } } },
     ]),
-    StreamEntry.aggregate<{ _id: string; plays: number }>([
+    StreamEntry.aggregate<{ _id: string; artistImageUrl: string; plays: number }>([
       { $match: { userId, ts: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo } } },
-      { $group: { _id: "$artistName", plays: { $sum: 1 } } },
+      { $group: { _id: "$artistName", artistImageUrl: { $first: "$artistImageUrl" }, plays: { $sum: 1 } } },
     ]),
   ]);
 
@@ -72,7 +72,7 @@ export async function GET(req: NextRequest) {
       const prev = prevMap.get(a._id) ?? 0;
       const delta = a.plays - prev;
       const trend: Trend = delta > 0 ? "up" : delta < 0 ? "down" : "same";
-      return { name: a._id, plays: a.plays, prev, delta, trend };
+      return { name: a._id, artistImageUrl: a.artistImageUrl, plays: a.plays, prev, delta, trend };
     })
     .sort((a, b) => b.plays - a.plays)
     .slice(0, limit);
@@ -126,6 +126,7 @@ export async function GET(req: NextRequest) {
   const artists = topArtists.map((a) => ({
     name: a.name,
     initials: nameToInitials(a.name),
+    imageUrl: a.artistImageUrl,
     plays: a.plays,
     delta: a.delta,
     trend: a.trend,
