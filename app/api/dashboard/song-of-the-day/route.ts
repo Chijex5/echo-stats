@@ -262,10 +262,10 @@ export async function GET() {
   ]);
 
   // Top artist during peak month
-  type ArtistEntry = { _id: string; plays: number };
+  type ArtistEntry = { _id: string; artistImageUrl?: string; plays: number };
   const peakArtists = await StreamEntry.aggregate<ArtistEntry>([
     { $match: { userId, ts: { $gte: peakStart, $lt: peakEnd } } },
-    { $group: { _id: "$artistName", plays: { $sum: 1 } } },
+    { $group: { _id: "$artistName", artistImageUrl: { $first: "$artistImageUrl" }, plays: { $sum: 1 } } },
     { $sort: { plays: -1 } },
     { $limit: 1 },
   ]);
