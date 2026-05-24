@@ -133,7 +133,7 @@ export async function GET(req: NextRequest) {
       { $sort: { plays: -1 } },
       { $limit: 1 },
     ]),
-    StreamEntry.aggregate<{ _id: string; plays: number }>([
+    StreamEntry.aggregate<{ _id: string; artistImageUrl:string; plays: number }>([
       { $match: rangeMatch },
       { $group: { _id: "$artistName", plays: { $sum: 1 }, artistImageUrl: { $first: "$artistImageUrl" } } },
       { $sort: { plays: -1 } },
