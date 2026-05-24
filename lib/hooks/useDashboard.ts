@@ -401,7 +401,7 @@ export interface StoryModeResponse {
   from: string;
   to: string;
   topSong: { title: string; albumImageUrl?: string; subtitle: string };
-  topArtist: { title: string; subtitle: string };
+  topArtist: { title: string; subtitle: string; artistImageUrl?: string };
   musicAge: {
     year: string;
     subtitle: string;

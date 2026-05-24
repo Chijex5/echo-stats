@@ -59,6 +59,7 @@ export interface SnapshotArtist {
   initials: string;
   plays: number;
   color: string;
+  imageUrl?: string | null;
 }
 
 export interface MemorySnapshot {

@@ -121,21 +121,22 @@ export async function GET() {
       { $group: { _id: { $month: "$ts" }, count: { $sum: 1 } } },
       { $sort: { count: -1 } },
     ]),
-    StreamEntry.aggregate<{ _id: string; plays: number; artistName: string }>([
+    StreamEntry.aggregate<{ _id: string; plays: number; albumImageUrl?: string; artistName: string }>([
       { $match: { userId, albumName: { $exists: true, $ne: "" } } },
       {
         $group: {
           _id: "$albumName",
           plays: { $sum: 1 },
+          albumImageUrl: { $first: "$albumImageUrl" },
           artistName: { $first: "$artistName" },
         },
       },
       { $sort: { plays: -1 } },
       { $limit: 6 },
     ]),
-    StreamEntry.aggregate<{ _id: string; plays: number }>([
+    StreamEntry.aggregate<{ _id: string; artistImageUrl?: string; plays: number }>([
       { $match: { userId } },
-      { $group: { _id: "$artistName", plays: { $sum: 1 } } },
+      { $group: { _id: "$artistName", artistImageUrl: { $first: "$artistImageUrl" }, plays: { $sum: 1 } } },
       { $sort: { plays: -1 } },
       { $limit: 1 },
     ]),

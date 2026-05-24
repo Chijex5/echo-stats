@@ -117,8 +117,8 @@ function ArtistCard({ artist, index, isFirst }: ArtistCardProps) {
 
 const SKELETON_COUNT = 8;
 
-export function TopArtistsSection() {
-  const { data, isLoading, error } = useTopArtists(8);
+export function TopArtistsSection({ limit = 8 }: { limit?: number }) {
+  const { data, isLoading, error } = useTopArtists(limit);
   const artists = data?.artists ?? [];
 
   // Scroll the carousel programmatically via the chevron buttons

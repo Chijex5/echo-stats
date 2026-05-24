@@ -80,8 +80,8 @@ type ProfileResponse = {
     storageUsed: string;
   };
   highlights: {
-    topAlbums: Array<{ _id: string; artistName: string; plays: number }>;
-    mostPlayedArtist: { _id: string; plays: number } | null;
+    topAlbums: Array<{ _id: string; albumImageUrl:string; artistName: string; plays: number }>;
+    mostPlayedArtist: { _id: string; artistImageUrl?: string; plays: number } | null;
     favoriteSongThisYear: SongMoment;
     forgottenFavoriteCount: number;
   };
@@ -534,21 +534,46 @@ export default function ProfilePage() {
                             : Array.from({ length: 6 }, (_, i) => ({
                                 _id: `Album ${i + 1}`,
                                 artistName: "EchoStats",
+                                albumImageUrl: "",
                                 plays: 0,
                               }))
                         ).map((album, i) => (
                           <div
                             key={`${album._id}-${i}`}
-                            className={`aspect-square rounded-2xl bg-gradient-to-br ${albumGradients[i % albumGradients.length]} p-[2px] shadow-xl shadow-black/40`}
+                            className={`aspect-square rounded-2xl ${
+                              album.albumImageUrl
+                                ? "p-0 overflow-hidden"
+                                : `bg-gradient-to-br ${albumGradients[i % albumGradients.length]} p-[2px]`
+                            } shadow-xl shadow-black/40`}
                           >
-                            <div className="flex h-full flex-col justify-between rounded-[14px] border border-white/10 bg-black/20 p-3">
-                              <span className="text-[9px] font-semibold uppercase tracking-widest text-white/50">
-                                {album.plays} plays
-                              </span>
-                              <span className="line-clamp-2 text-sm font-semibold leading-snug text-white">
-                                {album._id}
-                              </span>
-                            </div>
+                            {album.albumImageUrl ? (
+                              <div className="relative h-full w-full rounded-2xl overflow-hidden">
+                                <img
+                                  src={album.albumImageUrl}
+                                  alt={album._id}
+                                  className="w-full h-full object-cover"
+                                />
+                                {/* Overlay so text stays readable */}
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                                <div className="absolute inset-0 flex flex-col justify-between p-3">
+                                  <span className="text-[9px] font-semibold uppercase tracking-widest text-white/60">
+                                    {album.plays} plays
+                                  </span>
+                                  <span className="line-clamp-2 text-sm font-semibold leading-snug text-white">
+                                    {album._id}
+                                  </span>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex h-full flex-col justify-between rounded-[14px] border border-white/10 bg-black/20 p-3">
+                                <span className="text-[9px] font-semibold uppercase tracking-widest text-white/50">
+                                  {album.plays} plays
+                                </span>
+                                <span className="line-clamp-2 text-sm font-semibold leading-snug text-white">
+                                  {album._id}
+                                </span>
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -558,10 +583,18 @@ export default function ProfilePage() {
                     <GlassPanel className="p-6">
                       <EyebrowLabel>Most played artist</EyebrowLabel>
 
-                      <div className="mt-6 flex h-28 w-28 items-center justify-center rounded-full bg-gradient-to-br from-emerald-300 via-indigo-400 to-violet-500 text-3xl font-bold text-black shadow-[0_0_50px_rgba(99,102,241,0.3)]">
-                        {data.highlights.mostPlayedArtist?._id
-                          .slice(0, 2)
-                          .toUpperCase() ?? "ES"}
+                      <div className="mt-6 relative w-28 h-28 shrink-0">
+                        {data.highlights.mostPlayedArtist?.artistImageUrl ? (
+                          <img
+                            src={data.highlights.mostPlayedArtist.artistImageUrl}
+                            alt={data.highlights.mostPlayedArtist._id}
+                            className="w-full h-full rounded-full object-cover shadow-[0_0_50px_rgba(99,102,241,0.3)] ring-1 ring-white/10"
+                          />
+                        ) : (
+                          <div className="w-full h-full rounded-full bg-gradient-to-br from-emerald-300 via-indigo-400 to-violet-500 flex items-center justify-center text-3xl font-bold text-black shadow-[0_0_50px_rgba(99,102,241,0.3)]">
+                            {data.highlights.mostPlayedArtist?._id.slice(0, 2).toUpperCase() ?? "ES"}
+                          </div>
+                        )}
                       </div>
 
                       <h3 className="mt-6 text-2xl font-semibold leading-tight text-white">

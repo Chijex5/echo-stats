@@ -10,6 +10,7 @@ import { TimelineExplorerSection } from '@/components/TimelineExplorerSection';
 import { VisualAnalyticsSection } from '@/components/VisualAnalyticsSection';
 import { RediscoverySection } from '@/components/RediscoverySection';
 import { StoryModePreviewSection } from '@/components/StoryModePreviewSection';
+import { RecentlyPlayedDesktop } from '@/components/RecentlyPlayedDesktop';
 // app/dashboard/page.tsx
 export default function DashboardPage() {
   return (
@@ -32,6 +33,7 @@ export default function DashboardPage() {
             <div className="relative z-10 flex flex-col gap-12">
               <HeroSection />
               <WidgetStrip />
+              <RecentlyPlayedDesktop />
               <TopTracks />
               <TopArtistsSection />
               <Insights />

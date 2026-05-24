@@ -31,36 +31,225 @@ type StorySlide = {
 const DURATION_MS = 5500;
 
 /* ─────────────────────────────────────────────────────────────
+   Image → base-64 helper
+   Canvas-first (hits the browser cache of already-displayed
+   images), fetch as fallback, raw URL as last resort.
+   This is what makes images survive print / Save-as-PDF.
+───────────────────────────────────────────────────────────── */
+async function toDataURL(url: string): Promise<string> {
+  // ── Canvas approach ──────────────────────────────────────
+  try {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = reject;
+      img.src = url;
+    });
+    const canvas = document.createElement("canvas");
+    canvas.width  = img.naturalWidth  || 400;
+    canvas.height = img.naturalHeight || 400;
+    canvas.getContext("2d")!.drawImage(img, 0, 0);
+    return canvas.toDataURL("image/jpeg", 0.9);
+  } catch { /* fall through */ }
+
+  // ── Fetch approach ───────────────────────────────────────
+  try {
+    const res  = await fetch(url, { mode: "cors" });
+    const blob = await res.blob();
+    return new Promise<string>((resolve, reject) => {
+      const r = new FileReader();
+      r.onloadend = () => resolve(r.result as string);
+      r.onerror   = reject;
+      r.readAsDataURL(blob);
+    });
+  } catch { /* fall through */ }
+
+  return url; // best-effort: original URL (images may still load in some browsers)
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Per-slide decorative visuals for non-art slides
+   Each one is a self-contained HTML string with inline CSS.
+   Uses the slide's own gradient colours so it always matches.
+───────────────────────────────────────────────────────────── */
+function slideDecoration(s: StorySlide): string {
+  const { hexFrom, hexVia, hexTo, id, title } = s;
+
+  switch (id) {
+    /* ── 1 · Top Song — spinning vinyl ── */
+    case 1:
+      return `
+        <div style="width:148px;height:148px;margin:20px auto 14px;position:relative;flex-shrink:0">
+          <div style="position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 45deg,rgba(255,255,255,.16) 0%,rgba(0,0,0,.55) 25%,rgba(255,255,255,.10) 50%,rgba(0,0,0,.55) 75%,rgba(255,255,255,.16) 100%);border:1.5px solid rgba(255,255,255,.22);box-shadow:0 12px 40px rgba(0,0,0,.65)"></div>
+          <div style="position:absolute;inset:8%;border-radius:50%;border:1px solid rgba(255,255,255,.07)"></div>
+          <div style="position:absolute;inset:16%;border-radius:50%;border:1px solid rgba(255,255,255,.05)"></div>
+          <div style="position:absolute;inset:28%;border-radius:50%;background:linear-gradient(135deg,${hexFrom},${hexTo});border:1px solid rgba(255,255,255,.2);box-shadow:0 4px 18px rgba(0,0,0,.55)"></div>
+          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
+            <div style="width:15px;height:15px;border-radius:50%;background:rgba(255,255,255,.55);border:2.5px solid rgba(255,255,255,.9)"></div>
+          </div>
+        </div>`;
+
+    /* ── 2 · Top Artist — equaliser bars ── */
+    case 2:
+      return `
+        <div style="display:flex;align-items:flex-end;justify-content:center;gap:4px;height:72px;width:148px;margin:20px auto 14px;flex-shrink:0">
+          ${[38,62,48,80,55,90,44,76,58,85,42,68,52,78,35].map((h, i) =>
+            `<div style="flex:1;border-radius:3px 3px 0 0;background:linear-gradient(to top,${hexFrom},${hexVia});height:${h}%;opacity:${.52 + i * .03}"></div>`
+          ).join("")}
+        </div>`;
+
+    /* ── 3 · Music Age — year inside concentric rings ── */
+    case 3:
+      return `
+        <div style="width:148px;height:148px;margin:16px auto 10px;position:relative;flex-shrink:0">
+          ${[0,12,24,36].map((inset, i) =>
+            `<div style="position:absolute;inset:${inset}px;border-radius:50%;border:1.5px solid rgba(255,255,255,${.18 - i*.04})"></div>`
+          ).join("")}
+          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px">
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:32px;line-height:1;letter-spacing:.06em;color:rgba(255,255,255,.88)">${title}</div>
+            <div style="font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:rgba(255,255,255,.38);font-family:'DM Sans',sans-serif">era</div>
+          </div>
+        </div>`;
+
+    /* ── 4 · Favorite Era — horizontal era bars ── */
+    case 4:
+      return `
+        <div style="width:148px;margin:20px auto 14px;flex-shrink:0">
+          ${["80s","90s","00s","10s","20s"].map((era, i) => {
+            const w = [42,68,85,62,50][i];
+            return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+              <span style="font-size:9px;color:rgba(255,255,255,.38);width:24px;text-align:right;font-family:'DM Sans',sans-serif;letter-spacing:.06em">${era}</span>
+              <div style="flex:1;height:8px;border-radius:4px;background:rgba(255,255,255,.1);overflow:hidden">
+                <div style="height:100%;width:${w}%;border-radius:4px;background:linear-gradient(to right,${hexFrom},${hexVia})"></div>
+              </div>
+            </div>`;
+          }).join("")}
+        </div>`;
+
+    /* ── 5 · Forgotten Favorite — cassette tape ── */
+    case 5:
+      return `
+        <div style="width:156px;height:90px;margin:20px auto 14px;position:relative;flex-shrink:0">
+          <div style="position:absolute;inset:0;border-radius:10px;background:rgba(0,0,0,.45);border:1.5px solid rgba(255,255,255,.2);box-shadow:0 6px 24px rgba(0,0,0,.5)"></div>
+          <div style="position:absolute;inset:12px;border-radius:6px;background:linear-gradient(135deg,${hexFrom}1a,${hexTo}1a);border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:space-evenly">
+            ${["left","right"].map(() =>
+              `<div style="width:28px;height:28px;border-radius:50%;border:2.5px solid rgba(255,255,255,.35);display:flex;align-items:center;justify-content:center">
+                <div style="width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.5)"></div>
+              </div>`
+            ).join(`<div style="flex:1;height:2.5px;background:linear-gradient(to right,rgba(255,255,255,.25),rgba(255,255,255,.08));margin:0 8px;border-radius:2px"></div>`)}
+          </div>
+          <div style="position:absolute;bottom:7px;left:50%;transform:translateX(-50%);width:44%;height:3px;background:linear-gradient(to right,${hexVia},${hexFrom});border-radius:2px;opacity:.55"></div>
+        </div>`;
+
+    /* ── 6 · Emotional Month — EKG heartbeat ── */
+    case 6:
+      return `
+        <div style="width:148px;height:60px;margin:22px auto 14px;flex-shrink:0;overflow:visible">
+          <svg viewBox="0 0 148 60" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;overflow:visible">
+            <defs>
+              <linearGradient id="ekg${id}" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%"   stop-color="${hexFrom}" stop-opacity=".25"/>
+                <stop offset="45%"  stop-color="${hexVia}"  stop-opacity="1"/>
+                <stop offset="100%" stop-color="${hexTo}"   stop-opacity=".25"/>
+              </linearGradient>
+              <filter id="glow${id}">
+                <feGaussianBlur stdDeviation="2.5" result="blur"/>
+                <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+            </defs>
+            <path d="M 0 30 L 18 30 L 23 30 L 28 10 L 33 52 L 38 18 L 43 30 L 62 30 L 67 30 L 72 8 L 77 52 L 82 18 L 87 30 L 106 30 L 111 30 L 116 12 L 121 48 L 126 20 L 131 30 L 148 30"
+              fill="none" stroke="url(#ekg${id})" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow${id})"/>
+            <circle cx="72" cy="8" r="4" fill="${hexVia}" opacity=".85" filter="url(#glow${id})"/>
+          </svg>
+        </div>`;
+
+    /* ── 7 · Hidden Gem — faceted diamond ── */
+    case 7:
+      return `
+        <div style="width:100px;height:100px;margin:20px auto 14px;flex-shrink:0">
+          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;overflow:visible">
+            <defs>
+              <linearGradient id="gf${id}" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%"   stop-color="${hexFrom}" stop-opacity=".95"/>
+                <stop offset="100%" stop-color="${hexTo}"   stop-opacity=".75"/>
+              </linearGradient>
+              <filter id="gs${id}"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            </defs>
+            <!-- outer glow -->
+            <polygon points="50,6 88,38 50,94 12,38" fill="${hexVia}" opacity=".15" transform="scale(1.08) translate(-4,-3)" filter="url(#gs${id})"/>
+            <!-- main body -->
+            <polygon points="50,6 88,38 50,94 12,38" fill="url(#gf${id})" stroke="rgba(255,255,255,.28)" stroke-width="1.5"/>
+            <!-- facet lines -->
+            <line x1="12" y1="38" x2="88" y2="38" stroke="rgba(255,255,255,.35)" stroke-width="1.2"/>
+            <line x1="50" y1="6"  x2="12" y2="38" stroke="rgba(255,255,255,.22)" stroke-width="1"/>
+            <line x1="50" y1="6"  x2="88" y2="38" stroke="rgba(255,255,255,.22)" stroke-width="1"/>
+            <line x1="50" y1="6"  x2="50" y2="94" stroke="rgba(255,255,255,.12)" stroke-width="1"/>
+            <!-- shine facet -->
+            <polygon points="50,6 66,38 50,22" fill="rgba(255,255,255,.28)"/>
+          </svg>
+        </div>`;
+
+    /* ── 8 · Personality — fingerprint rings ── */
+    case 8:
+      return `
+        <div style="width:120px;height:120px;margin:18px auto 10px;position:relative;flex-shrink:0">
+          ${[4,12,20,28,36,44,52].map((inset, i) =>
+            `<div style="position:absolute;inset:${inset}px;border-radius:50%;border:1.5px solid rgba(255,255,255,${.06 + i * .025});transform:rotate(${i * 9}deg)"></div>`
+          ).join("")}
+          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
+            <div style="width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,${hexFrom},${hexTo});opacity:.8;box-shadow:0 0 18px ${hexVia}99"></div>
+          </div>
+        </div>`;
+
+    default:
+      return "";
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
    Full-story HTML export — all 8 slides, print-ready
-   Album art featured as full bleed background when present
+   Images are expected to be base64 data-URLs by the time this
+   is called — that's what makes them survive Save as PDF.
 ───────────────────────────────────────────────────────────── */
 function buildFullExportHTML(slides: StorySlide[], from: string, to: string): string {
-  const cards = slides.map((s) => `
+  const cards = slides.map((s) => {
+    const hasArt = Boolean(s.albumImageUrl);
+    const deco   = hasArt ? "" : slideDecoration(s);
+
+    return `
     <div class="card">
       <div class="card-glow" style="background:radial-gradient(circle at 30% 30%,${s.hexVia}55,transparent 60%)"></div>
       <div class="card-inner" style="background:linear-gradient(145deg,${s.hexFrom},${s.hexVia} 52%,${s.hexTo})">
-        ${s.albumImageUrl ? `
+        ${hasArt ? `
         <div class="album-bg-wrap">
           <img class="album-bg-img" src="${s.albumImageUrl}" alt="" />
           <div class="album-bg-scrim"></div>
         </div>` : ""}
         <div class="noise"></div>
+
         <div class="card-body">
           <div class="chip">${s.label}</div>
-          ${s.albumImageUrl ? `
+
+          ${hasArt ? `
           <div class="album-art-container">
             <img class="album-art" src="${s.albumImageUrl}" alt="${s.title}" />
             <div class="album-art-shine"></div>
-          </div>` : ""}
-          <h2 class="title">${s.title}</h2>
-          <p class="sub">${s.subtitle}</p>
+          </div>` : deco}
+
+          <div class="text-block">
+            <h2 class="title">${s.title}</h2>
+            <p class="sub">${s.subtitle}</p>
+          </div>
         </div>
+
         <div class="card-footer">
           <span class="brand">&#9835; Music Story</span>
           <span class="range-text">${from} &rarr; ${to}</span>
         </div>
       </div>
-    </div>`).join("\n");
+    </div>`;
+  }).join("\n");
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -69,35 +258,56 @@ function buildFullExportHTML(slides: StorySlide[], from: string, to: string): st
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Music Story &middot; ${from} &ndash; ${to}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600&display=swap" rel="stylesheet"/>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html,body{background:#080808;min-height:100%;font-family:'DM Sans',sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact;color:#fff}
+html,body{background:#060608;min-height:100%;font-family:'DM Sans',sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact;color:#fff}
+
+/* ── Page header ── */
 .page-header{text-align:center;padding:56px 24px 40px}
-.eyebrow{font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:rgba(255,255,255,.35);margin-bottom:14px}
-.page-header h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(48px,8vw,88px);letter-spacing:.04em;line-height:1}
-.range-badge{display:inline-block;margin-top:18px;padding:6px 18px;border:1px solid rgba(255,255,255,.15);border-radius:100px;font-size:12px;color:rgba(255,255,255,.5);letter-spacing:.1em}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px;padding:0 32px 64px;max-width:1100px;margin:0 auto}
-.card{position:relative;border-radius:36px;aspect-ratio:9/16;overflow:hidden}
-.card-glow{position:absolute;inset:-20px;pointer-events:none;z-index:0;filter:blur(40px);opacity:.55}
-.card-inner{position:relative;z-index:1;width:100%;height:100%;border-radius:36px;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;border:1px solid rgba(255,255,255,.12)}
-/* Album background layers */
+.eyebrow{font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:rgba(255,255,255,.32);margin-bottom:14px}
+.page-header h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(52px,9vw,96px);letter-spacing:.05em;line-height:1;background:linear-gradient(135deg,rgba(255,255,255,.95) 30%,rgba(255,255,255,.4));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.range-badge{display:inline-block;margin-top:20px;padding:7px 22px;border:1px solid rgba(255,255,255,.14);border-radius:100px;font-size:12px;color:rgba(255,255,255,.45);letter-spacing:.12em}
+
+/* ── Grid ── */
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;padding:0 32px 72px;max-width:1080px;margin:0 auto}
+@media(max-width:800px){.grid{grid-template-columns:repeat(2,1fr)}}
+
+/* ── Card shell ── */
+.card{position:relative;border-radius:32px;aspect-ratio:9/16;overflow:hidden}
+.card-glow{position:absolute;inset:-24px;pointer-events:none;z-index:0;filter:blur(44px);opacity:.5}
+.card-inner{position:relative;z-index:1;width:100%;height:100%;border-radius:32px;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;border:1px solid rgba(255,255,255,.13)}
+
+/* ── Album bg layers ── */
 .album-bg-wrap{position:absolute;inset:0;z-index:0;pointer-events:none}
-.album-bg-img{width:100%;height:100%;object-fit:cover;opacity:.22;filter:blur(24px) saturate(1.6);transform:scale(1.08)}
-.album-bg-scrim{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.35) 0%,rgba(0,0,0,.1) 40%,rgba(0,0,0,.75) 100%)}
-/* Album art spotlight */
-.album-art-container{position:relative;margin:18px auto 0;width:148px;height:148px;border-radius:20px;flex-shrink:0}
-.album-art{width:100%;height:100%;object-fit:cover;border-radius:20px;border:1px solid rgba(255,255,255,.18);box-shadow:0 8px 40px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.08)}
-.album-art-shine{position:absolute;inset:0;border-radius:20px;background:linear-gradient(135deg,rgba(255,255,255,.18) 0%,transparent 50%);pointer-events:none}
-.noise{position:absolute;inset:0;border-radius:inherit;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.06'/%3E%3C/svg%3E");pointer-events:none;z-index:2;mix-blend-mode:overlay}
-.card-body{padding:32px 28px 0;position:relative;z-index:3;display:flex;flex-direction:column;align-items:flex-start}
-.chip{display:inline-block;font-size:10px;font-weight:500;letter-spacing:.22em;text-transform:uppercase;color:rgba(255,255,255,.65);background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.18);border-radius:100px;padding:5px 14px;margin-bottom:4px}
-.title{font-family:'Bebas Neue',sans-serif;font-size:clamp(34px,5vw,52px);letter-spacing:.04em;line-height:1;word-break:break-word;margin-top:16px}
-.sub{margin-top:14px;font-size:14px;line-height:1.6;color:rgba(255,255,255,.72);font-weight:300}
-.card-footer{position:relative;z-index:3;padding:16px 28px 28px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid rgba(255,255,255,.1);margin-top:24px}
-.brand{font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:.1em;color:rgba(255,255,255,.45)}
-.range-text{font-size:11px;color:rgba(255,255,255,.3);letter-spacing:.06em}
-@media print{.grid{page-break-inside:avoid}.card{break-inside:avoid}}
+.album-bg-img{width:100%;height:100%;object-fit:cover;opacity:.20;filter:blur(28px) saturate(1.7);transform:scale(1.1)}
+.album-bg-scrim{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.3) 0%,rgba(0,0,0,.05) 40%,rgba(0,0,0,.78) 100%)}
+
+/* ── Album art spotlight ── */
+.album-art-container{position:relative;margin:16px auto 0;width:136px;height:136px;border-radius:18px;flex-shrink:0}
+.album-art{width:100%;height:100%;object-fit:cover;border-radius:18px;border:1px solid rgba(255,255,255,.18);box-shadow:0 8px 44px rgba(0,0,0,.65),0 0 0 1px rgba(255,255,255,.08);display:block}
+.album-art-shine{position:absolute;inset:0;border-radius:18px;background:linear-gradient(135deg,rgba(255,255,255,.2) 0%,transparent 52%);pointer-events:none}
+
+/* ── Noise texture ── */
+.noise{position:absolute;inset:0;border-radius:inherit;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.055'/%3E%3C/svg%3E");pointer-events:none;z-index:2;mix-blend-mode:overlay}
+
+/* ── Card body ── */
+.card-body{padding:26px 22px 0;position:relative;z-index:3;display:flex;flex-direction:column;align-items:center;flex:1}
+.chip{display:inline-block;font-size:9px;font-weight:500;letter-spacing:.24em;text-transform:uppercase;color:rgba(255,255,255,.62);background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.16);border-radius:100px;padding:5px 13px;margin-bottom:2px;align-self:flex-start}
+.text-block{width:100%;margin-top:auto;border-radius:16px;background:rgba(0,0,0,.38);border:1px solid rgba(255,255,255,.1);padding:14px 16px 16px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.title{font-family:'Bebas Neue',sans-serif;font-size:clamp(26px,3.5vw,38px);letter-spacing:.04em;line-height:1.05;word-break:break-word}
+.sub{margin-top:9px;font-size:11px;line-height:1.6;color:rgba(255,255,255,.68);font-weight:300}
+
+/* ── Footer ── */
+.card-footer{position:relative;z-index:3;padding:12px 22px 20px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid rgba(255,255,255,.09);margin-top:12px}
+.brand{font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:.12em;color:rgba(255,255,255,.38)}
+.range-text{font-size:10px;color:rgba(255,255,255,.28);letter-spacing:.07em}
+
+@media print{
+  body{background:#060608!important}
+  .grid{page-break-inside:avoid}
+  .card{break-inside:avoid}
+}
 </style>
 </head>
 <body>
@@ -439,26 +649,49 @@ function DateRangeInputs({
 }
 
 /* ─────────────────────────────────────────────────────────────
-   Export modal — album art strip preview when present
+   Export modal
+   All three export actions are async: they first convert every
+   album-art URL to a base64 data-URL so images survive
+   print / Save-as-PDF. A "preparing" overlay shows while that
+   happens.
 ───────────────────────────────────────────────────────────── */
 function ExportModal({
   slides, from, to, onClose,
 }: { slides: StorySlide[]; from: string; to: string; onClose: () => void }) {
 
-  const handleDownload = () => {
-    const html = buildFullExportHTML(slides, from, to);
-    const blob = new Blob([html], { type: "text/html" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `music-story-${from}-${to}.html`;
+  const [preparing, setPreparing] = useState(false);
+
+  /* Convert every image URL → base64 once, then hand off to the builder */
+  const resolveSlides = async (): Promise<StorySlide[]> => {
+    setPreparing(true);
+    try {
+      return await Promise.all(
+        slides.map(async (s) => ({
+          ...s,
+          albumImageUrl: s.albumImageUrl ? await toDataURL(s.albumImageUrl) : undefined,
+        }))
+      );
+    } finally {
+      setPreparing(false);
+    }
+  };
+
+  const handleDownload = async () => {
+    const resolved = await resolveSlides();
+    const html  = buildFullExportHTML(resolved, from, to);
+    const blob  = new Blob([html], { type: "text/html" });
+    const url   = URL.createObjectURL(blob);
+    const a     = document.createElement("a");
+    a.href      = url;
+    a.download  = `music-story-${from}-${to}.html`;
     a.click();
     URL.revokeObjectURL(url);
   };
 
-  const handlePrint = () => {
-    const html = buildFullExportHTML(slides, from, to);
-    const win = window.open("", "_blank");
+  const handlePrint = async () => {
+    const resolved = await resolveSlides();
+    const html = buildFullExportHTML(resolved, from, to);
+    const win  = window.open("", "_blank");
     if (!win) return;
     win.document.write(html);
     win.document.close();
@@ -466,7 +699,7 @@ function ExportModal({
   };
 
   const handleNativeShare = async () => {
-    if (!navigator.share) { handleDownload(); return; }
+    if (!navigator.share) { await handleDownload(); return; }
     try {
       await navigator.share({
         title: "My Music Story",
@@ -543,7 +776,20 @@ function ExportModal({
         </div>
 
         {/* Actions */}
-        <div className="p-5 space-y-2">
+        <div className="p-5 space-y-2 relative">
+          {/* Preparing overlay — shown while images are being base64-encoded */}
+          <AnimatePresence>
+            {preparing && (
+              <motion.div
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-[inherit] bg-[#0d0d10]/90 backdrop-blur-sm"
+              >
+                <Loader2 size={22} className="animate-spin text-fuchsia-400" />
+                <p className="text-[11px] text-white/50 tracking-wide">Embedding images…</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           <button onClick={handlePrint}
             className="flex items-center justify-center gap-2.5 w-full rounded-2xl bg-gradient-to-r from-fuchsia-500 via-violet-500 to-indigo-500 py-3.5 text-sm font-semibold text-white transition hover:opacity-90 active:scale-[.98]">
             <Sparkles size={14} strokeWidth={1.8} />
@@ -585,7 +831,7 @@ export default function StoryModePage() {
       : "Unknown";
     return [
       { id: 1, label: "Top Song",           title: data?.topSong.title ?? "Loading your anthem",            subtitle: data?.topSong.subtitle ?? "Analyzing play history",                         accent: "from-fuchsia-500 via-purple-500 to-blue-500",    hexFrom: "#d946ef", hexVia: "#a855f7", hexTo: "#3b82f6", Icon: Music2,      albumImageUrl: data?.topSong.albumImageUrl          },
-      { id: 2, label: "Top Artist",         title: data?.topArtist.title ?? "Loading top artist",           subtitle: data?.topArtist.subtitle ?? "Calculating listening minutes",                accent: "from-emerald-400 via-cyan-500 to-teal-600",      hexFrom: "#34d399", hexVia: "#06b6d4", hexTo: "#0f766e", Icon: Mic2,   },
+      { id: 2, label: "Top Artist",         title: data?.topArtist.title ?? "Loading top artist",           subtitle: data?.topArtist.subtitle ?? "Calculating listening minutes",                accent: "from-emerald-400 via-cyan-500 to-teal-600",      hexFrom: "#34d399", hexVia: "#06b6d4", hexTo: "#0f766e", Icon: Mic2, albumImageUrl: data?.topArtist.artistImageUrl },
       { id: 3, label: "Music Age",          title: data?.musicAge.year ?? "Unknown",                        subtitle: data?.musicAge.subtitle ?? "Inferred from release-date metadata.",          accent: "from-violet-600 via-fuchsia-500 to-pink-400",    hexFrom: "#7c3aed", hexVia: "#d946ef", hexTo: "#f472b6", Icon: Clock                                                  },
       { id: 4, label: "Favorite Era",       title: data?.favoriteEra.title ?? "Favorite era loading",       subtitle: data?.favoriteEra.subtitle ?? "Scanning your listening hours",              accent: "from-blue-500 via-indigo-500 to-violet-600",     hexFrom: "#3b82f6", hexVia: "#6366f1", hexTo: "#7c3aed", Icon: Layers                                                 },
       { id: 5, label: "Forgotten Favorite", title: data?.forgottenFavorite.title ?? "Hidden memory",        subtitle: data?.forgottenFavorite.subtitle ?? "Looking for long-gap rediscoveries",   accent: "from-amber-400 via-orange-500 to-rose-500",      hexFrom: "#fbbf24", hexVia: "#f97316", hexTo: "#f43f5e", Icon: RefreshCcw,  albumImageUrl: data?.forgottenFavorite.albumImageUrl },
