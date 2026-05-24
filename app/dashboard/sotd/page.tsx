@@ -863,8 +863,12 @@ function MemorySnapshotSection({ data }: { data: MemorySnapshot }) {
             <div>
               <SectionLabel>Top artist</SectionLabel>
               <div className="flex items-center gap-3 mt-1">
-                <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${data.topArtist.color} flex items-center justify-center font-bold ring-1 ring-white/10 text-sm`}>
-                  {data.topArtist.initials}
+                <div className={`w-12 h-12 rounded-full ring-1 ring-white/10 overflow-hidden ${data.topArtist.imageUrl ? "" : `bg-gradient-to-br ${data.topArtist.color} flex items-center justify-center font-bold text-sm`}`}>
+                  {data.topArtist.imageUrl ? (
+                    <img src={data.topArtist.imageUrl} alt={data.topArtist.name} className="w-full h-full object-cover" />
+                  ) : (
+                    data.topArtist.initials
+                  )}
                 </div>
                 <div>
                   <div className="text-sm font-semibold">{data.topArtist.name}</div>

@@ -135,7 +135,7 @@ export async function GET(req: NextRequest) {
     ]),
     StreamEntry.aggregate<{ _id: string; plays: number }>([
       { $match: rangeMatch },
-      { $group: { _id: "$artistName", plays: { $sum: 1 } } },
+      { $group: { _id: "$artistName", plays: { $sum: 1 }, artistImageUrl: { $first: "$artistImageUrl" } } },
       { $sort: { plays: -1 } },
       { $limit: 1 },
     ]),
@@ -321,6 +321,7 @@ export async function GET(req: NextRequest) {
     topArtist: {
       title: topArtist[0]?._id ?? "No artist yet",
       subtitle: topArtist[0] ? `${topArtist[0].plays} total plays` : "Play more music to unlock this slide",
+      artistImageUrl: topArtist[0]?.artistImageUrl ?? undefined,
     },
     musicAge: {
       year: inferredMusicAge !== null ? String(inferredMusicAge) : "Unknown",

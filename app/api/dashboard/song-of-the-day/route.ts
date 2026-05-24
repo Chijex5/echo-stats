@@ -426,6 +426,7 @@ export async function GET() {
             initials: nameToInitials(topArtistPeak._id),
             plays: topArtistPeak.plays,
             color: strToSnapshotColor(topArtistPeak._id),
+            imageUrl: topArtistPeak.artistImageUrl ?? null,
           }
         : null,
       peakMonthHours,
