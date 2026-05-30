@@ -37,7 +37,7 @@ export function TopNav() {
   }, []);
 
   return (
-    <header className="sticky top-0 z-30 h-16 lg:h-20 bg-background/80 backdrop-blur-xl border-b border-white/5 flex items-center gap-3 px-4 lg:px-8">
+    <header className="sticky top-0 z-30 h-16 lg:h-20 bg-background/80 backdrop-blur-xl border-b border-white/5 flex items-center gap-3 px-3 py-8 lg:px-8">
       {/* Hamburger — mobile only */}
       <button
         onClick={toggle}

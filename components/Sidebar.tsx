@@ -51,7 +51,7 @@ function NavContent({ onNavClick }: { onNavClick?: () => void }) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto py-6 lg:py-8 px-4 space-y-1 hide-scrollbar">
+      <nav className="flex-1 overflow-y-auto py-6 lg:py-6 px-4 space-y-1 hide-scrollbar">
         {navItems.map((item) => {
           const isActive = pathname === item.path;
           return (
