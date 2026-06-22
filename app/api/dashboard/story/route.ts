@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import mongoose from "mongoose";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { getSessionUserId } from "@/lib/get-session-user-id";
 import { connectDB } from "@/lib/db";
 import StreamEntry from "@/lib/models/StreamEntry";
 import { getValidSpotifyToken } from "@/lib/spotify-token";
@@ -111,8 +110,8 @@ async function fetchTrackReleaseMetadata(userMongoId: string, uris: string[]) {
 }
 
 export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
+  const userId = await getSessionUserId(req);
+  if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -123,8 +122,8 @@ export async function GET(req: NextRequest) {
   const to = parseDate(searchParams.get("to"), now);
 
   await connectDB();
-  const userId = new mongoose.Types.ObjectId(session.user.id);
-  const rangeMatch = { userId, ts: { $gte: from, $lte: to } };
+  const userObjectId = new mongoose.Types.ObjectId(userId);
+  const rangeMatch = { userId: userObjectId, ts: { $gte: from, $lte: to } };
 
   const [topTrack, topArtist, trackReleaseAgg, monthData, hiddenGem, daypartData, forgottenFavorite, totals] = await Promise.all([
     StreamEntry.aggregate<{ _id: string; artistName: string; plays: number; albumImageUrl: string | null }>([
@@ -246,11 +245,11 @@ export async function GET(req: NextRequest) {
   let releaseMetadataMap = new Map<string, { releaseYear: number; releaseDatePrecision: ReleasePrecision | null; releaseYearConfidence: number | null }>();
   if (missingMetadataUris.length > 0) {
     try {
-      releaseMetadataMap = await fetchTrackReleaseMetadata(session.user.id, missingMetadataUris);
+      releaseMetadataMap = await fetchTrackReleaseMetadata(userId, missingMetadataUris);
       if (releaseMetadataMap.size > 0) {
         const metadataOps = Array.from(releaseMetadataMap.entries()).map(([uri, metadata]) => ({
           updateMany: {
-            filter: { userId, spotifyTrackUri: uri, $or: [{ releaseYear: { $exists: false } }, { releaseYear: null }] },
+            filter: { userId: userObjectId, spotifyTrackUri: uri, $or: [{ releaseYear: { $exists: false } }, { releaseYear: null }] },
             update: {
               $set: {
                 releaseYear: metadata.releaseYear,

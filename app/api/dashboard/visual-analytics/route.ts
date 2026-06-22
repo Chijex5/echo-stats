@@ -1,7 +1,6 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+import { NextRequest, NextResponse } from "next/server";
 import mongoose from "mongoose";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { getSessionUserId } from "@/lib/get-session-user-id";
 import { connectDB } from "@/lib/db";
 import StreamEntry from "@/lib/models/StreamEntry";
 
@@ -13,14 +12,14 @@ function decadeLabel(decade: number) {
   return `${String(decade).slice(2)}s`;
 }
 
-export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
+export async function GET(req: NextRequest) {
+  const userId = await getSessionUserId(req);
+  if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   await connectDB();
-  const userId = new mongoose.Types.ObjectId(session.user.id);
+  const userObjectId = new mongoose.Types.ObjectId(userId);
   const now = new Date();
   const thirtyDaysAgo = new Date(now);
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29);
@@ -28,12 +27,12 @@ export async function GET() {
 
   const [streamAgg, artistAgg, moodAgg, decadeAgg] = await Promise.all([
     StreamEntry.aggregate<{ _id: string; value: number }>([
-      { $match: { userId, ts: { $gte: thirtyDaysAgo } } },
+      { $match: { userId: userObjectId, ts: { $gte: thirtyDaysAgo } } },
       { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$ts" } }, value: { $sum: 1 } } },
       { $sort: { _id: 1 } },
     ]),
     StreamEntry.aggregate<{ _id: string; value: number }>([
-      { $match: { userId, ts: { $gte: thirtyDaysAgo } } },
+      { $match: { userId: userObjectId, ts: { $gte: thirtyDaysAgo } } },
       { $group: { _id: "$artistName", value: { $sum: 1 } } },
       { $sort: { value: -1 } },
       { $limit: 4 },
@@ -46,7 +45,7 @@ export async function GET() {
       sad: number;
       happy: number;
     }>([
-      { $match: { userId, ts: { $gte: thirtyDaysAgo } } },
+      { $match: { userId: userObjectId, ts: { $gte: thirtyDaysAgo } } },
       {
         $group: {
           _id: {
@@ -64,7 +63,7 @@ export async function GET() {
       { $sort: { _id: 1 } },
     ]),
     StreamEntry.aggregate<{ _id: number; value: number }>([
-      { $match: { userId, releaseYear: { $exists: true, $ne: null } } },
+      { $match: { userId: userObjectId, releaseYear: { $exists: true, $ne: null } } },
       { $group: { _id: { $multiply: [{ $floor: { $divide: ["$releaseYear", 10] } }, 10] }, value: { $sum: 1 } } },
     ]),
   ]);

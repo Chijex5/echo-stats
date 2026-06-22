@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { getSessionUserId } from "@/lib/get-session-user-id";
 import { connectDB } from "@/lib/db";
 import StreamEntry from "@/lib/models/StreamEntry";
 import mongoose from "mongoose";
@@ -39,14 +38,14 @@ function nameToInitials(name: string): string {
 type Trend = "up" | "down" | "same";
 
 export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id)
+  const userId = await getSessionUserId(req);
+  if (!userId)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const limit = Number(new URL(req.url).searchParams.get("limit") ?? "8");
 
   await connectDB();
-  const userId = new mongoose.Types.ObjectId(session.user.id);
+  const userObjectId = new mongoose.Types.ObjectId(userId);
 
   const now = new Date();
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
@@ -55,11 +54,11 @@ export async function GET(req: NextRequest) {
   // ── Current & previous period totals ──────────────────────────────────────
   const [current, previous] = await Promise.all([
     StreamEntry.aggregate<{ _id: string; artistImageUrl: string; plays: number }>([
-      { $match: { userId, ts: { $gte: thirtyDaysAgo } } },
+      { $match: { userId: userObjectId, ts: { $gte: thirtyDaysAgo } } },
       { $group: { _id: "$artistName", artistImageUrl: { $first: "$artistImageUrl" }, plays: { $sum: 1 } } },
     ]),
     StreamEntry.aggregate<{ _id: string; artistImageUrl: string; plays: number }>([
-      { $match: { userId, ts: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo } } },
+      { $match: { userId: userObjectId, ts: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo } } },
       { $group: { _id: "$artistName", artistImageUrl: { $first: "$artistImageUrl" }, plays: { $sum: 1 } } },
     ]),
   ]);
@@ -87,7 +86,7 @@ export async function GET(req: NextRequest) {
   }>([
     {
       $match: {
-        userId,
+        userId: userObjectId,
         artistName: { $in: topNames },
         ts: { $gte: fiveWeeksAgo },
       },

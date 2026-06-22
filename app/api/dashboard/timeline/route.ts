@@ -1,7 +1,6 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+import { NextRequest, NextResponse } from "next/server";
 import mongoose from "mongoose";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { getSessionUserId } from "@/lib/get-session-user-id";
 import { connectDB } from "@/lib/db";
 import StreamEntry from "@/lib/models/StreamEntry";
 
@@ -22,14 +21,14 @@ function monthLabel(date: Date) {
   return new Intl.DateTimeFormat("en", { month: "short", year: "numeric" }).format(date);
 }
 
-export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
+export async function GET(req: NextRequest) {
+  const userId = await getSessionUserId(req);
+  if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   await connectDB();
-  const userId = new mongoose.Types.ObjectId(session.user.id);
+  const userObjectId = new mongoose.Types.ObjectId(userId);
 
   const now = new Date();
   const heatmapStart = new Date(now);
@@ -41,11 +40,11 @@ export async function GET() {
 
   const [bounds, dailyAgg, snapshotTracks, snapshotArtist] = await Promise.all([
     StreamEntry.aggregate<{ _id: null; firstPlay: Date; lastPlay: Date }>([
-      { $match: { userId } },
+      { $match: { userId: userObjectId } },
       { $group: { _id: null, firstPlay: { $min: "$ts" }, lastPlay: { $max: "$ts" } } },
     ]),
     StreamEntry.aggregate<{ _id: string; plays: number }>([
-      { $match: { userId, ts: { $gte: heatmapStart } } },
+      { $match: { userId: userObjectId, ts: { $gte: heatmapStart } } },
       {
         $group: {
           _id: { $dateToString: { format: "%Y-%m-%d", date: "$ts" } },
@@ -54,7 +53,7 @@ export async function GET() {
       },
     ]),
     StreamEntry.aggregate<{ _id: string; trackName: string; artistName: string; plays: number }>([
-      { $match: { userId, ts: { $gte: snapshotStart, $lt: snapshotEnd } } },
+      { $match: { userId: userObjectId, ts: { $gte: snapshotStart, $lt: snapshotEnd } } },
       {
         $group: {
           _id: "$spotifyTrackUri",
@@ -67,7 +66,7 @@ export async function GET() {
       { $limit: 3 },
     ]),
     StreamEntry.aggregate<{ _id: string; plays: number }>([
-      { $match: { userId, ts: { $gte: snapshotStart, $lt: snapshotEnd } } },
+      { $match: { userId: userObjectId, ts: { $gte: snapshotStart, $lt: snapshotEnd } } },
       { $group: { _id: "$artistName", plays: { $sum: 1 } } },
       { $sort: { plays: -1 } },
       { $limit: 1 },

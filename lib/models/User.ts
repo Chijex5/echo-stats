@@ -14,6 +14,9 @@ export interface IUser extends Document {
   // App-specific fields populated at /import
   favoriteGenres?: string[];
   bio?: string;
+  // Mobile session revocation counter — bumped on logout to invalidate
+  // every outstanding mobile refresh token for this user.
+  mobileTokenVersion: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -33,6 +36,7 @@ const UserSchema = new Schema<IUser>(
     // App-specific
     favoriteGenres:      [{ type: String }],
     bio:                 { type: String, maxlength: 500 },
+    mobileTokenVersion:  { type: Number, default: 0 },
   },
   { timestamps: true }
 );

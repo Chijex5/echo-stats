@@ -1,6 +1,5 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { NextRequest, NextResponse } from "next/server";
+import { getSessionUserId } from "@/lib/get-session-user-id";
 import { connectDB } from "@/lib/db";
 import StreamEntry from "@/lib/models/StreamEntry";
 import mongoose from "mongoose";
@@ -14,13 +13,13 @@ function decadeLabel(year: number): string {
   return `${d}s`;
 }
 
-export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id)
+export async function GET(req: NextRequest) {
+  const userId = await getSessionUserId(req);
+  if (!userId)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   await connectDB();
-  const userId = new mongoose.Types.ObjectId(session.user.id);
+  const userObjectId = new mongoose.Types.ObjectId(userId);
 
   const now = new Date();
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
@@ -38,7 +37,7 @@ export async function GET() {
 
     // ── 1. Current 30-day track plays (for Hidden Gem: lowest global-ish play count) ──
     StreamEntry.aggregate<{ _id: string; trackName: string; artistName: string; albumImageUrl: string | null; plays: number }>([
-      { $match: { userId, ts: { $gte: thirtyDaysAgo } } },
+      { $match: { userId: userObjectId, ts: { $gte: thirtyDaysAgo } } },
       {
         $group: {
           _id: "$spotifyTrackUri",
@@ -56,13 +55,13 @@ export async function GET() {
     // We proxy "genre" through artistName — top artist name of each window
     Promise.all([
       StreamEntry.aggregate<{ _id: string; plays: number; albumImageUrl: string | null }>([
-        { $match: { userId, ts: { $gte: thirtyDaysAgo } } },
+        { $match: { userId: userObjectId, ts: { $gte: thirtyDaysAgo } } },
         { $group: { _id: "$artistName", plays: { $sum: 1 }, albumImageUrl: { $first: "$albumImageUrl" } } },
         { $sort: { plays: -1 } },
         { $limit: 1 },
       ]),
       StreamEntry.aggregate<{ _id: string; plays: number; albumImageUrl: string | null }>([
-        { $match: { userId, ts: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo } } },
+        { $match: { userId: userObjectId, ts: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo } } },
         { $group: { _id: "$artistName", plays: { $sum: 1 }, albumImageUrl: { $first: "$albumImageUrl" } } },
         { $sort: { plays: -1 } },
         { $limit: 1 },
@@ -72,13 +71,13 @@ export async function GET() {
     // ── 3. Hour-of-day distribution (for Emotional Profile proxy) ──
     // Morning 6-11 = calm, Afternoon 12-17 = neutral, Evening 18-21 = energetic, Night 22-5 = intense
     StreamEntry.aggregate<{ _id: number; count: number }>([
-      { $match: { userId, ts: { $gte: thirtyDaysAgo } } },
+      { $match: { userId: userObjectId, ts: { $gte: thirtyDaysAgo } } },
       { $group: { _id: { $hour: "$ts" }, count: { $sum: 1 } } },
     ]),
 
     // ── 4. Release-year decade breakdown ──
     StreamEntry.aggregate<{ _id: number; count: number }>([
-      { $match: { userId, releaseYear: { $exists: true, $ne: null } } },
+      { $match: { userId: userObjectId, releaseYear: { $exists: true, $ne: null } } },
       {
         $group: {
           _id: { $floor: { $divide: ["$releaseYear", 10] } }, // e.g. 201 = 2010s
@@ -90,7 +89,7 @@ export async function GET() {
 
     // ── 5. First song of the current year ──
     StreamEntry.aggregate<{ _id: string; trackName: string; artistName: string; albumImageUrl: string | null; ts: Date }>([
-      { $match: { userId, ts: { $gte: yearStart } } },
+      { $match: { userId: userObjectId, ts: { $gte: yearStart } } },
       { $sort: { ts: 1 } },
       { $limit: 1 },
       {
@@ -107,7 +106,7 @@ export async function GET() {
     // ── 6. All plays for longest single-track consecutive-day streak ──
     // Group by (uri, date) → find longest run of consecutive dates per track
     StreamEntry.aggregate<{ _id: { uri: string; date: string }; trackName: string; artistName: string; albumImageUrl: string | null }>([
-      { $match: { userId } },
+      { $match: { userId: userObjectId } },
       {
         $group: {
           _id: {
@@ -229,7 +228,7 @@ export async function GET() {
     }
   }
 
-  const allStreams = await StreamEntry.find({ userId }).sort({ ts: 1 }).lean();
+  const allStreams = await StreamEntry.find({ userId: userObjectId }).sort({ ts: 1 }).lean();
     if (allStreams.length === 0) {
       return NextResponse.json({ error: "No stream data found for user" }, { status: 404 });
     }
@@ -239,7 +238,7 @@ export async function GET() {
       releaseDatePrecision: stream.releaseDatePrecision ?? undefined,
     })) as Parameters<typeof analyzeUserMusic>[1];
 
-  const analysisResult = analyzeUserMusic(userId, normalizedStreams as Parameters<typeof analyzeUserMusic>[1]);
+  const analysisResult = analyzeUserMusic(userObjectId, normalizedStreams as Parameters<typeof analyzeUserMusic>[1]);
 
   return NextResponse.json({
     hiddenGem,
