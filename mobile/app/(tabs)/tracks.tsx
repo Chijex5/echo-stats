@@ -1,11 +1,64 @@
-import { View, Text } from "react-native";
-import { SectionHeading } from "@/components/ui";
+import { FlatList, Text, View } from "react-native";
+import { TrendingUp, TrendingDown, Minus } from "lucide-react-native";
+import { SectionHeading, ListRow, Shimmer } from "@/components/ui";
+import { TopTracksPodium } from "@/components/dashboard/TopTracksPodium";
+import { useTopTracks, type Trend, type TopTrack } from "@/lib/api/hooks";
+
+function TrendIcon({ trend }: { trend: Trend }) {
+  if (trend === "up") return <TrendingUp size={14} color="#18d87e" />;
+  if (trend === "down") return <TrendingDown size={14} color="#f87171" />;
+  return <Minus size={14} color="rgba(255,255,255,0.3)" />;
+}
 
 export default function TracksScreen() {
+  const topTracks = useTopTracks(50);
+  const tracks = topTracks.data?.tracks ?? [];
+  const podium = tracks.slice(0, 3);
+  const rest = tracks.slice(3);
+
   return (
-    <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 72 }}>
-      <SectionHeading label="Coming soon" title="Tracks" />
-      <Text className="mt-4 text-[13px] text-white/40">This screen is being built next.</Text>
+    <View style={{ flex: 1, paddingTop: 72 }}>
+      <View className="px-5">
+        <SectionHeading label="On repeat" title="Top tracks" align="left" />
+      </View>
+
+      {topTracks.isLoading ? (
+        <View className="mt-5 px-5">
+          <Shimmer width="100%" height={160} rounded="xl" />
+          <View className="mt-3 gap-2">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Shimmer key={i} width="100%" height={56} />
+            ))}
+          </View>
+        </View>
+      ) : (
+        <FlatList
+          data={rest}
+          keyExtractor={(item) => item.uri}
+          ListHeaderComponent={
+            podium.length === 3 ? (
+              <View className="mb-6 mt-5">
+                <TopTracksPodium tracks={podium} />
+              </View>
+            ) : null
+          }
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 140 }}
+          renderItem={({ item, index }: { item: TopTrack; index: number }) => (
+            <ListRow
+              imageUrl={item.albumImageUrl}
+              title={item.trackName}
+              subtitle={item.artistName}
+              trailing={
+                <View className="flex-row items-center gap-2">
+                  <Text className="text-[12px] text-white/40">{item.playCount}×</Text>
+                  <TrendIcon trend={item.trend} />
+                  <Text className="w-6 text-right text-[11px] text-white/30">#{index + 4}</Text>
+                </View>
+              }
+            />
+          )}
+        />
+      )}
     </View>
   );
 }
