@@ -29,6 +29,11 @@ const TABS: TabConfig[] = [
 export function CustomTabBar({ state, navigation }: TabBarProps) {
   const insets = useSafeAreaInsets();
 
+  // Story Mode is a full-screen immersive takeover (the slide IS the
+  // screen, no phone-mockup chrome) — the floating pill bar would
+  // overlap its own bottom nav, so it's hidden on that one route.
+  if (state.routes[state.index]?.name === "story") return null;
+
   return (
     <View style={{ position: "absolute", left: 16, right: 16, bottom: insets.bottom + 8 }}>
       <View className="overflow-hidden rounded-full border border-white/10">
