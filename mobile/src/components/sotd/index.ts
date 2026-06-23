@@ -1,9 +1,7 @@
 export { SotdHero } from "./SotdHero";
+export { QuickStats } from "./QuickStats";
 export { TheStory } from "./TheStory";
-export { MemorySnapshot } from "./MemorySnapshot";
-export { WhyWePickedThis } from "./WhyWePickedThis";
+export { InsightTabs } from "./InsightTabs";
 export { RelatedForgotten } from "./RelatedForgotten";
-export { MoodReconstruction } from "./MoodReconstruction";
 export { DailyRitual } from "./DailyRitual";
 export { ShareSheet } from "./ShareSheet";
-export { MoodRadar } from "./MoodRadar";

@@ -1,38 +1,28 @@
-import { View, Text } from "react-native";
-import { Calendar, Moon, CloudRain, Repeat, type LucideIcon } from "lucide-react-native";
-import { GlassCard, SectionHeading } from "@/components/ui";
-import type { SotdStoryBeat, SotdStoryIconName } from "@/lib/api/hooks/types";
-
-const ICON_MAP: Record<SotdStoryIconName, LucideIcon> = { Calendar, Moon, CloudRain, Repeat };
+import { Text } from "react-native";
+import { EyebrowLabel, GlassCard } from "@/components/ui";
+import type { SotdStoryBeat } from "@/lib/api/hooks/types";
 
 type TheStoryProps = {
   beats: SotdStoryBeat[];
 };
 
+// app/api/dashboard/song-of-the-day/route.ts always returns these 4 beats
+// in this fixed order (peak month, night %, days since last play, season
+// anchor), so this reads as one flowing sentence instead of a 4-row stat
+// list — a narrative fits "song of the day" better than a mini dashboard.
 export function TheStory({ beats }: TheStoryProps) {
+  const [peak, night, sinceLastPlay, season] = beats;
+  if (!peak || !night || !sinceLastPlay || !season) return null;
+
   return (
-    <View>
-      <View className="mb-5">
-        <SectionHeading label="The story" title="You lived with this song for a" accentWord="season." />
-      </View>
-      <GlassCard padding="lg" rounded="2xl">
-        <View className="gap-5">
-          {beats.map((b, i) => {
-            const Icon = ICON_MAP[b.icon];
-            return (
-              <View key={i} className="flex-row items-start gap-3.5">
-                <View className="h-10 w-10 items-center justify-center rounded-xl border border-white/8 bg-white/[0.04]">
-                  <Icon size={15} color="rgba(255,255,255,0.6)" strokeWidth={1.8} />
-                </View>
-                <View className="flex-1">
-                  <Text className="text-[26px] font-serif leading-none text-white">{b.stat}</Text>
-                  <Text className="mt-1.5 text-[13px] leading-relaxed text-white/50">{b.label}</Text>
-                </View>
-              </View>
-            );
-          })}
-        </View>
-      </GlassCard>
-    </View>
+    <GlassCard padding="lg" rounded="2xl">
+      <EyebrowLabel className="mb-3">The story so far</EyebrowLabel>
+      <Text className="text-[15px] leading-relaxed text-white/75">
+        You came back to this song <Text className="font-sans-bold text-white">{peak.stat}</Text> {peak.label}, and{" "}
+        <Text className="font-sans-bold text-white">{night.stat}</Text> {night.label}. It&apos;s been{" "}
+        <Text className="font-sans-bold text-white">{sinceLastPlay.stat}</Text> {sinceLastPlay.label} — making it
+        your <Text className="font-serif italic text-echo-green">{season.stat}</Text> {season.label}.
+      </Text>
+    </GlassCard>
   );
 }
