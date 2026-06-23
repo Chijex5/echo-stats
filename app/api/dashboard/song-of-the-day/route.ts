@@ -1,6 +1,5 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { NextRequest, NextResponse } from "next/server";
+import { getSessionUserId } from "@/lib/get-session-user-id";
 import { connectDB } from "@/lib/db";
 import StreamEntry from "@/lib/models/StreamEntry";
 import mongoose from "mongoose";
@@ -80,13 +79,13 @@ function timeAgoLabel(date: Date, now: Date): string {
 
 // ─── Route ─────────────────────────────────────────────────────────────────
 
-export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id)
+export async function GET(req: NextRequest) {
+  const userId = await getSessionUserId(req);
+  if (!userId)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   await connectDB();
-  const userId = new mongoose.Types.ObjectId(session.user.id);
+  const userObjectId = new mongoose.Types.ObjectId(userId);
   const now = new Date();
   const recencyCutoff = new Date(now.getTime() - RECENCY_EXCLUSION_DAYS * 24 * 60 * 60 * 1000);
 
@@ -106,7 +105,7 @@ export async function GET() {
   };
 
   const candidates = await StreamEntry.aggregate<CandidateAgg>([
-    { $match: { userId } },
+    { $match: { userId: userObjectId } },
     {
       $group: {
         _id: "$spotifyTrackUri",
@@ -131,7 +130,7 @@ export async function GET() {
   }
 
   // ── 2. Deterministic daily pick ────────────────────────────────────────
-  const seed = dayIndex(session.user.id, now);
+  const seed = dayIndex(userId, now);
   const picked = candidates[seed % candidates.length];
 
   const gradient = uriToGradient(picked._id);
@@ -142,7 +141,7 @@ export async function GET() {
   // ── 3. Full play history for the picked track ──────────────────────────
   type TrackPlayEntry = { ts: Date; msPlayed: number };
   const trackPlays = await StreamEntry.find(
-    { userId, spotifyTrackUri: picked._id },
+    { userId: userObjectId, spotifyTrackUri: picked._id },
     { ts: 1, msPlayed: 1, _id: 0 }
   ).lean<TrackPlayEntry[]>();
 
@@ -243,7 +242,7 @@ export async function GET() {
   const coPlayed = await StreamEntry.aggregate<CoPlayEntry>([
     {
       $match: {
-        userId,
+        userId: userObjectId,
         ts: { $gte: peakStart, $lt: peakEnd },
         spotifyTrackUri: { $ne: picked._id },
       },
@@ -264,7 +263,7 @@ export async function GET() {
   // Top artist during peak month
   type ArtistEntry = { _id: string; artistImageUrl?: string; plays: number };
   const peakArtists = await StreamEntry.aggregate<ArtistEntry>([
-    { $match: { userId, ts: { $gte: peakStart, $lt: peakEnd } } },
+    { $match: { userId: userObjectId, ts: { $gte: peakStart, $lt: peakEnd } } },
     { $group: { _id: "$artistName", artistImageUrl: { $first: "$artistImageUrl" }, plays: { $sum: 1 } } },
     { $sort: { plays: -1 } },
     { $limit: 1 },
@@ -273,7 +272,7 @@ export async function GET() {
   // Total hours streamed during peak month
   type MonthTotalEntry = { totalMs: number };
   const [peakMonthTotal] = await StreamEntry.aggregate<MonthTotalEntry>([
-    { $match: { userId, ts: { $gte: peakStart, $lt: peakEnd } } },
+    { $match: { userId: userObjectId, ts: { $gte: peakStart, $lt: peakEnd } } },
     { $group: { _id: null, totalMs: { $sum: "$msPlayed" } } },
   ]);
   const peakMonthHours = Math.round((peakMonthTotal?.totalMs ?? 0) / 3_600_000);
@@ -354,7 +353,7 @@ export async function GET() {
   const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
   type DayEntry = { _id: string };
   const recentDays = await StreamEntry.aggregate<DayEntry>([
-    { $match: { userId, ts: { $gte: twoWeeksAgo } } },
+    { $match: { userId: userObjectId, ts: { $gte: twoWeeksAgo } } },
     { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$ts" } } } },
     { $sort: { _id: -1 } },
   ]);

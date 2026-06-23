@@ -3,6 +3,7 @@ import { JWT } from "next-auth/jwt";
 import SpotifyProvider from "next-auth/providers/spotify";
 import { connectDB } from "@/lib/db";
 import User from "@/lib/models/User";
+import { upsertSpotifyUser } from "@/lib/spotify-auth";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -124,44 +125,14 @@ export const authOptions: NextAuthOptions = {
           product?: string;
         };
 
-        await connectDB();
-
-        // ── Upsert user in MongoDB ──
-        const existingUser = await User.findOne({
-          $or: [
-            { spotifyId: spotifyProfile.id },
-            { email: spotifyProfile.email },
-          ],
+        const user = await upsertSpotifyUser(spotifyProfile, {
+          access_token: account.access_token!,
+          refresh_token: account.refresh_token!,
+          expires_at_ms: account.expires_at! * 1000,
         });
 
-        if (existingUser) {
-          // Refresh tokens on every login
-          existingUser.accessToken   = account.access_token!;
-          existingUser.refreshToken  = account.refresh_token!;
-          existingUser.tokenExpiresAt = account.expires_at! * 1000;
-          await existingUser.save();
-
-          token.mongoId             = existingUser._id.toString();
-          token.onboardingCompleted = existingUser.onboardingCompleted;
-        } else {
-          // New user — create with onboardingCompleted: false
-          const newUser = await User.create({
-            spotifyId:           spotifyProfile.id,
-            email:               spotifyProfile.email,
-            displayName:         spotifyProfile.display_name ?? "Spotify User",
-            avatarUrl:           spotifyProfile.images?.[0]?.url,
-            country:             spotifyProfile.country,
-            spotifyProduct:      spotifyProfile.product,
-            accessToken:         account.access_token!,
-            refreshToken:        account.refresh_token!,
-            tokenExpiresAt:      account.expires_at! * 1000,
-            onboardingCompleted: false,
-          });
-
-          token.mongoId             = newUser._id.toString();
-          token.onboardingCompleted = false;
-        }
-
+        token.mongoId             = user._id.toString();
+        token.onboardingCompleted = user.onboardingCompleted;
         token.spotifyId    = spotifyProfile.id;
         token.accessToken  = account.access_token!;
         token.refreshToken = account.refresh_token!;

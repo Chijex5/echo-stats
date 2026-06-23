@@ -1,7 +1,6 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+import { NextRequest, NextResponse } from "next/server";
 import mongoose from "mongoose";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { getSessionUserId } from "@/lib/get-session-user-id";
 import { connectDB } from "@/lib/db";
 import StreamEntry from "@/lib/models/StreamEntry";
 
@@ -36,14 +35,14 @@ const CARDS = [
   },
 ] as const;
 
-export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
+export async function GET(req: NextRequest) {
+  const userId = await getSessionUserId(req);
+  if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   await connectDB();
-  const userId = new mongoose.Types.ObjectId(session.user.id);
+  const userObjectId = new mongoose.Types.ObjectId(userId);
   const now = new Date();
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 86_400_000);
   const ninetyDaysAgo = new Date(now.getTime() - 90 * 86_400_000);
@@ -51,13 +50,13 @@ export async function GET() {
 
   const [forgotten, comeback, abandoned, returning] = await Promise.all([
     StreamEntry.aggregate<{ count: number }>([
-      { $match: { userId } },
+      { $match: { userId: userObjectId } },
       { $group: { _id: "$spotifyTrackUri", plays: { $sum: 1 }, lastPlayed: { $max: "$ts" } } },
       { $match: { plays: { $gte: 5 }, lastPlayed: { $lt: ninetyDaysAgo } } },
       { $count: "count" },
     ]),
     StreamEntry.aggregate<{ count: number }>([
-      { $match: { userId } },
+      { $match: { userId: userObjectId } },
       {
         $group: {
           _id: "$spotifyTrackUri",
@@ -69,7 +68,7 @@ export async function GET() {
       { $count: "count" },
     ]),
     StreamEntry.aggregate<{ count: number }>([
-      { $match: { userId, ts: { $gte: oneEightyDaysAgo } } },
+      { $match: { userId: userObjectId, ts: { $gte: oneEightyDaysAgo } } },
       {
         $group: {
           _id: "$spotifyTrackUri",
@@ -81,7 +80,7 @@ export async function GET() {
       { $count: "count" },
     ]),
     StreamEntry.aggregate<{ count: number }>([
-      { $match: { userId, ts: { $gte: ninetyDaysAgo } } },
+      { $match: { userId: userObjectId, ts: { $gte: ninetyDaysAgo } } },
       {
         $group: {
           _id: "$spotifyTrackUri",

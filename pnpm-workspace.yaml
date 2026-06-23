@@ -1,3 +1,9 @@
+packages:
+  - mobile
+
 ignoredBuiltDependencies:
   - sharp
   - unrs-resolver
+
+onlyBuiltDependencies:
+  - "@shopify/react-native-skia"

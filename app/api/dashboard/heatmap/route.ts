@@ -1,6 +1,5 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { NextRequest, NextResponse } from "next/server";
+import { getSessionUserId } from "@/lib/get-session-user-id";
 import { connectDB } from "@/lib/db";
 import StreamEntry from "@/lib/models/StreamEntry";
 import mongoose from "mongoose";
@@ -12,13 +11,13 @@ function decadeLabel(year: number): string {
   return `${d}s`;
 }
 
-export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id)
+export async function GET(req: NextRequest) {
+  const userId = await getSessionUserId(req);
+  if (!userId)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   await connectDB();
-  const userId = new mongoose.Types.ObjectId(session.user.id);
+  const userObjectId = new mongoose.Types.ObjectId(userId);
 
   const now = new Date();
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
@@ -36,7 +35,7 @@ export async function GET() {
 
     // ── 1. Current 30-day track plays (for Hidden Gem: lowest global-ish play count) ──
     StreamEntry.aggregate<{ _id: string; trackName: string; artistName: string; plays: number }>([
-      { $match: { userId, ts: { $gte: thirtyDaysAgo } } },
+      { $match: { userId: userObjectId, ts: { $gte: thirtyDaysAgo } } },
       {
         $group: {
           _id: "$spotifyTrackUri",
@@ -53,13 +52,13 @@ export async function GET() {
     // We proxy "genre" through artistName — top artist name of each window
     Promise.all([
       StreamEntry.aggregate<{ _id: string; plays: number }>([
-        { $match: { userId, ts: { $gte: thirtyDaysAgo } } },
+        { $match: { userId: userObjectId, ts: { $gte: thirtyDaysAgo } } },
         { $group: { _id: "$artistName", plays: { $sum: 1 } } },
         { $sort: { plays: -1 } },
         { $limit: 1 },
       ]),
       StreamEntry.aggregate<{ _id: string; plays: number }>([
-        { $match: { userId, ts: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo } } },
+        { $match: { userId: userObjectId, ts: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo } } },
         { $group: { _id: "$artistName", plays: { $sum: 1 } } },
         { $sort: { plays: -1 } },
         { $limit: 1 },
@@ -69,13 +68,13 @@ export async function GET() {
     // ── 3. Hour-of-day distribution (for Emotional Profile proxy) ──
     // Morning 6-11 = calm, Afternoon 12-17 = neutral, Evening 18-21 = energetic, Night 22-5 = intense
     StreamEntry.aggregate<{ _id: number; count: number }>([
-      { $match: { userId, ts: { $gte: thirtyDaysAgo } } },
+      { $match: { userId: userObjectId, ts: { $gte: thirtyDaysAgo } } },
       { $group: { _id: { $hour: "$ts" }, count: { $sum: 1 } } },
     ]),
 
     // ── 4. Release-year decade breakdown ──
     StreamEntry.aggregate<{ _id: number; count: number }>([
-      { $match: { userId, releaseYear: { $exists: true, $ne: null } } },
+      { $match: { userId: userObjectId, releaseYear: { $exists: true, $ne: null } } },
       {
         $group: {
           _id: { $floor: { $divide: ["$releaseYear", 10] } }, // e.g. 201 = 2010s
@@ -87,7 +86,7 @@ export async function GET() {
 
     // ── 5. First song of the current year ──
     StreamEntry.aggregate<{ _id: string; trackName: string; artistName: string; ts: Date }>([
-      { $match: { userId, ts: { $gte: yearStart } } },
+      { $match: { userId: userObjectId, ts: { $gte: yearStart } } },
       { $sort: { ts: 1 } },
       { $limit: 1 },
       {
@@ -103,7 +102,7 @@ export async function GET() {
     // ── 6. All plays for longest single-track consecutive-day streak ──
     // Group by (uri, date) → find longest run of consecutive dates per track
     StreamEntry.aggregate<{ _id: { uri: string; date: string }; trackName: string; artistName: string }>([
-      { $match: { userId } },
+      { $match: { userId: userObjectId } },
       {
         $group: {
           _id: {

@@ -1,7 +1,6 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+import { NextRequest, NextResponse } from "next/server";
 import mongoose from "mongoose";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { getSessionUserId } from "@/lib/get-session-user-id";
 import { connectDB } from "@/lib/db";
 import StreamEntry from "@/lib/models/StreamEntry";
 import { getValidSpotifyToken } from "@/lib/spotify-token";
@@ -171,24 +170,24 @@ async function fetchArtistMeta(
 
 // ─── Route handler ────────────────────────────────────────────────────────────
 
-export async function GET() {
-  const session = await getServerSession(authOptions);
+export async function GET(req: NextRequest) {
+  const userId = await getSessionUserId(req);
 
-  if (!session?.user?.id) {
+  if (!userId) {
     console.log("[sync] No valid session or user ID found");
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let userId: mongoose.Types.ObjectId;
+  let userObjectId: mongoose.Types.ObjectId;
   try {
-    userId = new mongoose.Types.ObjectId(session.user.id);
+    userObjectId = new mongoose.Types.ObjectId(userId);
   } catch {
     return NextResponse.json({ error: "Invalid user id" }, { status: 400 });
   }
 
   let accessToken: string;
   try {
-    accessToken = await getValidSpotifyToken(session.user.id);
+    accessToken = await getValidSpotifyToken(userId);
   } catch (err) {
     console.log("[sync] Token refresh failed:", err);
     return NextResponse.json(
@@ -201,7 +200,7 @@ export async function GET() {
 
   if (recentlyPlayedRes.status === 401) {
     try {
-      accessToken = await getValidSpotifyToken(session.user.id, { forceRefresh: true });
+      accessToken = await getValidSpotifyToken(userId, { forceRefresh: true });
       [nowPlayingRes, recentlyPlayedRes] = await fetchSpotifyPlayback(accessToken);
     } catch (err) {
       console.log("[sync] Forced token refresh failed:", err);
@@ -210,7 +209,8 @@ export async function GET() {
 
   if (recentlyPlayedRes.status === 401) {
     const error = await getSpotifyErrorInfo(recentlyPlayedRes);
-    console.log("[sync] Spotify recently played unauthorized for user", session.user.id, error);
+    console.log("[sync] Spotify recently played unauthorized for user", userId, error);
+
     return NextResponse.json(
       { error: "Spotify authorization failed. Please reconnect your account." },
       { status: 401 },
@@ -240,7 +240,7 @@ export async function GET() {
     nowPlayingAuth.reconnectRequired = true;
     nowPlayingAuth.message           = error.message;
     console.log("[sync] Spotify now playing unauthorized; continuing recent sync", {
-      userId: session.user.id, ...error,
+      userId: userId, ...error,
     });
   } else if (nowPlayingRes.status === 200) {
     const payload = (await nowPlayingRes.json()) as CurrentlyPlayingResponse;
@@ -253,7 +253,7 @@ export async function GET() {
     nowPlayingAuth.status     = error.status;
     nowPlayingAuth.message    = error.message;
     console.log("[sync] Spotify now playing unavailable; continuing recent sync", {
-      userId: session.user.id, ...error,
+      userId: userId, ...error,
     });
   }
 
@@ -298,13 +298,13 @@ export async function GET() {
     return {
       updateOne: {
         filter: {
-          userId,
+          userId: userObjectId,
           ts:              new Date(item.played_at),
           spotifyTrackUri: track.uri,
         },
         update: {
           $setOnInsert: {
-            userId,
+            userId: userObjectId,
             ts:              new Date(item.played_at),
             platform:        "spotify-live-sync",
             msPlayed:        Math.max(0, track.duration_ms ?? 0),

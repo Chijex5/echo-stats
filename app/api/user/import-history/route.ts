@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { getSessionUserId } from "@/lib/get-session-user-id";
 import { connectDB } from "@/lib/db";
 import StreamEntry from "@/lib/models/StreamEntry";
 import mongoose from "mongoose";
@@ -63,9 +62,9 @@ function toDocument(entry: RawEntry, userId: mongoose.Types.ObjectId) {
 // ─── POST /api/user/import-history ───────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const userId = await getSessionUserId(req);
 
-  if (!session?.user?.id) {
+  if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -79,12 +78,12 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const userId = new mongoose.Types.ObjectId(session.user.id);
+  const userObjectId = new mongoose.Types.ObjectId(userId);
   const rawEntries = parsed.data.entries;
 
   // Filter out skips, accidental taps, episodes, audiobooks
   const valid = rawEntries.filter(isValidPlay);
-  const docs   = valid.map((e) => toDocument(e, userId));
+  const docs   = valid.map((e) => toDocument(e, userObjectId));
 
   await connectDB();
 

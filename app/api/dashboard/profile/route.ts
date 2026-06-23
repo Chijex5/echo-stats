@@ -1,7 +1,6 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+import { NextRequest, NextResponse } from "next/server";
 import mongoose from "mongoose";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { getSessionUserId } from "@/lib/get-session-user-id";
 import { connectDB } from "@/lib/db";
 import StreamEntry from "@/lib/models/StreamEntry";
 import User from "@/lib/models/User";
@@ -40,15 +39,15 @@ function listeningPersonality(nightPct: number, topHour: number | null, uniqueAr
   return "Memory Collector";
 }
 
-export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
+export async function GET(req: NextRequest) {
+  const userId = await getSessionUserId(req);
+  if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   await connectDB();
 
-  const userId = new mongoose.Types.ObjectId(session.user.id);
+  const userObjectId = new mongoose.Types.ObjectId(userId);
   const now = new Date();
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
@@ -72,10 +71,10 @@ export async function GET() {
     previousTopArtist,
     lastSync,
   ] = await Promise.all([
-    User.findById(userId).select("displayName email avatarUrl spotifyProduct favoriteGenres createdAt"),
-    UserImport.findOne({ userId }).sort({ createdAt: -1 }).lean(),
+    User.findById(userId).select("displayName email avatarUrl spotifyProduct favoriteGenres createdAt spotifyId"),
+    UserImport.findOne({ userId: userObjectId }).sort({ createdAt: -1 }).lean(),
     StreamEntry.aggregate([
-      { $match: { userId } },
+      { $match: { userId: userObjectId } },
       {
         $group: {
           _id: null,
@@ -101,7 +100,7 @@ export async function GET() {
       },
     ]),
     StreamEntry.aggregate([
-      { $match: { userId } },
+      { $match: { userId: userObjectId } },
       {
         $group: {
           _id: { $dateToString: { format: "%Y-%m-%d", date: "$ts" } },
@@ -112,17 +111,17 @@ export async function GET() {
       { $limit: 365 },
     ]),
     StreamEntry.aggregate<{ _id: number; count: number }>([
-      { $match: { userId } },
+      { $match: { userId: userObjectId } },
       { $group: { _id: { $hour: "$ts" }, count: { $sum: 1 } } },
       { $sort: { count: -1 } },
     ]),
     StreamEntry.aggregate<{ _id: number; count: number }>([
-      { $match: { userId } },
+      { $match: { userId: userObjectId } },
       { $group: { _id: { $month: "$ts" }, count: { $sum: 1 } } },
       { $sort: { count: -1 } },
     ]),
     StreamEntry.aggregate<{ _id: string; plays: number; albumImageUrl?: string; artistName: string }>([
-      { $match: { userId, albumName: { $exists: true, $ne: "" } } },
+      { $match: { userId: userObjectId, albumName: { $exists: true, $ne: "" } } },
       {
         $group: {
           _id: "$albumName",
@@ -135,13 +134,13 @@ export async function GET() {
       { $limit: 6 },
     ]),
     StreamEntry.aggregate<{ _id: string; artistImageUrl?: string; plays: number }>([
-      { $match: { userId } },
+      { $match: { userId: userObjectId } },
       { $group: { _id: "$artistName", artistImageUrl: { $first: "$artistImageUrl" }, plays: { $sum: 1 } } },
       { $sort: { plays: -1 } },
       { $limit: 1 },
     ]),
     StreamEntry.aggregate<{ _id: string; trackName: string; artistName: string; plays: number }>([
-      { $match: { userId, ts: { $gte: new Date(now.getFullYear(), 0, 1) } } },
+      { $match: { userId: userObjectId, ts: { $gte: new Date(now.getFullYear(), 0, 1) } } },
       {
         $group: {
           _id: "$spotifyTrackUri",
@@ -153,13 +152,13 @@ export async function GET() {
       { $sort: { plays: -1 } },
       { $limit: 1 },
     ]),
-    StreamEntry.findOne({ userId }).sort({ ts: 1 }).select("trackName artistName ts").lean(),
-    StreamEntry.findOne({ userId, platform: "spotify-live-sync" })
+    StreamEntry.findOne({ userId: userObjectId }).sort({ ts: 1 }).select("trackName artistName ts").lean(),
+    StreamEntry.findOne({ userId: userObjectId, platform: "spotify-live-sync" })
       .sort({ ts: 1 })
       .select("trackName artistName ts")
       .lean(),
     StreamEntry.aggregate<{ trackName: string; artistName: string; firstPlayed: Date; plays: number }>([
-      { $match: { userId } },
+      { $match: { userId: userObjectId } },
       {
         $group: {
           _id: "$spotifyTrackUri",
@@ -173,7 +172,7 @@ export async function GET() {
       { $limit: 1 },
     ]),
     StreamEntry.aggregate<{ trackName: string; artistName: string; plays: number }>([
-      { $match: { userId } },
+      { $match: { userId: userObjectId } },
       {
         $group: {
           _id: "$spotifyTrackUri",
@@ -186,18 +185,18 @@ export async function GET() {
       { $limit: 1 },
     ]),
     StreamEntry.aggregate<{ _id: string; plays: number }>([
-      { $match: { userId, ts: { $gte: thirtyDaysAgo } } },
+      { $match: { userId: userObjectId, ts: { $gte: thirtyDaysAgo } } },
       { $group: { _id: "$artistName", plays: { $sum: 1 } } },
       { $sort: { plays: -1 } },
       { $limit: 1 },
     ]),
     StreamEntry.aggregate<{ _id: string; plays: number }>([
-      { $match: { userId, ts: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo } } },
+      { $match: { userId: userObjectId, ts: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo } } },
       { $group: { _id: "$artistName", plays: { $sum: 1 } } },
       { $sort: { plays: -1 } },
       { $limit: 1 },
     ]),
-    StreamEntry.findOne({ userId, platform: "spotify-live-sync" }).sort({ ts: -1 }).select("ts").lean(),
+    StreamEntry.findOne({ userId: userObjectId, platform: "spotify-live-sync" }).sort({ ts: -1 }).select("ts").lean(),
   ]);
 
   const data = totals[0] ?? {};
@@ -243,9 +242,9 @@ export async function GET() {
 
   return NextResponse.json({
     user: {
-      name: user?.displayName ?? session.user.name ?? "EchoStats Listener",
-      email: user?.email ?? session.user.email ?? "",
-      avatarUrl: user?.avatarUrl ?? session.user.image ?? null,
+      name: user?.displayName ?? "EchoStats Listener",
+      email: user?.email ?? "",
+      avatarUrl: user?.avatarUrl ?? null,
       spotifyProduct: user?.spotifyProduct ?? "connected",
       connectedAt: user?.createdAt ?? null,
       accountAge: formatMonthYear(user?.createdAt),
@@ -279,7 +278,7 @@ export async function GET() {
       },
     },
     services: {
-      spotifyConnected: Boolean(user?.spotifyId ?? session.user.spotifyId),
+      spotifyConnected: Boolean(user?.spotifyId),
       lastSync: lastSync?.ts ?? lastPlay,
       syncHealth: lastSync ? "Healthy" : "Archive only",
       archiveImported: Boolean(userImport?.spotifyImported ?? totalPlays > 0),

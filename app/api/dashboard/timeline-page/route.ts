@@ -1,7 +1,6 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+import { NextRequest, NextResponse } from "next/server";
 import mongoose from "mongoose";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { getSessionUserId } from "@/lib/get-session-user-id";
 import { connectDB } from "@/lib/db";
 import StreamEntry from "@/lib/models/StreamEntry";
 
@@ -39,12 +38,12 @@ function monthShort(month: number, year: number) {
   return new Intl.DateTimeFormat("en", { month: "short", year: "numeric" }).format(new Date(year, month - 1, 1));
 }
 
-export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+export async function GET(req: NextRequest) {
+  const userId = await getSessionUserId(req);
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   await connectDB();
-  const userId = new mongoose.Types.ObjectId(session.user.id);
+  const userObjectId = new mongoose.Types.ObjectId(userId);
 
   const [months, yearHours] = await Promise.all([
     StreamEntry.aggregate<{
@@ -56,7 +55,7 @@ export async function GET() {
       topArtistImageUrl: string;
       tracks: Array<{ title: string; artist: string; plays: number; albumImageUrl?: string }>;
     }>([
-      { $match: { userId } },
+      { $match: { userId: userObjectId } },
       {
         $group: {
           _id: {
@@ -95,7 +94,7 @@ export async function GET() {
       { $limit: 96 },
     ]),
     StreamEntry.aggregate<{ _id: { year: number; month: number }; v: number }>([
-      { $match: { userId } },
+      { $match: { userId: userObjectId } },
       {
         $group: {
           _id: { year: { $year: "$ts" }, month: { $month: "$ts" } },

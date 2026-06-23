@@ -1,21 +1,20 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { NextRequest, NextResponse } from "next/server";
+import { getSessionUserId } from "@/lib/get-session-user-id";
 import { connectDB } from "@/lib/db";
 import StreamEntry from "@/lib/models/StreamEntry";
 import mongoose from "mongoose";
 
-export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+export async function GET(req: NextRequest) {
+  const userId = await getSessionUserId(req);
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   await connectDB();
-  const userId = new mongoose.Types.ObjectId(session.user.id);
+  const userObjectId = new mongoose.Types.ObjectId(userId);
 
   const [totals, dailyPlays] = await Promise.all([
     // Overall totals
     StreamEntry.aggregate([
-      { $match: { userId } },
+      { $match: { userId: userObjectId } },
       {
         $group: {
           _id: null,
@@ -41,7 +40,7 @@ export async function GET() {
 
     // Daily play counts for streak calculation
     StreamEntry.aggregate([
-      { $match: { userId } },
+      { $match: { userId: userObjectId } },
       {
         $group: {
           _id: { $dateToString: { format: "%Y-%m-%d", date: "$ts" } },
@@ -72,7 +71,7 @@ export async function GET() {
 
   // Night listening % (22:00 – 05:00)
   const [nightStats] = await StreamEntry.aggregate([
-    { $match: { userId } },
+    { $match: { userId: userObjectId } },
     {
       $group: {
         _id: null,
