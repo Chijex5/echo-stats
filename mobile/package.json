@@ -1,7 +1,7 @@
 {
   "name": "mobile",
   "version": "1.0.0",
-  "main": "index.ts",
+  "main": "expo-router/entry",
   "dependencies": {
     "@expo-google-fonts/geist": "^0.4.2",
     "@expo-google-fonts/geist-mono": "^0.4.2",
@@ -28,6 +28,7 @@
     "nativewind": "^4.2.6",
     "react": "19.2.3",
     "react-native": "0.85.3",
+    "react-native-css-interop": "0.2.6",
     "react-native-gesture-handler": "~2.31.2",
     "react-native-reanimated": "4.3.1",
     "react-native-safe-area-context": "~5.7.0",
