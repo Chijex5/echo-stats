@@ -1,7 +1,7 @@
 import { ScrollView, View, Text } from "react-native";
 import { useRouter } from "expo-router";
 import { MotiView } from "moti";
-import { Gem, Shuffle, Flame, Compass, Sparkles } from "lucide-react-native";
+import { Gem, Shuffle, Flame, Compass, Sparkles, Disc3 } from "lucide-react-native";
 import { GlassCard, SectionHeading, StatTile, ListRow, Shimmer } from "@/components/ui";
 import { Sparkline, ProportionalBars } from "@/components/charts";
 import { NowPlayingPill } from "@/components/dashboard/NowPlayingPill";
@@ -217,6 +217,12 @@ export default function OverviewScreen() {
           subtitle="A cinematic recap of your year in music"
           icon={Sparkles}
           onPress={() => router.push("/(tabs)/story")}
+        />
+        <ExploreCTACard
+          title="Song of the day"
+          subtitle="A forgotten favorite, resurfaced just for today"
+          icon={Disc3}
+          onPress={() => router.push("/(tabs)/song-of-the-day")}
         />
       </MotiView>
     </ScrollView>

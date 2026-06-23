@@ -358,6 +358,124 @@ export interface StoryModeResponse {
   personality: { title: string; subtitle: string };
 }
 
+// ─── Song of the Day ─────────────────────────────────────────────────────────
+
+export type SotdAlgoIconName = "Calendar" | "Heart" | "Moon" | "Sparkles" | "CloudRain";
+export type SotdStoryIconName = "Repeat" | "Moon" | "Calendar" | "CloudRain";
+
+export interface SotdSong {
+  uri: string;
+  title: string;
+  artist: string;
+  albumImageUrl: string | null;
+  artistImageUrl?: string;
+  album: string;
+  released: string;
+  gradientFrom: string;
+  gradientTo: string;
+  gradientClass: string;
+}
+
+export interface SotdStats {
+  pastPlays: number;
+  lastPlayed: string;
+  lastPlayedDate: string;
+  daysSinceLastPlay: number;
+  favoriteMonth: string;
+  peakMonthPlays: number;
+  nightPct: number;
+  dominantSeason: string;
+  totalMinutes: number;
+}
+
+export interface SotdStoryBeat {
+  stat: string;
+  label: string;
+  icon: SotdStoryIconName;
+}
+
+export interface SotdSnapshotTrack {
+  title: string;
+  albumImageUrl?: string | null;
+  artistImageUrl?: string;
+  artist: string;
+  color: string;
+}
+
+export interface SotdSnapshotArtist {
+  name: string;
+  initials: string;
+  plays: number;
+  color: string;
+  imageUrl?: string | null;
+}
+
+export interface SotdMemorySnapshot {
+  snapshotTracks: SotdSnapshotTrack[];
+  snapshotCollage: string[];
+  topArtist: SotdSnapshotArtist | null;
+  peakMonthHours: number;
+  peakMonthLabel: string;
+}
+
+export interface SotdAlgoReason {
+  icon: SotdAlgoIconName;
+  label: string;
+  desc: string;
+}
+
+export interface SotdHourHeatPoint {
+  hour: number;
+  v: number;
+}
+
+export interface SotdMonthTrendPoint {
+  m: string;
+  v: number;
+}
+
+export interface SotdRepeatCurvePoint {
+  v: number;
+}
+
+export interface SotdMoodReconstruction {
+  hourHeat: SotdHourHeatPoint[];
+  peakHourLabel: string;
+  monthTrend: SotdMonthTrendPoint[];
+  repeatCurve: SotdRepeatCurvePoint[];
+  maxRepeatsInOneDay: number;
+}
+
+export interface SotdRelatedTrack {
+  title: string;
+  albumImageUrl?: string | null;
+  artistImageUrl?: string;
+  artist: string;
+  color: string;
+  tag: string;
+  lastPlayed: string;
+}
+
+export interface SotdDailyRitual {
+  streakDays: number;
+  totalRediscovered: number;
+  avgAffinityScore: number;
+  savedToLibrary: number;
+}
+
+export interface SongOfTheDayResponse {
+  song: SotdSong;
+  stats: SotdStats;
+  storyBeats: SotdStoryBeat[];
+  memorySnapshot: SotdMemorySnapshot;
+  algoReasons: SotdAlgoReason[];
+  affinityScore: number;
+  affinityLabel: string;
+  moodReconstruction: SotdMoodReconstruction;
+  related: SotdRelatedTrack[];
+  dailyRitual: SotdDailyRitual;
+}
+
 // ─── Profile ───────────────────────────────────────────────────────────────
 // Ported from app/api/dashboard/profile/route.ts's actual NextResponse.json
 // payload — milestones is an OBJECT with 5 named keys, not an array.

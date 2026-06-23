@@ -13,6 +13,7 @@ export default function TabsLayout() {
         <Tabs.Screen name="profile" />
         <Tabs.Screen name="timeline" options={{ href: null }} />
         <Tabs.Screen name="story" options={{ href: null }} />
+        <Tabs.Screen name="song-of-the-day" options={{ href: null }} />
       </Tabs>
     </AppBackground>
   );

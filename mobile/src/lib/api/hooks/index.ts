@@ -12,3 +12,4 @@ export * from "./useRediscovery";
 export * from "./useStoryPreview";
 export * from "./useStoryMode";
 export * from "./useProfile";
+export * from "./useSongOfTheDay";
