@@ -1,78 +1,94 @@
-import { View, Text, Image } from "react-native";
+import { useState } from "react";
+import { View, Text, Image, Pressable } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { Play, Heart, Share2, Disc3, Sparkles } from "lucide-react-native";
-import { GlassCard, PrimaryButton, StatTile, AmbientBlob, EyebrowLabel } from "@/components/ui";
-import { colors } from "@/lib/theme/tokens";
-import type { SotdSong, SotdStats } from "@/lib/api/hooks/types";
+import { Play, Heart, Share2, Disc3, Sparkles, type LucideIcon } from "lucide-react-native";
+import { AmbientBlob, EyebrowLabel } from "@/components/ui";
+import { cn } from "@/lib/cn";
+import { colors, shadows } from "@/lib/theme/tokens";
+import type { SotdSong } from "@/lib/api/hooks/types";
 
 type SotdHeroProps = {
   song: SotdSong;
-  stats: SotdStats;
   onShare: () => void;
 };
 
 const WEEKDAY = new Date().toLocaleDateString("en-US", { weekday: "long" });
 
-export function SotdHero({ song, stats, onShare }: SotdHeroProps) {
+type IconActionProps = {
+  icon: LucideIcon;
+  label: string;
+  variant?: "primary" | "ghost" | "active";
+  size?: number;
+  onPress?: () => void;
+};
+
+function IconAction({ icon: Icon, label, variant = "ghost", size = 46, onPress }: IconActionProps) {
+  const isPrimary = variant === "primary";
+  const isActive = variant === "active";
+  return (
+    <Pressable onPress={onPress} className="items-center gap-1.5">
+      <View
+        className={cn(
+          "items-center justify-center rounded-full",
+          isPrimary ? "bg-spotify" : isActive ? "border border-spotify/50 bg-spotify/15" : "border border-white/10 bg-white/[0.05]"
+        )}
+        style={[{ height: size, width: size }, isPrimary ? shadows.glowSpotify : undefined]}
+      >
+        <Icon
+          size={size * 0.4}
+          color={isPrimary ? "#000" : isActive ? colors.spotifyLight : "rgba(255,255,255,0.75)"}
+          strokeWidth={1.8}
+          fill={isActive ? colors.spotifyLight : "transparent"}
+        />
+      </View>
+      <Text className="text-[10px] text-white/45">{label}</Text>
+    </Pressable>
+  );
+}
+
+export function SotdHero({ song, onShare }: SotdHeroProps) {
+  const [saved, setSaved] = useState(false);
+
   return (
     <View>
-      <AmbientBlob color={song.gradientFrom} size={340} blur={70} style={{ top: -80, left: -60 }} durationMs={8000} />
-      <AmbientBlob color={song.gradientTo} size={260} blur={70} style={{ top: 40, right: -60 }} durationMs={7000} delayMs={300} />
+      <AmbientBlob color={song.gradientFrom} size={300} blur={70} style={{ top: -60, left: -80 }} durationMs={8000} />
+      <AmbientBlob color={song.gradientTo} size={240} blur={70} style={{ top: 140, right: -70 }} durationMs={7000} delayMs={300} />
 
-      <View className="items-center px-2">
-        <View className="mb-5 flex-row items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5">
-          <Sparkles size={11} color={colors.spotify} />
-          <Text className="text-[10px] uppercase tracking-widest2 text-white/60">
-            Song of the day · {WEEKDAY}
-          </Text>
-        </View>
-        <Text className="text-center text-[26px] font-sans-bold leading-tight text-white">
-          A song you <Text className="font-serif italic text-white/90">loved</Text> once.
-        </Text>
-        <Text className="mt-2 text-center text-[13px] text-white/50">
-          A memory waiting to return. Today, we found it.
-        </Text>
+      <View className="mb-4 flex-row items-center gap-2 self-start rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5">
+        <Sparkles size={11} color={colors.spotify} />
+        <Text className="text-[10px] uppercase tracking-widest2 text-white/60">Song of the day · {WEEKDAY}</Text>
       </View>
 
-      <View className="mt-7">
-        <GlassCard padding="lg" rounded="2xl" glow>
-          <View className="items-center gap-6">
-            <View className="h-44 w-44 overflow-hidden rounded-2xl" style={{ shadowColor: "#000", shadowOpacity: 0.4, shadowRadius: 20 }}>
-              {song.albumImageUrl ? (
-                <Image source={{ uri: song.albumImageUrl }} className="h-full w-full" />
-              ) : (
-                <LinearGradient colors={[song.gradientFrom, song.gradientTo]} className="h-full w-full" />
-              )}
-              <View className="absolute inset-0 bg-black/15" />
-              <Disc3 size={28} color="rgba(255,255,255,0.3)" style={{ position: "absolute", bottom: 12, right: 12 }} />
-            </View>
+      <View
+        className="overflow-hidden rounded-[28px]"
+        style={{ aspectRatio: 1, shadowColor: "#000", shadowOpacity: 0.45, shadowRadius: 24 }}
+      >
+        {song.albumImageUrl ? (
+          <Image source={{ uri: song.albumImageUrl }} className="h-full w-full" />
+        ) : (
+          <LinearGradient colors={[song.gradientFrom, song.gradientTo]} className="h-full w-full items-center justify-center">
+            <Disc3 size={48} color="rgba(255,255,255,0.35)" />
+          </LinearGradient>
+        )}
+        <LinearGradient
+          colors={["transparent", "rgba(0,0,0,0.78)"]}
+          style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: "55%" }}
+        />
+        <View className="absolute bottom-0 left-0 right-0 p-5">
+          <EyebrowLabel className="mb-1.5 text-white/70">Forgotten favorite</EyebrowLabel>
+          <Text numberOfLines={2} className="text-[24px] font-sans-bold leading-tight text-white">
+            {song.title}
+          </Text>
+          <Text numberOfLines={1} className="mt-1 text-[13px] text-white/70">
+            {song.artist} · {song.album}
+          </Text>
+        </View>
+      </View>
 
-            <View className="w-full items-center">
-              <EyebrowLabel className="mb-1.5">Forgotten favorite</EyebrowLabel>
-              <Text className="text-center text-[20px] font-sans-bold leading-tight text-white">{song.title}</Text>
-              <Text className="mt-1 text-center text-[13px] text-white/55">
-                {song.artist} · {song.album} · {song.released}
-              </Text>
-            </View>
-
-            <View className="w-full flex-row gap-3">
-              <StatTile label="Past plays" value={stats.pastPlays} variant="serif-lg" />
-              <StatTile label="Last played" value={stats.lastPlayed} />
-            </View>
-
-            <View className="w-full gap-2.5">
-              <PrimaryButton label="Play preview" variant="spotify-solid" icon={Play} fullWidth onPress={() => {}} />
-              <View className="flex-row gap-2.5">
-                <View className="flex-1">
-                  <PrimaryButton label="Save" variant="outline" icon={Heart} fullWidth onPress={() => {}} />
-                </View>
-                <View className="flex-1">
-                  <PrimaryButton label="Share card" variant="outline" icon={Share2} fullWidth onPress={onShare} />
-                </View>
-              </View>
-            </View>
-          </View>
-        </GlassCard>
+      <View className="mt-5 flex-row items-center justify-center gap-7">
+        <IconAction icon={Heart} label="Save" variant={saved ? "active" : "ghost"} onPress={() => setSaved((s) => !s)} />
+        <IconAction icon={Play} label="Preview" variant="primary" size={60} onPress={() => {}} />
+        <IconAction icon={Share2} label="Share" onPress={onShare} />
       </View>
     </View>
   );
