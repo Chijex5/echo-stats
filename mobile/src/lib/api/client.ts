@@ -1,5 +1,6 @@
 import { env } from "@/lib/env";
 import { getTokens, setTokens, clearTokens } from "@/lib/auth/tokenStore";
+import { getMockResponse } from "@/lib/mock/fixtures";
 
 let refreshPromise: Promise<string | null> | null = null;
 let onUnauthenticated: (() => void) | null = null;
@@ -39,6 +40,11 @@ async function refreshAccessToken(): Promise<string | null> {
 }
 
 export async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  if (env.mockEnabled) {
+    const mockData = getMockResponse(path);
+    return new Response(JSON.stringify(mockData ?? {}), { status: 200, headers: { "Content-Type": "application/json" } });
+  }
+
   const { accessToken } = await getTokens();
   const headers = new Headers(init.headers);
   if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);

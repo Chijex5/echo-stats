@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { env } from "@/lib/env";
 import { apiFetch, setUnauthenticatedHandler } from "@/lib/api/client";
+import { MOCK_USER } from "@/lib/mock/mockUser";
 import {
   getTokens,
   setTokens,
@@ -41,6 +42,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (env.mockEnabled) {
+      setUser(MOCK_USER);
+      setStatus("authenticated");
+      return;
+    }
     (async () => {
       const { refreshToken } = await getTokens();
       const storedUser = await getStoredUser();
