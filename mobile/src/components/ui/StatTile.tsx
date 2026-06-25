@@ -8,16 +8,47 @@ type StatTileProps = {
   accentColor?: string;
 };
 
-export function StatTile({ label, value, variant = "default", accentColor }: StatTileProps) {
+export function StatTile({
+  label,
+  value,
+  accentColor,
+}: {
+  label: string;
+  value: string | number;
+  accentColor?: string;
+}) {
   return (
-    <View className="flex-1 rounded-xl border border-white/5 bg-white/[0.03] p-3.5">
-      <Text className="text-[10px] font-sans uppercase tracking-widest2 text-white/35">{label}</Text>
+    <View
+      style={{
+        width: "30%",
+        minWidth: 100,
+        backgroundColor: "rgba(255,255,255,0.03)",
+        borderWidth: 0.5,
+        borderColor: "rgba(255,255,255,0.06)",
+        borderRadius: 12,
+        padding: 12,
+      }}
+    >
       <Text
-        className={cn(
-          "mt-1.5",
-          variant === "serif-lg" ? "text-2xl font-serif italic text-white" : "text-lg font-sans-bold text-white"
-        )}
-        style={accentColor ? { color: accentColor } : undefined}
+        style={{
+          fontSize: 10,
+          color: "rgba(255,255,255,0.35)",
+          textTransform: "uppercase",
+          letterSpacing: 1.2,
+          marginBottom: 6,
+        }}
+        numberOfLines={1}
+      >
+        {label}
+      </Text>
+      <Text
+        style={{
+          fontSize: 18,
+          fontWeight: "700",
+          color: accentColor ?? "#ffffff",
+        }}
+        numberOfLines={1}
+        adjustsFontSizeToFit
       >
         {value}
       </Text>

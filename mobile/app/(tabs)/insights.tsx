@@ -6,6 +6,7 @@ import { RadialGauge, ProportionalBars } from "@/components/charts";
 import { GenreBarList } from "@/components/dashboard/GenreBarList";
 import { staggerChild } from "@/lib/motion/presets";
 import { useInsights } from "@/lib/api/hooks";
+import { colors } from "@/lib/theme/tokens";
 
 const ERA_ORDER = ["pre-70s", "70s", "80s", "90s", "2000s", "2010s", "2020s+"];
 const ERA_COLORS = ["#f87171", "#f59e0b", "#fde047", "#34d399", "#60a5fa", "#a78bfa", "#18d87e"];
@@ -27,7 +28,7 @@ export default function InsightsScreen() {
     : [];
 
   return (
-    <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 72, paddingBottom: 140 }}>
+    <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 72, paddingBottom: 140, backgroundColor: colors.background }}>
       <View className="mb-5">
         <SectionHeading label="Discoveries" title="Insights" align="left" />
       </View>

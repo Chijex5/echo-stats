@@ -3,6 +3,7 @@ import { SectionHeading, StatTile, Shimmer } from "@/components/ui";
 import { FeaturedArtistCard } from "@/components/dashboard/FeaturedArtistCard";
 import { ArtistGridCard } from "@/components/dashboard/ArtistGridCard";
 import { useTopArtists, type TopArtist } from "@/lib/api/hooks";
+import { colors } from "@/lib/theme/tokens";
 
 function computeInsights(artists: TopArtist[]) {
   const sortedByDelta = [...artists].sort((a, b) => b.delta - a.delta);
@@ -22,7 +23,7 @@ export default function ArtistsScreen() {
   const { fastRising, forgotten, driftPct } = computeInsights(artists);
 
   return (
-    <View style={{ flex: 1, paddingTop: 72 }}>
+    <View style={{ flex: 1, paddingTop: 72, backgroundColor: colors.background }}>
       <View className="px-5">
         <SectionHeading label="Most played" title="Top artists" align="left" />
       </View>

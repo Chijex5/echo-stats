@@ -59,8 +59,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ code, code_verifier: codeVerifier, redirect_uri: redirectUri }),
     });
+
     if (!res.ok) {
-      throw new Error("Spotify authentication failed");
+      const body = await res.json().catch(() => ({}));
+      console.error("Backend error:", res.status, JSON.stringify(body));
+      throw new Error(body?.error ?? "Spotify authentication failed");
     }
     const data = await res.json();
     await setTokens(data.accessToken, data.refreshToken);

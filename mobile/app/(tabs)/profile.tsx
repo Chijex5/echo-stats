@@ -18,6 +18,7 @@ import {
 } from "lucide-react-native";
 import { GlassCard, SectionHeading, StatTile, Shimmer } from "@/components/ui";
 import { ProfileHero } from "@/components/dashboard/ProfileHero";
+import { colors } from "@/lib/theme/tokens";
 import { MilestoneTimeline, type MilestoneItem } from "@/components/dashboard/MilestoneTimeline";
 import { ServiceRow } from "@/components/dashboard/ServiceRow";
 import { HighlightsSection } from "@/components/dashboard/HighlightsSection";
@@ -55,7 +56,7 @@ export default function ProfileScreen() {
   const data = profile.data;
 
   return (
-    <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 72, paddingBottom: 140 }}>
+    <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 72, paddingBottom: 140, backgroundColor: colors.background }}>
       <View className="mb-5">
         <SectionHeading label="Your archive" title="Profile" align="left" />
       </View>

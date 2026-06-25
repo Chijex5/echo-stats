@@ -3,7 +3,7 @@ import { TrendingUp, TrendingDown, Minus } from "lucide-react-native";
 import { SectionHeading, ListRow, Shimmer } from "@/components/ui";
 import { TopTracksPodium } from "@/components/dashboard/TopTracksPodium";
 import { useTopTracks, type Trend, type TopTrack } from "@/lib/api/hooks";
-
+import { colors } from "@/lib/theme/tokens";
 function TrendIcon({ trend }: { trend: Trend }) {
   if (trend === "up") return <TrendingUp size={14} color="#18d87e" />;
   if (trend === "down") return <TrendingDown size={14} color="#f87171" />;
@@ -17,7 +17,7 @@ export default function TracksScreen() {
   const rest = tracks.slice(3);
 
   return (
-    <View style={{ flex: 1, paddingTop: 72 }}>
+    <View style={{ flex: 1, paddingTop: 72 , backgroundColor: colors.background,}}>
       <View className="px-5">
         <SectionHeading label="On repeat" title="Top tracks" align="left" />
       </View>

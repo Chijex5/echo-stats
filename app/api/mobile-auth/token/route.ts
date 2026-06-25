@@ -55,8 +55,8 @@ export async function POST(req: NextRequest) {
         onboardingCompleted: user.onboardingCompleted,
       },
     });
-  } catch (err) {
-    console.error("[mobile-auth/token]", err);
-    return NextResponse.json({ error: "Spotify authentication failed" }, { status: 401 });
+  } catch (err: any) {
+    console.error("[mobile-auth/token] raw error:", err?.message, err?.response?.data ?? err);
+    return NextResponse.json({ error: err?.message ?? "Spotify authentication failed" }, { status: 401 });
   }
 }
