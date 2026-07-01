@@ -50,7 +50,7 @@ export default function OverviewScreen() {
     : [];
 
   return (
-    <ScreenScroll>
+    <ScreenScroll style={{ backgroundColor: colors.background }}>
       <MotiView {...staggerChild(0)} style={styles.section}>
         <SectionHeading label="Welcome back" title="Your listening" accentWord="pulse" />
         {nowPlaying.data ? (
