@@ -2,7 +2,7 @@ import { View, Text } from "react-native";
 import Animated, { useAnimatedStyle, useDerivedValue, withTiming } from "react-native-reanimated";
 import { Calendar, Heart, Moon, Sparkles, CloudRain, type LucideIcon } from "lucide-react-native";
 import { GlassCard, SectionHeading, EyebrowLabel } from "@/components/ui";
-import { colors } from "@/lib/theme/tokens";
+import { colors, alpha } from "@/lib/theme/tokens";
 import type { SotdAlgoReason, SotdAlgoIconName } from "@/lib/api/hooks/types";
 
 const ICON_MAP: Record<SotdAlgoIconName, LucideIcon> = { Calendar, Heart, Moon, Sparkles, CloudRain };
@@ -40,10 +40,10 @@ export function WhyWePickedThis({ reasons, affinityScore, affinityLabel }: WhyWe
             return (
               <View key={r.label} className="w-1/2 items-center px-1">
                 <View className="mb-3 h-14 w-14 items-center justify-center rounded-2xl border border-white/8 bg-white/[0.04]">
-                  <Icon size={18} color="rgba(255,255,255,0.7)" strokeWidth={1.8} />
+                  <Icon size={18} color={alpha.white(0.7)} strokeWidth={1.8} />
                 </View>
-                <Text className="mb-1 text-center text-[13px] font-sans-semibold text-white">{r.label}</Text>
-                <Text className="text-center text-[11px] leading-relaxed text-white/45">{r.desc}</Text>
+                <Text className="mb-1 text-center text-13 font-sans-semibold text-white">{r.label}</Text>
+                <Text className="text-center text-11 leading-relaxed text-white/45">{r.desc}</Text>
               </View>
             );
           })}
@@ -52,14 +52,14 @@ export function WhyWePickedThis({ reasons, affinityScore, affinityLabel }: WhyWe
         <View className="mt-7 gap-3 border-t border-white/5 pt-6">
           <EyebrowLabel>Affinity score</EyebrowLabel>
           <View className="flex-row items-baseline gap-2.5">
-            <Text className="text-[28px] font-serif text-white">{affinityScore}</Text>
-            <Text className="text-[13px] font-sans-medium text-spotify">{affinityLabel}</Text>
+            <Text className="text-30 font-serif text-white">{affinityScore}</Text>
+            <Text className="text-13 font-sans-medium text-spotify">{affinityLabel}</Text>
           </View>
           <AffinityBar score={affinityScore} />
           <View className="flex-row justify-between">
-            <Text className="text-[10px] text-white/30">0</Text>
-            <Text className="text-[10px] text-white/30">50</Text>
-            <Text className="text-[10px] text-white/30">100</Text>
+            <Text className="text-10 text-white/30">0</Text>
+            <Text className="text-10 text-white/30">50</Text>
+            <Text className="text-10 text-white/30">100</Text>
           </View>
         </View>
       </GlassCard>

@@ -1,5 +1,6 @@
 import { View } from "react-native";
 import Animated, { useAnimatedStyle, type SharedValue } from "react-native-reanimated";
+import { colors, radius } from "@/lib/theme/tokens";
 
 function Segment({ state, progress }: { state: "done" | "active" | "upcoming"; progress: SharedValue<number> }) {
   const style = useAnimatedStyle(() => ({
@@ -7,7 +8,7 @@ function Segment({ state, progress }: { state: "done" | "active" | "upcoming"; p
   }));
   return (
     <View className="h-1 flex-1 overflow-hidden rounded-full bg-white/20">
-      <Animated.View style={[{ height: "100%", borderRadius: 999, backgroundColor: "#fff" }, style]} />
+      <Animated.View style={[{ height: "100%", borderRadius: radius.full, backgroundColor: colors.white }, style]} />
     </View>
   );
 }

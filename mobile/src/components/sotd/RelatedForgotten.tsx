@@ -2,7 +2,8 @@ import { ScrollView, View, Text, Image } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Clock } from "lucide-react-native";
 import { GlassCard, SectionHeading } from "@/components/ui";
-import { gradientFor } from "./sotdColors";
+import { sotdGradientFor as gradientFor } from "@/lib/theme/gradients";
+import { alpha } from "@/lib/theme/tokens";
 import type { SotdRelatedTrack } from "@/lib/api/hooks/types";
 
 type RelatedForgottenProps = {
@@ -26,18 +27,18 @@ export function RelatedForgotten({ related }: RelatedForgottenProps) {
               )}
               <View className="absolute inset-0 bg-black/12" />
               <View className="absolute left-2 top-2 rounded-full bg-black/45 px-2 py-1">
-                <Text className="text-[9px] font-sans-semibold uppercase tracking-widest text-white/90">{r.tag}</Text>
+                <Text className="text-9 font-sans-semibold uppercase tracking-widest text-white/90">{r.tag}</Text>
               </View>
             </View>
-            <Text numberOfLines={1} className="mt-2.5 text-[13px] font-sans-semibold text-white">
+            <Text numberOfLines={1} className="mt-2.5 text-13 font-sans-semibold text-white">
               {r.title}
             </Text>
-            <Text numberOfLines={1} className="mt-0.5 text-[11px] text-white/45">
+            <Text numberOfLines={1} className="mt-0.5 text-11 text-white/45">
               {r.artist}
             </Text>
             <View className="mt-2 flex-row items-center gap-1.5">
-              <Clock size={10} color="rgba(255,255,255,0.35)" />
-              <Text numberOfLines={1} className="flex-1 text-[10px] text-white/35">
+              <Clock size={10} color={alpha.white(0.35)} />
+              <Text numberOfLines={1} className="flex-1 text-10 text-white/35">
                 Last played {r.lastPlayed}
               </Text>
             </View>

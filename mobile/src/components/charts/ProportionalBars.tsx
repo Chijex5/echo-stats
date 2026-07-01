@@ -39,7 +39,7 @@ export function ProportionalBars({ segments, height = 10, showLegend = true }: P
           {segments.map((segment, i) => (
             <View key={segment.label + i} className="flex-row items-center gap-1.5">
               <View className="h-2 w-2 rounded-full" style={{ backgroundColor: segment.color }} />
-              <Text className="text-[11px] text-white/60">
+              <Text className="text-11 text-white/60">
                 {segment.label} · {Math.round(segment.pct)}%
               </Text>
             </View>

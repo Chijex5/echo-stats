@@ -2,16 +2,9 @@ import { View, Text, Image } from "react-native";
 import { Disc3 } from "lucide-react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { GlassCard, EyebrowLabel } from "@/components/ui";
+import { alpha } from "@/lib/theme/tokens";
+import { albumPlaceholderGradient, FALLBACK_ARTIST_GRADIENT } from "@/lib/theme/gradients";
 import type { ProfileResponse } from "@/lib/api/hooks";
-
-const ALBUM_GRADIENTS: [string, string][] = [
-  ["#6ee7b7", "#0f172a"],
-  ["#d8b4fe", "#000000"],
-  ["#a5b4fc", "#0f172a"],
-  ["#fde68a", "#1c1917"],
-  ["#a7f3d0", "#000000"],
-  ["#e9d5ff", "#18181b"],
-];
 
 function AlbumTile({ album, index }: { album: ProfileResponse["highlights"]["topAlbums"][number]; index: number }) {
   return (
@@ -19,21 +12,21 @@ function AlbumTile({ album, index }: { album: ProfileResponse["highlights"]["top
       {album.albumImageUrl ? (
         <View className="h-full w-full">
           <Image source={{ uri: album.albumImageUrl }} style={{ width: "100%", height: "100%" }} />
-          <View className="absolute inset-0 justify-between p-2.5" style={{ backgroundColor: "rgba(0,0,0,0.25)" }}>
-            <Text className="text-[8px] font-sans-bold uppercase tracking-widest2 text-white/70">
+          <View className="absolute inset-0 justify-between p-2.5" style={{ backgroundColor: alpha.black(0.25) }}>
+            <Text className="text-9 font-sans-bold uppercase tracking-widest2 text-white/70">
               {album.plays} plays
             </Text>
-            <Text numberOfLines={2} className="text-[11px] font-sans-semibold leading-tight text-white">
+            <Text numberOfLines={2} className="text-11 font-sans-semibold leading-tight text-white">
               {album._id}
             </Text>
           </View>
         </View>
       ) : (
-        <LinearGradient colors={ALBUM_GRADIENTS[index % ALBUM_GRADIENTS.length]} className="h-full w-full justify-between p-2.5">
-          <Text className="text-[8px] font-sans-bold uppercase tracking-widest2 text-black/50">
+        <LinearGradient colors={albumPlaceholderGradient(index)} className="h-full w-full justify-between p-2.5">
+          <Text className="text-9 font-sans-bold uppercase tracking-widest2 text-black/50">
             {album.plays} plays
           </Text>
-          <Text numberOfLines={2} className="text-[11px] font-sans-semibold leading-tight text-black/80">
+          <Text numberOfLines={2} className="text-11 font-sans-semibold leading-tight text-black/80">
             {album._id}
           </Text>
         </LinearGradient>
@@ -52,9 +45,9 @@ export function HighlightsSection({ highlights }: { highlights: ProfileResponse[
           <View className="mb-4 flex-row items-center justify-between">
             <View>
               <EyebrowLabel>Top album art collage</EyebrowLabel>
-              <Text className="mt-1 text-[15px] font-sans-semibold text-white">Albums that colored the archive</Text>
+              <Text className="mt-1 text-15 font-sans-semibold text-white">Albums that colored the archive</Text>
             </View>
-            <Disc3 size={18} color="rgba(24,216,126,0.7)" />
+            <Disc3 size={18} color={alpha.spotify(0.7)} />
           </View>
           <View className="flex-row flex-wrap gap-2.5">
             {albums.map((album, i) => (
@@ -79,22 +72,22 @@ export function HighlightsSection({ highlights }: { highlights: ProfileResponse[
                   />
                 ) : (
                   <LinearGradient
-                    colors={["#6ee7b7", "#818cf8"]}
+                    colors={FALLBACK_ARTIST_GRADIENT}
                     style={{ width: 56, height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center" }}
                   >
-                    <Text className="text-[16px] font-sans-bold text-black">
+                    <Text className="text-17 font-sans-bold text-black">
                       {highlights.mostPlayedArtist._id.slice(0, 2).toUpperCase()}
                     </Text>
                   </LinearGradient>
                 )}
               </View>
-              <Text numberOfLines={1} className="mt-3 text-[15px] font-sans-bold text-white">
+              <Text numberOfLines={1} className="mt-3 text-15 font-sans-bold text-white">
                 {highlights.mostPlayedArtist._id}
               </Text>
-              <Text className="mt-1 text-[12px] text-white/40">{highlights.mostPlayedArtist.plays} lifetime plays</Text>
+              <Text className="mt-1 text-12 text-white/40">{highlights.mostPlayedArtist.plays} lifetime plays</Text>
             </>
           ) : (
-            <Text className="mt-4 text-[13px] text-white/40">Still emerging</Text>
+            <Text className="mt-4 text-13 text-white/40">Still emerging</Text>
           )}
         </GlassCard>
 
@@ -102,21 +95,21 @@ export function HighlightsSection({ highlights }: { highlights: ProfileResponse[
           <EyebrowLabel>Favorite song this year</EyebrowLabel>
           {highlights.favoriteSongThisYear ? (
             <>
-              <Text numberOfLines={2} className="mt-4 text-[15px] font-sans-semibold leading-snug text-white">
+              <Text numberOfLines={2} className="mt-4 text-15 font-sans-semibold leading-snug text-white">
                 {highlights.favoriteSongThisYear.trackName} — {highlights.favoriteSongThisYear.artistName}
               </Text>
-              <Text className="mt-2 text-[12px] text-white/40">{highlights.favoriteSongThisYear.plays} plays this year</Text>
+              <Text className="mt-2 text-12 text-white/40">{highlights.favoriteSongThisYear.plays} plays this year</Text>
             </>
           ) : (
-            <Text className="mt-4 text-[13px] text-white/40">No track yet</Text>
+            <Text className="mt-4 text-13 text-white/40">No track yet</Text>
           )}
         </GlassCard>
       </View>
 
       <GlassCard padding="md" rounded="2xl">
         <EyebrowLabel>Forgotten favorites</EyebrowLabel>
-        <Text className="mt-3 text-[32px] font-sans-bold text-white">{highlights.forgottenFavoriteCount}</Text>
-        <Text className="mt-1.5 text-[13px] text-white/40">
+        <Text className="mt-3 text-30 font-sans-bold text-white">{highlights.forgottenFavoriteCount}</Text>
+        <Text className="mt-1.5 text-13 text-white/40">
           Tracks with enough history to deserve a rediscovery pass.
         </Text>
       </GlassCard>

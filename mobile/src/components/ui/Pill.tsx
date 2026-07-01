@@ -1,7 +1,7 @@
 import { Pressable, Text, type StyleProp, type ViewStyle } from "react-native";
 import type { LucideIcon } from "lucide-react-native";
 import { cn } from "@/lib/cn";
-import { shadows } from "@/lib/theme/tokens";
+import { shadows, colors, alpha } from "@/lib/theme/tokens";
 
 type PillVariant = "default" | "spotify" | "outline";
 
@@ -41,8 +41,8 @@ export function Pill({ label, selected = false, variant = "default", icon: Icon,
       className={cn(BASE, selected ? VARIANT_SELECTED[variant] : VARIANT_UNSELECTED[variant])}
       style={[selected && variant === "spotify" ? shadows.glowSpotify : null, style]}
     >
-      {Icon ? <Icon size={13} color={selected ? "#22e065" : "rgba(255,255,255,0.6)"} /> : null}
-      <Text className={cn("text-[13px] font-sans", selected ? LABEL_SELECTED[variant] : "text-white/60")}>
+      {Icon ? <Icon size={13} color={selected ? colors.spotifyLight : alpha.white(0.6)} /> : null}
+      <Text className={cn("text-13 font-sans", selected ? LABEL_SELECTED[variant] : "text-white/60")}>
         {label}
       </Text>
     </Pressable>

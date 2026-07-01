@@ -2,7 +2,7 @@ import { View, type ViewStyle, type StyleProp } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
 import { cn } from "@/lib/cn";
-import { shadows } from "@/lib/theme/tokens";
+import { shadows, alpha } from "@/lib/theme/tokens";
 
 type GlassCardProps = {
   children: React.ReactNode;
@@ -44,7 +44,7 @@ export function GlassCard({
         style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
       />
       <LinearGradient
-        colors={["rgba(255,255,255,0.02)", "rgba(255,255,255,0.01)"]}
+        colors={[alpha.white(0.02), alpha.white(0.01)]}
         style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
       />
       <View className={PADDING[padding]}>{children}</View>

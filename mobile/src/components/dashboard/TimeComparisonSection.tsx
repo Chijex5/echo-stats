@@ -1,7 +1,7 @@
 import { View, Text } from "react-native";
 import { ArrowRight } from "lucide-react-native";
 import { GlassCard, EyebrowLabel, SectionHeading } from "@/components/ui";
-import { colors } from "@/lib/theme/tokens";
+import { colors, alpha } from "@/lib/theme/tokens";
 import type { TimelinePagePeriod } from "@/lib/api/hooks";
 
 function pickComparisonPair(periods: TimelinePagePeriod[]) {
@@ -41,30 +41,30 @@ function ComparisonCell({ period, side }: { period: TimelinePagePeriod; side: "t
   return (
     <GlassCard padding="md" rounded="2xl" style={{ flex: 1 }}>
       <EyebrowLabel>{side === "then" ? "Then" : "Now"}</EyebrowLabel>
-      <Text className="mt-2 text-[17px] font-sans-bold text-white">
+      <Text className="mt-2 text-17 font-sans-bold text-white">
         {period.monthName} {period.year}
       </Text>
 
       <View className="mt-4 gap-2.5">
         <View className="flex-row items-center justify-between">
-          <Text className="text-[11px] text-white/40">Top artist</Text>
-          <Text numberOfLines={1} className="ml-3 max-w-[60%] text-[12px] font-sans-medium text-white">
+          <Text className="text-11 text-white/40">Top artist</Text>
+          <Text numberOfLines={1} className="ml-3 max-w-[60%] text-12 font-sans-medium text-white">
             {period.topArtist}
           </Text>
         </View>
         <View className="flex-row items-center justify-between">
-          <Text className="text-[11px] text-white/40">Top genre</Text>
-          <Text className="text-[12px] font-sans-medium text-white">{period.topGenre}</Text>
+          <Text className="text-11 text-white/40">Top genre</Text>
+          <Text className="text-12 font-sans-medium text-white">{period.topGenre}</Text>
         </View>
         <View className="flex-row items-center justify-between">
-          <Text className="text-[11px] text-white/40">Mood</Text>
-          <Text className="text-[12px] font-sans-medium text-white">
+          <Text className="text-11 text-white/40">Mood</Text>
+          <Text className="text-12 font-sans-medium text-white">
             {period.mood} · {period.moodScore.toFixed(1)}
           </Text>
         </View>
         <View className="flex-row items-center justify-between">
-          <Text className="text-[11px] text-white/40">Hours</Text>
-          <Text className="text-[12px] font-sans-medium text-white">{period.totalHours}h</Text>
+          <Text className="text-11 text-white/40">Hours</Text>
+          <Text className="text-12 font-sans-medium text-white">{period.totalHours}h</Text>
         </View>
       </View>
     </GlassCard>
@@ -85,17 +85,17 @@ export function TimeComparisonSection({ periods }: { periods: TimelinePagePeriod
         <View className="items-center gap-1.5">
           <View
             className="h-9 w-9 items-center justify-center rounded-full border"
-            style={{ borderColor: "rgba(24,216,126,0.3)", backgroundColor: "rgba(24,216,126,0.12)" }}
+            style={{ borderColor: alpha.spotify(0.3), backgroundColor: alpha.spotify(0.12) }}
           >
             <ArrowRight size={15} color={colors.echoGreen} />
           </View>
-          <Text className="text-center text-[9px] uppercase tracking-widest2 text-white/35">
+          <Text className="text-center text-9 uppercase tracking-widest2 text-white/35">
             Mood{"\n"}
             <Text style={{ color: colors.echoGreen }}>+{moodDelta}</Text>
           </Text>
-          <Text className="text-center text-[9px] uppercase tracking-widest2 text-white/35">
+          <Text className="text-center text-9 uppercase tracking-widest2 text-white/35">
             Hours{"\n"}
-            <Text style={{ color: hoursDelta >= 0 ? colors.echoGreen : "#fb7185" }}>
+            <Text style={{ color: hoursDelta >= 0 ? colors.echoGreen : colors.accentRose }}>
               {hoursDelta >= 0 ? "+" : ""}
               {hoursDelta}h
             </Text>

@@ -20,7 +20,7 @@ export function SectionHeading({ label, title, accentWord, subtitle, align = "le
         {accentWord ? <Text className="font-serif italic text-echo-green"> {accentWord}</Text> : null}
       </Text>
       {subtitle ? (
-        <Text className={cn("mt-1.5 text-[13px] text-white/45", centered && "text-center")}>{subtitle}</Text>
+        <Text className={cn("mt-1.5 text-13 text-white/45", centered && "text-center")}>{subtitle}</Text>
       ) : null}
     </View>
   );

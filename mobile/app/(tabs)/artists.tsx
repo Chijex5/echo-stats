@@ -2,6 +2,7 @@ import { FlatList, View } from "react-native";
 import { SectionHeading, StatTile, Shimmer } from "@/components/ui";
 import { FeaturedArtistCard } from "@/components/dashboard/FeaturedArtistCard";
 import { ArtistGridCard } from "@/components/dashboard/ArtistGridCard";
+import { colors, spacing } from "@/lib/theme/tokens";
 import { useTopArtists, type TopArtist } from "@/lib/api/hooks";
 
 function computeInsights(artists: TopArtist[]) {
@@ -22,13 +23,13 @@ export default function ArtistsScreen() {
   const { fastRising, forgotten, driftPct } = computeInsights(artists);
 
   return (
-    <View style={{ flex: 1, paddingTop: 72 }}>
-      <View className="px-5">
+    <View style={{ flex: 1, paddingTop: spacing.screenTop }}>
+      <View className="px-screen-x">
         <SectionHeading label="Most played" title="Top artists" align="left" />
       </View>
 
       {topArtists.isLoading ? (
-        <View className="mt-5 gap-3 px-5">
+        <View className="mt-5 gap-3 px-screen-x">
           <Shimmer width="100%" height={280} rounded="xl" />
           <View className="flex-row gap-3">
             <Shimmer width="100%" height={80} rounded="xl" />
@@ -41,14 +42,14 @@ export default function ArtistsScreen() {
           keyExtractor={(item) => item.name}
           numColumns={2}
           columnWrapperStyle={{ gap: 12 }}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 140, gap: 12 }}
+          contentContainerStyle={{ paddingHorizontal: spacing.screenX, paddingBottom: spacing.screenBottom, gap: 12 }}
           ListHeaderComponent={
             <View className="mb-5 mt-5 gap-3">
               {featured ? <FeaturedArtistCard artist={featured} /> : null}
               <View className="flex-row gap-3">
                 <StatTile label="Monthly drift" value={`${driftPct}%`} />
-                <StatTile label="Fast rising" value={fastRising?.name ?? "None yet"} accentColor="#18d87e" />
-                <StatTile label="Fading out" value={forgotten?.name ?? "None"} accentColor="#f87171" />
+                <StatTile label="Fast rising" value={fastRising?.name ?? "None yet"} accentColor={colors.echoGreen} />
+                <StatTile label="Fading out" value={forgotten?.name ?? "None"} accentColor={colors.accentRed} />
               </View>
             </View>
           }

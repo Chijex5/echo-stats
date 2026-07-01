@@ -9,6 +9,7 @@ import { sheetSlideUp } from "@/lib/motion/presets";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { SPOTIFY_DISCOVERY, SPOTIFY_SCOPES, getRedirectUri } from "@/lib/auth/pkce";
 import { env } from "@/lib/env";
+import { colors } from "@/lib/theme/tokens";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -47,14 +48,14 @@ export default function LoginScreen() {
   return (
     <AppBackground>
       <View className="flex-1 items-center justify-center px-6">
-        <AmbientBlob color="#18d87e" size={260} style={{ top: 80, left: -100 }} delayMs={0} />
-        <AmbientBlob color="#0fb7a3" size={220} style={{ bottom: 120, right: -90 }} delayMs={1200} />
+        <AmbientBlob color={colors.echoGreen} size={260} style={{ top: 80, left: -100 }} delayMs={0} />
+        <AmbientBlob color={colors.echoTeal} size={220} style={{ bottom: 120, right: -90 }} delayMs={1200} />
 
         <MotiView {...sheetSlideUp} className="w-full max-w-sm">
           <GlassCard padding="lg" rounded="2xl">
             <View className="items-center mb-6">
               <View className="h-14 w-14 items-center justify-center rounded-2xl bg-white/5 border border-white/10 mb-4">
-                <Music2 size={26} color="#18d87e" />
+                <Music2 size={26} color={colors.echoGreen} />
               </View>
               <SectionHeading
                 align="center"
@@ -73,7 +74,7 @@ export default function LoginScreen() {
               onPress={() => promptAsync()}
             />
 
-            <Text className="mt-5 text-center text-[11px] text-white/35">
+            <Text className="mt-5 text-center text-11 text-white/35">
               We never see your Spotify password — only what you listen to.
             </Text>
           </GlassCard>

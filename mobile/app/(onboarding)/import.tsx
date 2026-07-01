@@ -12,6 +12,7 @@ import { BioInput } from "@/components/onboarding/BioInput";
 import { staggerChild } from "@/lib/motion/presets";
 import { apiFetch } from "@/lib/api/client";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { colors, spacing } from "@/lib/theme/tokens";
 
 type Stage = "idle" | "reading" | "uploading" | "form" | "submitting" | "success" | "error";
 
@@ -183,11 +184,18 @@ export default function ImportScreen() {
 
   return (
     <AppBackground>
-      <AmbientBlob color="#1DB954" size={420} blur={90} style={{ top: 60, left: -160 }} delayMs={0} />
-      <AmbientBlob color="#7c3aed" size={380} blur={100} style={{ top: 280, right: -150 }} delayMs={1400} />
-      <AmbientBlob color="#2563eb" size={320} blur={90} style={{ bottom: 80, left: -120 }} delayMs={2600} />
+      <AmbientBlob color={colors.spotify} size={420} blur={90} style={{ top: 60, left: -160 }} delayMs={0} />
+      <AmbientBlob color={colors.accentPurple} size={380} blur={100} style={{ top: 280, right: -150 }} delayMs={1400} />
+      <AmbientBlob color={colors.accentBlue} size={320} blur={90} style={{ bottom: 80, left: -120 }} delayMs={2600} />
 
-      <ScrollView contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, paddingTop: 72, paddingBottom: 48 }}>
+      <ScrollView
+        contentContainerStyle={{
+          flexGrow: 1,
+          paddingHorizontal: spacing.screenX,
+          paddingTop: spacing.screenTop,
+          paddingBottom: spacing["4xl"],
+        }}
+      >
         <MotiView {...staggerChild(0)} className="mb-6">
           <SectionHeading
             label="One last step"
@@ -209,24 +217,24 @@ export default function ImportScreen() {
                 <Text className="mb-1.5 text-xl font-sans-semibold text-white">
                   {stage === "reading" ? "Reading your files…" : "Uploading to your vault…"}
                 </Text>
-                <Text className="text-[13px] text-white/40">{progressLabel}</Text>
+                <Text className="text-13 text-white/40">{progressLabel}</Text>
               </View>
             )}
 
             {(stage === "form" || stage === "submitting") && stats && (
               <View className="gap-7">
                 <View className="flex-row flex-wrap gap-3">
-                  <StatTile label="Plays stored" value={stats.totalInserted.toLocaleString()} accentColor="#1DB954" />
+                  <StatTile label="Plays stored" value={stats.totalInserted.toLocaleString()} accentColor={colors.spotify} />
                   <StatTile label="Skips removed" value={stats.totalFiltered.toLocaleString()} />
                   <StatTile
                     label="History span"
                     value={`${stats.yearSpan} yr${stats.yearSpan !== 1 ? "s" : ""}`}
-                    accentColor="#a78bfa"
+                    accentColor={colors.accentPurple}
                   />
                   <StatTile
                     label="Duplicates"
                     value={stats.totalDuplicates > 0 ? stats.totalDuplicates.toLocaleString() : "None"}
-                    accentColor="#60a5fa"
+                    accentColor={colors.accentBlue}
                   />
                 </View>
 
@@ -246,7 +254,7 @@ export default function ImportScreen() {
 
                 {errorMsg ? (
                   <View className="flex-row items-center gap-2">
-                    <AlertCircle size={14} color="#f87171" />
+                    <AlertCircle size={14} color={colors.accentRed} />
                     <Text className="text-sm text-red-400">{errorMsg}</Text>
                   </View>
                 ) : null}
@@ -264,7 +272,7 @@ export default function ImportScreen() {
             {stage === "error" && (
               <View className="items-center gap-5 py-8">
                 <View className="h-16 w-16 items-center justify-center rounded-full bg-red-500/10">
-                  <AlertCircle size={32} color="#f87171" />
+                  <AlertCircle size={32} color={colors.accentRed} />
                 </View>
                 <View className="items-center">
                   <Text className="mb-1 text-xl font-sans-semibold text-white">Import failed</Text>
@@ -286,10 +294,10 @@ export default function ImportScreen() {
             {stage === "success" && stats && (
               <View className="items-center py-6">
                 <View className="mb-6 h-20 w-20 items-center justify-center rounded-full bg-spotify/20">
-                  <CheckCircle2 size={40} color="#1DB954" />
+                  <CheckCircle2 size={40} color={colors.spotify} />
                 </View>
                 <Text className="mb-2 text-2xl font-sans-bold text-white">Import Complete!</Text>
-                <Text className="mb-8 text-center text-[15px] text-white/60">
+                <Text className="mb-8 text-center text-15 text-white/60">
                   {stats.totalInserted.toLocaleString()} plays across {stats.yearSpan} year
                   {stats.yearSpan !== 1 ? "s" : ""} — your story is ready.
                 </Text>

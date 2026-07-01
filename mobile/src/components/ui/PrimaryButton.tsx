@@ -4,7 +4,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { MotiView } from "moti";
 import type { LucideIcon } from "lucide-react-native";
 import { cn } from "@/lib/cn";
-import { shadows } from "@/lib/theme/tokens";
+import { shadows, colors, alpha } from "@/lib/theme/tokens";
 
 type ButtonVariant = "spotify-gradient" | "spotify-solid" | "outline";
 
@@ -31,6 +31,7 @@ export function PrimaryButton({
 }: PrimaryButtonProps) {
   const [pressed, setPressed] = useState(false);
   const isDisabled = disabled || loading;
+  const onColor = variant === "spotify-solid" ? colors.black : colors.onSpotify;
 
   const content = (
     <MotiView
@@ -44,17 +45,13 @@ export function PrimaryButton({
       style={variant === "spotify-gradient" ? shadows.spotifyCta : undefined}
     >
       {loading ? (
-        <ActivityIndicator color={variant === "spotify-solid" ? "#000" : "#05210f"} />
+        <ActivityIndicator color={onColor} />
       ) : (
         <>
-          {Icon ? (
-            <Icon size={16} color={variant === "outline" ? "rgba(255,255,255,0.9)" : variant === "spotify-solid" ? "#000" : "#05210f"} />
-          ) : null}
+          {Icon ? <Icon size={16} color={variant === "outline" ? alpha.white(0.9) : onColor} /> : null}
           <Text
-            className={cn(
-              "text-[15px] font-sans-semibold",
-              variant === "outline" ? "text-white/90" : variant === "spotify-solid" ? "text-black" : "text-[#05210f]"
-            )}
+            className={cn("text-15 font-sans-semibold", variant === "outline" ? "text-white/90" : "")}
+            style={variant !== "outline" ? { color: onColor } : undefined}
           >
             {label}
           </Text>
@@ -73,7 +70,7 @@ export function PrimaryButton({
     >
       {variant === "spotify-gradient" ? (
         <LinearGradient
-          colors={["rgba(24,216,126,0.16)", "rgba(24,216,126,0.06)"]}
+          colors={[alpha.spotify(0.16), alpha.spotify(0.06)]}
           className={cn("rounded-full border border-echo-green/25", fullWidth && "w-full")}
         >
           {content}

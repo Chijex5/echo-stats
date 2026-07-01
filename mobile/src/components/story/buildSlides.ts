@@ -1,3 +1,4 @@
+import { palettes } from "@/lib/theme/tokens";
 import type { StoryModeResponse } from "@/lib/api/hooks";
 import type { DecorationKey } from "./decorations";
 
@@ -24,7 +25,7 @@ export function buildSlides(data: StoryModeResponse): StorySlide[] {
       label: "Top Song",
       title: data.topSong.title,
       subtitle: data.topSong.subtitle,
-      accent: "#18d87e",
+      accent: palettes.storySlides[0],
       imageUrl: data.topSong.albumImageUrl,
       decoration: "vinyl",
       showWave: true,
@@ -34,7 +35,7 @@ export function buildSlides(data: StoryModeResponse): StorySlide[] {
       label: "Top Artist",
       title: data.topArtist.title,
       subtitle: data.topArtist.subtitle,
-      accent: "#60a5fa",
+      accent: palettes.storySlides[1],
       imageUrl: data.topArtist.artistImageUrl,
       decoration: "equalizer",
       showWave: true,
@@ -44,7 +45,7 @@ export function buildSlides(data: StoryModeResponse): StorySlide[] {
       label: "Music Age",
       title: data.musicAge.year,
       subtitle: data.musicAge.subtitle,
-      accent: "#a78bfa",
+      accent: palettes.storySlides[2],
       decoration: "rings",
     },
     {
@@ -52,7 +53,7 @@ export function buildSlides(data: StoryModeResponse): StorySlide[] {
       label: "Favorite Era",
       title: data.favoriteEra.title,
       subtitle: data.favoriteEra.subtitle,
-      accent: "#f59e0b",
+      accent: palettes.storySlides[3],
       decoration: "era",
     },
     {
@@ -60,7 +61,7 @@ export function buildSlides(data: StoryModeResponse): StorySlide[] {
       label: "Forgotten Favorite",
       title: data.forgottenFavorite.title,
       subtitle: data.forgottenFavorite.subtitle,
-      accent: "#ec4899",
+      accent: palettes.storySlides[4],
       imageUrl: data.forgottenFavorite.albumImageUrl,
       decoration: "cassette",
     },
@@ -69,7 +70,7 @@ export function buildSlides(data: StoryModeResponse): StorySlide[] {
       label: "Emotional Month",
       title: data.emotionalMonth.month ? MONTH_NAMES[data.emotionalMonth.month - 1] ?? "—" : "—",
       subtitle: data.emotionalMonth.subtitle,
-      accent: "#fb7185",
+      accent: palettes.storySlides[5],
       decoration: "heartbeat",
     },
     {
@@ -77,7 +78,7 @@ export function buildSlides(data: StoryModeResponse): StorySlide[] {
       label: "Hidden Gem",
       title: data.hiddenGem?.trackName ?? "Still digging",
       subtitle: data.hiddenGem ? `${data.hiddenGem.artistName} · ${data.hiddenGem.plays} plays` : "Keep listening to surface one.",
-      accent: "#22d3ee",
+      accent: palettes.storySlides[6],
       imageUrl: data.hiddenGem?.albumImageUrl,
       decoration: "diamond",
     },
@@ -86,7 +87,7 @@ export function buildSlides(data: StoryModeResponse): StorySlide[] {
       label: "Personality",
       title: data.personality.title,
       subtitle: data.personality.subtitle,
-      accent: "#34d399",
+      accent: palettes.storySlides[7],
       decoration: "fingerprint",
     },
   ];

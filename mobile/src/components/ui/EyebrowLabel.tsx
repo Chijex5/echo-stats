@@ -10,7 +10,7 @@ export function EyebrowLabel({ children, className }: EyebrowLabelProps) {
   return (
     <Text
       className={cn(
-        "text-[10px] font-sans text-white/35 uppercase tracking-widest2",
+        "text-10 font-sans text-white/35 uppercase tracking-widest2",
         className
       )}
     >

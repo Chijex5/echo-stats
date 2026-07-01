@@ -8,3 +8,5 @@ export { Shimmer } from "./Shimmer";
 export { AmbientBlob } from "./AmbientBlob";
 export { AppBackground } from "./AppBackground";
 export { EyebrowLabel } from "./EyebrowLabel";
+export { BottomSheet } from "./BottomSheet";
+export { ScreenScroll } from "./ScreenScroll";

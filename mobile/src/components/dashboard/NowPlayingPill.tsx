@@ -1,6 +1,6 @@
 import { View, Text } from "react-native";
 import { MotiView } from "moti";
-import { colors } from "@/lib/theme/tokens";
+import { colors, alpha } from "@/lib/theme/tokens";
 import type { NowPlayingSyncTrack } from "@/lib/api/hooks";
 
 type NowPlayingPillProps = {
@@ -22,13 +22,13 @@ export function NowPlayingPill({ nowPlaying, lastPlayed }: NowPlayingPillProps) 
           style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.echoGreen }}
         />
       ) : (
-        <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "rgba(255,255,255,0.25)" }} />
+        <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: alpha.white(0.25) }} />
       )}
       <View className="flex-1">
-        <Text numberOfLines={1} className="text-[13px] font-sans-medium text-white/90">
+        <Text numberOfLines={1} className="text-13 font-sans-medium text-white/90">
           {track.trackName}
         </Text>
-        <Text numberOfLines={1} className="text-[11px] text-white/45">
+        <Text numberOfLines={1} className="text-11 text-white/45">
           {nowPlaying ? "Now playing" : "Last played"} · {track.artistName}
         </Text>
       </View>

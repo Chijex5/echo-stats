@@ -1,22 +1,20 @@
 import { useState } from "react";
-import { Modal, View, Text, Pressable, Image } from "react-native";
+import { View, Text, Image } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { MotiView } from "moti";
 import { Shuffle, X, Clock, Users, Music2 } from "lucide-react-native";
-import { GlassCard, PrimaryButton, EyebrowLabel } from "@/components/ui";
-import { sheetSlideUp } from "@/lib/motion/presets";
-import { colors } from "@/lib/theme/tokens";
-import { gradientFor } from "@/components/dashboard/timelineColors";
+import { GlassCard, PrimaryButton, EyebrowLabel, BottomSheet } from "@/components/ui";
+import { colors, alpha } from "@/lib/theme/tokens";
+import { timelineGradientFor } from "@/lib/theme/gradients";
 import type { TimelinePagePeriod } from "@/lib/api/hooks";
 
 function MemoryStat({ icon: Icon, label, value }: { icon: typeof Clock; label: string; value: string }) {
   return (
     <View className="flex-1 rounded-xl border border-white/5 bg-white/[0.03] p-3">
       <View className="flex-row items-center gap-1.5">
-        <Icon size={11} color="rgba(255,255,255,0.35)" />
-        <Text className="text-[9px] uppercase tracking-widest2 text-white/35">{label}</Text>
+        <Icon size={11} color={alpha.white(0.35)} />
+        <Text className="text-9 uppercase tracking-widest2 text-white/35">{label}</Text>
       </View>
-      <Text numberOfLines={1} className="mt-1.5 text-[13px] font-sans-semibold text-white">
+      <Text numberOfLines={1} className="mt-1.5 text-13 font-sans-semibold text-white">
         {value}
       </Text>
     </View>
@@ -28,10 +26,10 @@ function MemoryCard({ period, onAnother, onClose }: { period: TimelinePagePeriod
     <View>
       <View className="flex-row items-start justify-between gap-3">
         <View className="flex-1">
-          <Text className="text-[9px] uppercase tracking-widest2 text-white/35">You were here</Text>
-          <Text className="mt-1 text-[26px] font-sans-bold leading-tight text-white">{period.monthName}</Text>
-          <Text className="text-[17px] font-serif italic text-white/45">{period.year}</Text>
-          <Text className="mt-2 text-[12px] text-white/45">
+          <Text className="text-9 uppercase tracking-widest2 text-white/35">You were here</Text>
+          <Text className="mt-1 text-26 font-sans-bold leading-tight text-white">{period.monthName}</Text>
+          <Text className="text-17 font-serif italic text-white/45">{period.year}</Text>
+          <Text className="mt-2 text-12 text-white/45">
             Mood: <Text className="font-sans-medium text-white/80">{period.mood.toLowerCase()}</Text>
           </Text>
         </View>
@@ -39,7 +37,7 @@ function MemoryCard({ period, onAnother, onClose }: { period: TimelinePagePeriod
           <Text className="text-lg font-sans-bold" style={{ color: colors.echoGreen }}>
             {period.moodScore.toFixed(1)}
           </Text>
-          <Text className="text-[8px] uppercase tracking-widest2 text-white/25">mood</Text>
+          <Text className="text-9 uppercase tracking-widest2 text-white/25">mood</Text>
         </View>
       </View>
 
@@ -51,20 +49,20 @@ function MemoryCard({ period, onAnother, onClose }: { period: TimelinePagePeriod
 
       {period.tracks.length ? (
         <View className="mt-5 gap-3">
-          <Text className="text-[9px] uppercase tracking-widest2 text-white/25">Top songs</Text>
+          <Text className="text-9 uppercase tracking-widest2 text-white/25">Top songs</Text>
           {period.tracks.slice(0, 3).map((track, i) => (
             <View key={`${track.title}-${i}`} className="flex-row items-center gap-3">
-              <Text className="w-4 text-[10px] text-white/20">{i + 1}</Text>
+              <Text className="w-4 text-10 text-white/20">{i + 1}</Text>
               {track.albumImageUrl ? (
                 <Image source={{ uri: track.albumImageUrl }} className="h-9 w-9 rounded-xl" />
               ) : (
-                <LinearGradient colors={gradientFor(track.color)} style={{ width: 36, height: 36, borderRadius: 12 }} />
+                <LinearGradient colors={timelineGradientFor(track.color)} style={{ width: 36, height: 36, borderRadius: 12 }} />
               )}
               <View className="min-w-0 flex-1">
-                <Text numberOfLines={1} className="text-[13px] font-sans-medium text-white">
+                <Text numberOfLines={1} className="text-13 font-sans-medium text-white">
                   {track.title}
                 </Text>
-                <Text numberOfLines={1} className="text-[11px] text-white/40">
+                <Text numberOfLines={1} className="text-11 text-white/40">
                   {track.artist}
                 </Text>
               </View>
@@ -76,9 +74,9 @@ function MemoryCard({ period, onAnother, onClose }: { period: TimelinePagePeriod
       {period.story ? (
         <View className="mt-5 flex-row items-start gap-2.5 border-t border-white/[0.06] pt-4">
           <View className="rounded-full border border-white/[0.08] bg-white/[0.04] px-2 py-0.5">
-            <Text className="text-[8px] uppercase tracking-widest2 text-white/45">{period.story.tag}</Text>
+            <Text className="text-9 uppercase tracking-widest2 text-white/45">{period.story.tag}</Text>
           </View>
-          <Text className="flex-1 text-[12px] font-serif italic text-white/55">{period.story.line}</Text>
+          <Text className="flex-1 text-12 font-serif italic text-white/55">{period.story.line}</Text>
         </View>
       ) : null}
 
@@ -111,7 +109,7 @@ export function RandomNostalgiaSheet({ periods }: { periods: TimelinePagePeriod[
         <Text className="mt-3 text-2xl font-sans-bold leading-tight text-white">
           Take me somewhere <Text className="font-serif italic" style={{ color: colors.echoGreen }}>random</Text>.
         </Text>
-        <Text className="mt-2 text-[13px] text-white/50">
+        <Text className="mt-2 text-13 text-white/50">
           We&apos;ll drop you into a forgotten month — the songs, the mood, the memories that came with it.
         </Text>
         <View className="mt-5">
@@ -119,29 +117,9 @@ export function RandomNostalgiaSheet({ periods }: { periods: TimelinePagePeriod[
         </View>
       </GlassCard>
 
-      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
-        <Pressable
-          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.8)", justifyContent: "flex-end" }}
-          onPress={() => setOpen(false)}
-        >
-          <Pressable onPress={(e) => e.stopPropagation()}>
-            <MotiView {...sheetSlideUp} style={{ maxHeight: "85%" }}>
-              <View
-                className="rounded-t-[28px] border-t border-white/[0.08] px-6 pb-10 pt-6"
-                style={{ backgroundColor: "rgba(9,11,15,0.98)" }}
-              >
-                <Pressable
-                  onPress={() => setOpen(false)}
-                  className="absolute right-5 top-5 h-7 w-7 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.05]"
-                >
-                  <X size={12} color="rgba(255,255,255,0.5)" />
-                </Pressable>
-                {period ? <MemoryCard period={period} onAnother={pickRandom} onClose={() => setOpen(false)} /> : null}
-              </View>
-            </MotiView>
-          </Pressable>
-        </Pressable>
-      </Modal>
+      <BottomSheet visible={open} onClose={() => setOpen(false)} maxHeight="85%">
+        {period ? <MemoryCard period={period} onAnother={pickRandom} onClose={() => setOpen(false)} /> : null}
+      </BottomSheet>
     </>
   );
 }

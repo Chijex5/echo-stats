@@ -1,6 +1,6 @@
 import { View, Text, Image } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { colors } from "@/lib/theme/tokens";
+import { colors, alpha } from "@/lib/theme/tokens";
 import type { TopTrack } from "@/lib/api/hooks";
 
 function PodiumSlot({ track, rank, size }: { track: TopTrack; rank: number; size: number }) {
@@ -11,7 +11,7 @@ function PodiumSlot({ track, rank, size }: { track: TopTrack; rank: number; size
           <Image source={{ uri: track.albumImageUrl }} style={{ width: size, height: size, borderRadius: 16 }} />
         ) : (
           <LinearGradient
-            colors={["rgba(24,216,126,0.25)", "rgba(15,183,163,0.1)"]}
+            colors={[alpha.spotify(0.25), alpha.teal(0.1)]}
             style={{ width: size, height: size, borderRadius: 16 }}
           />
         )}
@@ -19,13 +19,13 @@ function PodiumSlot({ track, rank, size }: { track: TopTrack; rank: number; size
           className="absolute -right-2 -top-2 h-6 w-6 items-center justify-center rounded-full"
           style={{ backgroundColor: colors.echoGreen }}
         >
-          <Text className="text-[11px] font-sans-bold text-[#05210f]">{rank}</Text>
+          <Text className="text-11 font-sans-bold" style={{ color: colors.onSpotify }}>{rank}</Text>
         </View>
       </View>
-      <Text numberOfLines={1} style={{ maxWidth: size + 24 }} className="mt-2 text-center text-[12px] font-sans-semibold text-white">
+      <Text numberOfLines={1} style={{ maxWidth: size + 24 }} className="mt-2 text-center text-12 font-sans-semibold text-white">
         {track.trackName}
       </Text>
-      <Text numberOfLines={1} style={{ maxWidth: size + 24 }} className="text-center text-[11px] text-white/45">
+      <Text numberOfLines={1} style={{ maxWidth: size + 24 }} className="text-center text-11 text-white/45">
         {track.artistName}
       </Text>
     </View>

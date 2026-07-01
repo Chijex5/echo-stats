@@ -3,7 +3,7 @@ import { View, Text, Pressable, ScrollView, type LayoutChangeEvent } from "react
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming, runOnJS } from "react-native-reanimated";
 import { Pill } from "@/components/ui";
-import { colors } from "@/lib/theme/tokens";
+import { colors, alpha } from "@/lib/theme/tokens";
 import type { TimelinePagePeriod } from "@/lib/api/hooks";
 
 const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -66,7 +66,7 @@ export function TimelineScrubber({ periods, activeIdx, onChange }: TimelineScrub
 
   return (
     <View>
-      <Text className="text-[10px] uppercase tracking-widest2 text-white/35">Now exploring</Text>
+      <Text className="text-10 uppercase tracking-widest2 text-white/35">Now exploring</Text>
       <Text className="mt-1 text-xl font-sans-bold text-white">
         {activePeriod?.monthName} {activePeriod?.year}
       </Text>
@@ -89,7 +89,7 @@ export function TimelineScrubber({ periods, activeIdx, onChange }: TimelineScrub
                   borderRadius: THUMB_SIZE / 2,
                   backgroundColor: colors.echoGreen,
                   borderWidth: 2.5,
-                  borderColor: "#fff",
+                  borderColor: colors.white,
                 },
                 thumbStyle,
               ]}
@@ -101,8 +101,8 @@ export function TimelineScrubber({ periods, activeIdx, onChange }: TimelineScrub
           {years.map((year) => (
             <Pressable key={year} onPress={() => jumpToYear(year)}>
               <Text
-                className="text-[11px] font-sans-semibold"
-                style={{ color: year === activePeriod?.year ? colors.echoGreen : "rgba(255,255,255,0.35)" }}
+                className="text-11 font-sans-semibold"
+                style={{ color: year === activePeriod?.year ? colors.echoGreen : alpha.white(0.35) }}
               >
                 {year}
               </Text>

@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { ScrollView, View, Text } from "react-native";
+import { View, Text } from "react-native";
 import { MotiView } from "moti";
-import { SectionHeading, Shimmer } from "@/components/ui";
+import { SectionHeading, Shimmer, ScreenScroll } from "@/components/ui";
 import { staggerChild } from "@/lib/motion/presets";
 import { useSongOfTheDay } from "@/lib/api/hooks";
 import { SotdHero, TheStory, MemorySnapshot, WhyWePickedThis, RelatedForgotten, MoodReconstruction, DailyRitual, ShareSheet } from "@/components/sotd";
@@ -12,7 +12,7 @@ export default function SongOfTheDayScreen() {
   const data = sotd.data;
 
   return (
-    <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 72, paddingBottom: 140 }}>
+    <ScreenScroll>
       <View className="mb-6">
         <SectionHeading label="Today's pick" title="Song of the day" align="left" />
       </View>
@@ -24,7 +24,7 @@ export default function SongOfTheDayScreen() {
           <Shimmer width="100%" height={260} rounded="xl" />
         </View>
       ) : sotd.isError || !data ? (
-        <Text className="mt-10 text-center text-[13px] text-white/40">
+        <Text className="mt-10 text-center text-13 text-white/40">
           Could not load today&apos;s song. Please try again.
         </Text>
       ) : (
@@ -67,6 +67,6 @@ export default function SongOfTheDayScreen() {
           />
         </View>
       )}
-    </ScrollView>
+    </ScreenScroll>
   );
 }

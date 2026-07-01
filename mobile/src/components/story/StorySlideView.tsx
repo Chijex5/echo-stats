@@ -5,6 +5,7 @@ import { MotiView } from "moti";
 import type { LucideIcon } from "lucide-react-native";
 import { DECORATIONS } from "./decorations";
 import type { StorySlide } from "./buildSlides";
+import { colors, alpha, radius } from "@/lib/theme/tokens";
 
 function Waveform({ color }: { color: string }) {
   const bars = Array.from({ length: 24 });
@@ -28,17 +29,17 @@ export function StorySlideView({ slide, Icon }: { slide: StorySlide; Icon: Lucid
   const Decoration = DECORATIONS[slide.decoration];
 
   return (
-    <View style={{ width, height, backgroundColor: "#07090b" }}>
+    <View style={{ width, height, backgroundColor: colors.background }}>
       {slide.imageUrl ? (
         <Image source={{ uri: slide.imageUrl }} style={{ width, height, position: "absolute" }} resizeMode="cover" blurRadius={2} />
       ) : (
         <LinearGradient
-          colors={[`${slide.accent}33`, "#07090b", "#07090b"]}
+          colors={[`${slide.accent}33`, colors.background, colors.background]}
           style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
         />
       )}
       <LinearGradient
-        colors={["rgba(7,9,11,0.55)", "rgba(7,9,11,0.35)", "rgba(7,9,11,0.92)"]}
+        colors={[alpha.black(0.55), alpha.black(0.35), alpha.black(0.92)]}
         style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
       />
 
@@ -52,7 +53,7 @@ export function StorySlideView({ slide, Icon }: { slide: StorySlide; Icon: Lucid
                 borderRadius: 24,
                 overflow: "hidden",
                 borderWidth: 1,
-                borderColor: "rgba(255,255,255,0.12)",
+                borderColor: alpha.white(0.12),
                 shadowColor: slide.accent,
                 shadowOpacity: 0.45,
                 shadowRadius: 30,
@@ -69,21 +70,21 @@ export function StorySlideView({ slide, Icon }: { slide: StorySlide; Icon: Lucid
       </View>
 
       <View style={{ position: "absolute", left: 0, right: 0, bottom: 0 }}>
-        <View style={{ overflow: "hidden", borderTopLeftRadius: 28, borderTopRightRadius: 28 }}>
+        <View style={{ overflow: "hidden", borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet }}>
           <BlurView intensity={50} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
           <LinearGradient
-            colors={["rgba(255,255,255,0.04)", "rgba(255,255,255,0.01)"]}
+            colors={[alpha.white(0.04), alpha.white(0.01)]}
             style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
           />
           <View className="border-t border-white/[0.08] px-6 pb-10 pt-6">
             <View className="flex-row items-center gap-2">
               <Icon size={14} color={slide.accent} />
-              <Text className="text-[10px] uppercase tracking-widest2 text-white/45">{slide.label}</Text>
+              <Text className="text-10 uppercase tracking-widest2 text-white/45">{slide.label}</Text>
             </View>
-            <Text numberOfLines={2} className="mt-2 text-[26px] font-sans-bold leading-tight text-white">
+            <Text numberOfLines={2} className="mt-2 text-26 font-sans-bold leading-tight text-white">
               {slide.title}
             </Text>
-            <Text numberOfLines={2} className="mt-1.5 text-[14px] text-white/55">
+            <Text numberOfLines={2} className="mt-1.5 text-14 text-white/55">
               {slide.subtitle}
             </Text>
           </View>

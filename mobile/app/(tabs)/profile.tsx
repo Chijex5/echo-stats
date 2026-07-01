@@ -16,12 +16,13 @@ import {
   Sparkles,
   type LucideIcon,
 } from "lucide-react-native";
-import { GlassCard, SectionHeading, StatTile, Shimmer } from "@/components/ui";
+import { GlassCard, SectionHeading, StatTile, Shimmer, ScreenScroll } from "@/components/ui";
 import { ProfileHero } from "@/components/dashboard/ProfileHero";
 import { MilestoneTimeline, type MilestoneItem } from "@/components/dashboard/MilestoneTimeline";
 import { ServiceRow } from "@/components/dashboard/ServiceRow";
 import { HighlightsSection } from "@/components/dashboard/HighlightsSection";
 import { useProfile, type SongMoment } from "@/lib/api/hooks";
+import { colors, alpha } from "@/lib/theme/tokens";
 
 function formatDate(value: string | null | undefined) {
   if (!value) return "Not yet";
@@ -35,15 +36,15 @@ function songLabel(song: SongMoment) {
 
 function IdentityCard({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) {
   return (
-    <GlassCard padding="md" rounded="2xl" style={{ flex: 1, minWidth: "47%" }}>
+    <GlassCard padding="md" rounded="2xl" style={{ width: 168 }}>
       <View
         className="h-9 w-9 items-center justify-center rounded-xl border"
-        style={{ borderColor: "rgba(24,216,126,0.2)", backgroundColor: "rgba(24,216,126,0.08)" }}
+        style={{ borderColor: alpha.spotify(0.2), backgroundColor: alpha.spotify(0.08) }}
       >
-        <Icon size={16} color="#18d87e" />
+        <Icon size={16} color={colors.echoGreen} />
       </View>
-      <Text className="mt-3.5 text-[10px] font-sans-semibold uppercase tracking-widest2 text-white/35">{label}</Text>
-      <Text numberOfLines={1} className="mt-1.5 text-[15px] font-sans-semibold text-white">
+      <Text className="mt-3.5 text-10 font-sans-semibold uppercase tracking-widest2 text-white/35">{label}</Text>
+      <Text numberOfLines={1} className="mt-1.5 text-15 font-sans-semibold text-white">
         {value}
       </Text>
     </GlassCard>
@@ -55,7 +56,7 @@ export default function ProfileScreen() {
   const data = profile.data;
 
   return (
-    <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 72, paddingBottom: 140 }}>
+    <ScreenScroll>
       <View className="mb-5">
         <SectionHeading label="Your archive" title="Profile" align="left" />
       </View>
@@ -74,37 +75,37 @@ export default function ProfileScreen() {
           <ProfileHero user={data.user} connectedDate={data.summary.connectedDate} />
 
           <View>
-            <Text className="mb-3 text-[12px] font-sans-semibold uppercase tracking-widest2 text-white/30">
+            <Text className="mb-3 text-12 font-sans-semibold uppercase tracking-widest2 text-white/30">
               User summary
             </Text>
-            <View className="flex-row flex-wrap gap-3">
-              <StatTile label="Songs analyzed" value={data.summary.totalSongsAnalyzed.toLocaleString()} />
-              <StatTile label="Years imported" value={data.summary.yearsImported} />
-              <StatTile label="Artists discovered" value={data.summary.totalArtistsDiscovered.toLocaleString()} />
-              <StatTile label="Favorite genre" value={data.summary.favoriteGenre} />
-              <StatTile label="Listening streak" value={`${data.summary.listeningStreak}d`} accentColor="#f59e0b" />
-              <StatTile label="Connected date" value={data.summary.connectedDate} />
-              <StatTile label="Hours listened" value={data.summary.totalHoursListened.toLocaleString()} accentColor="#60a5fa" />
-              <StatTile label="Total plays" value={data.summary.totalPlays.toLocaleString()} />
-            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
+              <StatTile width={112} label="Songs analyzed" value={data.summary.totalSongsAnalyzed.toLocaleString()} />
+              <StatTile width={112} label="Years imported" value={data.summary.yearsImported} />
+              <StatTile width={112} label="Artists discovered" value={data.summary.totalArtistsDiscovered.toLocaleString()} />
+              <StatTile width={112} label="Favorite genre" value={data.summary.favoriteGenre} />
+              <StatTile width={112} label="Listening streak" value={`${data.summary.listeningStreak}d`} accentColor={colors.accentAmber} />
+              <StatTile width={112} label="Connected date" value={data.summary.connectedDate} />
+              <StatTile width={112} label="Hours listened" value={data.summary.totalHoursListened.toLocaleString()} accentColor={colors.accentBlue} />
+              <StatTile width={112} label="Total plays" value={data.summary.totalPlays.toLocaleString()} />
+            </ScrollView>
           </View>
 
           <View>
-            <Text className="mb-3 text-[12px] font-sans-semibold uppercase tracking-widest2 text-white/30">
+            <Text className="mb-3 text-12 font-sans-semibold uppercase tracking-widest2 text-white/30">
               Music identity
             </Text>
-            <View className="flex-row flex-wrap gap-3">
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
               <IdentityCard icon={Fingerprint} label="Listening personality" value={data.identity.listeningPersonality} />
               <IdentityCard icon={Archive} label="Music age" value={data.identity.musicAge} />
               <IdentityCard icon={Orbit} label="Favorite decade" value={data.identity.favoriteDecade} />
               <IdentityCard icon={Compass} label="Hidden genre" value={data.identity.hiddenGenre} />
               <IdentityCard icon={Clock3} label="Top listening hour" value={data.identity.topListeningHour} />
               <IdentityCard icon={Sparkles} label="Top listening season" value={data.identity.topListeningSeason} />
-            </View>
+            </ScrollView>
           </View>
 
           <View>
-            <Text className="mb-3 text-[12px] font-sans-semibold uppercase tracking-widest2 text-white/30">
+            <Text className="mb-3 text-12 font-sans-semibold uppercase tracking-widest2 text-white/30">
               Personal milestones
             </Text>
             <GlassCard padding="md" rounded="2xl">
@@ -155,7 +156,7 @@ export default function ProfileScreen() {
           </View>
 
           <View>
-            <Text className="mb-3 text-[12px] font-sans-semibold uppercase tracking-widest2 text-white/30">
+            <Text className="mb-3 text-12 font-sans-semibold uppercase tracking-widest2 text-white/30">
               Connected services
             </Text>
             <View className="gap-2.5">
@@ -188,13 +189,13 @@ export default function ProfileScreen() {
           </View>
 
           <View>
-            <Text className="mb-3 text-[12px] font-sans-semibold uppercase tracking-widest2 text-white/30">
+            <Text className="mb-3 text-12 font-sans-semibold uppercase tracking-widest2 text-white/30">
               Highlights
             </Text>
             <HighlightsSection highlights={data.highlights} />
           </View>
         </View>
       ) : null}
-    </ScrollView>
+    </ScreenScroll>
   );
 }

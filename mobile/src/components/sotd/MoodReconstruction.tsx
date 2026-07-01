@@ -1,5 +1,6 @@
 import { View, Text } from "react-native";
 import { GlassCard, SectionHeading, EyebrowLabel } from "@/components/ui";
+import { alpha } from "@/lib/theme/tokens";
 import { Sparkline } from "@/components/charts";
 import { MoodRadar } from "./MoodRadar";
 import type { SotdMoodReconstruction, SotdSong } from "@/lib/api/hooks/types";
@@ -52,7 +53,7 @@ export function MoodReconstruction({ data, song }: MoodReconstructionProps) {
         <GlassCard padding="lg" rounded="2xl">
           <View className="mb-3 flex-row items-center justify-between">
             <EyebrowLabel>Listening by hour</EyebrowLabel>
-            <Text className="text-[11px] text-white/40">
+            <Text className="text-11 text-white/40">
               Peak at <Text className="font-sans-medium text-white">{data.peakHourLabel}</Text>
             </Text>
           </View>
@@ -65,18 +66,18 @@ export function MoodReconstruction({ data, song }: MoodReconstructionProps) {
                   className="flex-1 rounded-t-sm"
                   style={{
                     height: Math.max(6, Math.round((h.v / maxHour) * HOUR_BAR_HEIGHT)),
-                    backgroundColor: peak ? song.gradientFrom : "rgba(255,255,255,0.10)",
+                    backgroundColor: peak ? song.gradientFrom : alpha.white(0.1),
                   }}
                 />
               );
             })}
           </View>
           <View className="mt-2 flex-row justify-between">
-            <Text className="text-[10px] text-white/30">00</Text>
-            <Text className="text-[10px] text-white/30">06</Text>
-            <Text className="text-[10px] text-white/30">12</Text>
-            <Text className="text-[10px] text-white/30">18</Text>
-            <Text className="text-[10px] text-white/30">23</Text>
+            <Text className="text-10 text-white/30">00</Text>
+            <Text className="text-10 text-white/30">06</Text>
+            <Text className="text-10 text-white/30">12</Text>
+            <Text className="text-10 text-white/30">18</Text>
+            <Text className="text-10 text-white/30">23</Text>
           </View>
         </GlassCard>
 
@@ -85,7 +86,7 @@ export function MoodReconstruction({ data, song }: MoodReconstructionProps) {
           <Sparkline data={data.monthTrend.map((m) => m.v)} width={290} height={70} color={song.gradientFrom} />
           <View className="mt-1.5 flex-row justify-between">
             {data.monthTrend.map((m) => (
-              <Text key={m.m} className="text-[10px] text-white/30">
+              <Text key={m.m} className="text-10 text-white/30">
                 {m.m[0]}
               </Text>
             ))}
@@ -95,7 +96,7 @@ export function MoodReconstruction({ data, song }: MoodReconstructionProps) {
         <GlassCard padding="lg" rounded="2xl">
           <EyebrowLabel className="mb-2">Repeat frequency</EyebrowLabel>
           <Sparkline data={data.repeatCurve.map((p) => p.v)} width={290} height={70} color={song.gradientTo} />
-          <Text className="mt-2 text-[12px] text-white/45">
+          <Text className="mt-2 text-12 text-white/45">
             Most back-to-back: <Text className="font-sans-medium text-white">{data.maxRepeatsInOneDay}×</Text> in one
             sitting.
           </Text>
