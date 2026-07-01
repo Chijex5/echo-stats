@@ -1,5 +1,6 @@
-import { View, Text } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import Animated, { useAnimatedStyle, useDerivedValue, withTiming } from "react-native-reanimated";
+import { alpha, fontSize } from "@/lib/theme/tokens";
 
 type Segment = {
   label: string;
@@ -24,7 +25,7 @@ export function ProportionalBars({ segments, height = 10, showLegend = true }: P
 
   return (
     <View>
-      <View className="flex-row overflow-hidden rounded-full bg-white/5" style={{ height }}>
+      <View style={[styles.track, { height }]}>
         {segments.map((segment, i) => (
           <AnimatedSegment
             key={segment.label + i}
@@ -35,11 +36,11 @@ export function ProportionalBars({ segments, height = 10, showLegend = true }: P
         ))}
       </View>
       {showLegend ? (
-        <View className="mt-3 flex-row flex-wrap gap-3">
+        <View style={styles.legend}>
           {segments.map((segment, i) => (
-            <View key={segment.label + i} className="flex-row items-center gap-1.5">
-              <View className="h-2 w-2 rounded-full" style={{ backgroundColor: segment.color }} />
-              <Text className="text-11 text-white/60">
+            <View key={segment.label + i} style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: segment.color }]} />
+              <Text style={styles.legendText}>
                 {segment.label} · {Math.round(segment.pct)}%
               </Text>
             </View>
@@ -49,3 +50,11 @@ export function ProportionalBars({ segments, height = 10, showLegend = true }: P
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  track: { flexDirection: "row", overflow: "hidden", borderRadius: 999, backgroundColor: alpha.white(0.05) },
+  legend: { marginTop: 12, flexDirection: "row", flexWrap: "wrap", gap: 12 },
+  legendItem: { flexDirection: "row", alignItems: "center", gap: 6 },
+  legendDot: { height: 8, width: 8, borderRadius: 999 },
+  legendText: { fontSize: fontSize[11], color: alpha.white(0.6) },
+});

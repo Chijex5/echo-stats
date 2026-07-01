@@ -1,28 +1,29 @@
-import { View, Text } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import { MotiView } from "moti";
 import { TrendingUp, Music2, Moon } from "lucide-react-native";
 import { GlassCard } from "@/components/ui";
 import { staggerChild } from "@/lib/motion/presets";
 import { colorForKey } from "@/lib/theme/gradients";
+import { colors, alpha, fontSize, trackingWidest2 } from "@/lib/theme/tokens";
 import type { TimelinePageInsight } from "@/lib/api/hooks";
 
 const ICONS = [TrendingUp, Music2, Moon];
 
 export function TimelineInsights({ insights, startIndex }: { insights: TimelinePageInsight[]; startIndex: number }) {
   return (
-    <View className="gap-3">
+    <View style={styles.list}>
       {insights.map((insight, i) => {
         const Icon = ICONS[i % ICONS.length];
         const accent = colorForKey(insight.label);
         return (
           <MotiView key={insight.label} {...staggerChild(startIndex + i)}>
             <GlassCard padding="md" rounded="2xl">
-              <View className="flex-row items-center gap-2">
+              <View style={styles.row}>
                 <Icon size={14} color={accent} />
-                <Text className="text-11 uppercase tracking-widest2 text-white/35">{insight.label}</Text>
+                <Text style={styles.label}>{insight.label}</Text>
               </View>
-              <Text className="mt-2 text-15 font-sans-semibold text-white">{insight.title}</Text>
-              <Text className="mt-1 text-12 text-white/45">{insight.sub}</Text>
+              <Text style={styles.title}>{insight.title}</Text>
+              <Text style={styles.sub}>{insight.sub}</Text>
             </GlassCard>
           </MotiView>
         );
@@ -30,3 +31,17 @@ export function TimelineInsights({ insights, startIndex }: { insights: TimelineP
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  list: { gap: 12 },
+  row: { flexDirection: "row", alignItems: "center", gap: 8 },
+  label: {
+    fontSize: fontSize[11],
+    fontFamily: "GeistSans",
+    textTransform: "uppercase",
+    letterSpacing: trackingWidest2(fontSize[11]),
+    color: alpha.white(0.35),
+  },
+  title: { marginTop: 8, fontSize: fontSize[15], fontFamily: "GeistSansSemiBold", color: colors.white },
+  sub: { marginTop: 4, fontSize: fontSize[12], fontFamily: "GeistSans", color: alpha.white(0.45) },
+});

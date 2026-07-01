@@ -1,7 +1,7 @@
-import { View, Text } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import Svg, { Circle } from "react-native-svg";
 import Animated, { useAnimatedProps, useDerivedValue, withTiming } from "react-native-reanimated";
-import { colors, alpha } from "@/lib/theme/tokens";
+import { colors, alpha, fontSize, trackingWidest2 } from "@/lib/theme/tokens";
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -45,9 +45,19 @@ export function RadialGauge({ value, min, max, size = 96, label, valueLabel, acc
         />
       </Svg>
       <View style={{ position: "absolute", alignItems: "center", justifyContent: "center" }}>
-        <Text className="text-lg font-sans-bold text-white">{valueLabel ?? Math.round(value)}</Text>
-        {label ? <Text className="text-10 uppercase tracking-widest2 text-white/35">{label}</Text> : null}
+        <Text style={styles.value}>{valueLabel ?? Math.round(value)}</Text>
+        {label ? <Text style={styles.label}>{label}</Text> : null}
       </View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  value: { fontSize: fontSize[18], fontFamily: "GeistSansBold", color: colors.white },
+  label: {
+    fontSize: fontSize[10],
+    textTransform: "uppercase",
+    letterSpacing: trackingWidest2(fontSize[10]),
+    color: alpha.white(0.35),
+  },
+});

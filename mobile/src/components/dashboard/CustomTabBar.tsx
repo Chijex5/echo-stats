@@ -1,10 +1,10 @@
-import { View, Pressable, Text } from "react-native";
+import { View, Pressable, Text, StyleSheet } from "react-native";
 import type { ComponentProps } from "react";
 import { Tabs } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MotiView } from "moti";
 import { LayoutDashboard, Music2, Users, History, Lightbulb, UserRound, type LucideIcon } from "lucide-react-native";
-import { colors, alpha } from "@/lib/theme/tokens";
+import { colors, alpha, fontSize, radius } from "@/lib/theme/tokens";
 
 // Derives the tabBar render-prop's parameter type from Tabs itself, since
 // expo-router vendors its own react-navigation/bottom-tabs fork with no
@@ -37,12 +37,9 @@ export function CustomTabBar({ state, navigation }: TabBarProps) {
   if (state.routes[state.index]?.name === "story") return null;
 
   return (
-    <View style={{ position: "absolute", left: 16, right: 16, bottom: insets.bottom + 8 }}>
-      <View
-        className="overflow-hidden rounded-full border border-white/10"
-        style={{ backgroundColor: colors.backgroundElevated }}
-      >
-        <View className="flex-row items-center justify-between px-1.5 py-2">
+    <View style={[styles.wrap, { bottom: insets.bottom + 8 }]}>
+      <View style={styles.bar}>
+        <View style={styles.row}>
           {TABS.map((tab) => {
             const routeIndex = state.routes.findIndex((route) => route.name === tab.name);
             const isActive = routeIndex !== -1 && state.index === routeIndex;
@@ -56,18 +53,15 @@ export function CustomTabBar({ state, navigation }: TabBarProps) {
                   const route = state.routes[routeIndex];
                   navigation.navigate(route.name, route.params);
                 }}
-                className="flex-1 items-center justify-center py-2"
+                style={styles.tab}
               >
                 <MotiView
                   animate={{ scale: isActive ? 1.05 : 1 }}
                   transition={{ type: "timing", duration: 150 }}
-                  style={{ alignItems: "center", gap: 2 }}
+                  style={styles.tabInner}
                 >
                   <Icon size={18} color={isActive ? colors.echoGreen : alpha.white(0.4)} />
-                  <Text
-                    className="text-9 font-sans-medium"
-                    style={{ color: isActive ? colors.echoGreen : alpha.white(0.4) }}
-                  >
+                  <Text style={[styles.label, { color: isActive ? colors.echoGreen : alpha.white(0.4) }]}>
                     {tab.label}
                   </Text>
                 </MotiView>
@@ -79,3 +73,18 @@ export function CustomTabBar({ state, navigation }: TabBarProps) {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  wrap: { position: "absolute", left: 16, right: 16 },
+  bar: {
+    overflow: "hidden",
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: alpha.white(0.1),
+    backgroundColor: colors.backgroundElevated,
+  },
+  row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 6, paddingVertical: 8 },
+  tab: { flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 8 },
+  tabInner: { alignItems: "center", gap: 2 },
+  label: { fontSize: fontSize[9], fontFamily: "GeistSansMedium" },
+});

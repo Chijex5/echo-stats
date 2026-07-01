@@ -1,7 +1,6 @@
-import { View, Text, Image } from "react-native";
+import { View, Text, Image, StyleSheet } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { cn } from "@/lib/cn";
-import { alpha } from "@/lib/theme/tokens";
+import { alpha, fontSize, radius } from "@/lib/theme/tokens";
 
 type ListRowProps = {
   imageUrl?: string | null;
@@ -20,20 +19,20 @@ export function ListRow({
   trailing,
   rounded = "lg",
 }: ListRowProps) {
-  const roundedClass = rounded === "full" ? "rounded-full" : "rounded-lg";
+  const borderRadius = rounded === "full" ? radius.full : 8;
   return (
-    <View className="flex-row items-center gap-3 py-2.5">
+    <View style={styles.row}>
       {imageUrl ? (
-        <Image source={{ uri: imageUrl }} className={cn("h-12 w-12", roundedClass)} />
+        <Image source={{ uri: imageUrl }} style={[styles.thumb, { borderRadius }]} />
       ) : (
-        <LinearGradient colors={fallbackGradient} className={cn("h-12 w-12", roundedClass)} />
+        <LinearGradient colors={fallbackGradient} style={[styles.thumb, { borderRadius }]} />
       )}
-      <View className="flex-1">
-        <Text numberOfLines={1} className="text-14 font-sans-medium text-white/90">
+      <View style={styles.text}>
+        <Text numberOfLines={1} style={styles.title}>
           {title}
         </Text>
         {subtitle ? (
-          <Text numberOfLines={1} className="mt-0.5 text-12 text-white/45">
+          <Text numberOfLines={1} style={styles.subtitle}>
             {subtitle}
           </Text>
         ) : null}
@@ -42,3 +41,11 @@ export function ListRow({
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  row: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10 },
+  thumb: { height: 48, width: 48 },
+  text: { flex: 1 },
+  title: { fontSize: fontSize[14], fontFamily: "GeistSansMedium", color: alpha.white(0.9) },
+  subtitle: { marginTop: 2, fontSize: fontSize[12], fontFamily: "GeistSans", color: alpha.white(0.45) },
+});

@@ -1,4 +1,4 @@
-import { FlatList, View } from "react-native";
+import { FlatList, View, StyleSheet } from "react-native";
 import { SectionHeading, StatTile, Shimmer } from "@/components/ui";
 import { FeaturedArtistCard } from "@/components/dashboard/FeaturedArtistCard";
 import { ArtistGridCard } from "@/components/dashboard/ArtistGridCard";
@@ -24,14 +24,14 @@ export default function ArtistsScreen() {
 
   return (
     <View style={{ flex: 1, paddingTop: spacing.screenTop }}>
-      <View className="px-screen-x">
+      <View style={{ paddingHorizontal: spacing.screenX }}>
         <SectionHeading label="Most played" title="Top artists" align="left" />
       </View>
 
       {topArtists.isLoading ? (
-        <View className="mt-5 gap-3 px-screen-x">
+        <View style={[styles.loadingWrap, { paddingHorizontal: spacing.screenX }]}>
           <Shimmer width="100%" height={280} rounded="xl" />
-          <View className="flex-row gap-3">
+          <View style={styles.loadingRow}>
             <Shimmer width="100%" height={80} rounded="xl" />
             <Shimmer width="100%" height={80} rounded="xl" />
           </View>
@@ -44,9 +44,9 @@ export default function ArtistsScreen() {
           columnWrapperStyle={{ gap: 12 }}
           contentContainerStyle={{ paddingHorizontal: spacing.screenX, paddingBottom: spacing.screenBottom, gap: 12 }}
           ListHeaderComponent={
-            <View className="mb-5 mt-5 gap-3">
+            <View style={styles.header}>
               {featured ? <FeaturedArtistCard artist={featured} /> : null}
-              <View className="flex-row gap-3">
+              <View style={styles.statsRow}>
                 <StatTile label="Monthly drift" value={`${driftPct}%`} />
                 <StatTile label="Fast rising" value={fastRising?.name ?? "None yet"} accentColor={colors.echoGreen} />
                 <StatTile label="Fading out" value={forgotten?.name ?? "None"} accentColor={colors.accentRed} />
@@ -59,3 +59,10 @@ export default function ArtistsScreen() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  loadingWrap: { marginTop: 20, gap: 12 },
+  loadingRow: { flexDirection: "row", gap: 12 },
+  header: { marginBottom: 20, marginTop: 20, gap: 12 },
+  statsRow: { flexDirection: "row", gap: 12 },
+});

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View, Text } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import { MotiView } from "moti";
 import { GlassCard, SectionHeading, Shimmer, ScreenScroll } from "@/components/ui";
 import { staggerChild } from "@/lib/motion/presets";
@@ -10,6 +10,7 @@ import { TimeComparisonSection } from "@/components/dashboard/TimeComparisonSect
 import { RandomNostalgiaSheet } from "@/components/dashboard/RandomNostalgiaSheet";
 import { TimelineInsights } from "@/components/dashboard/TimelineInsights";
 import { CalendarHeatmap } from "@/components/charts";
+import { alpha, fontSize, trackingWidest2 } from "@/lib/theme/tokens";
 
 export default function TimelineScreen() {
   const page = useTimelinePage();
@@ -22,18 +23,18 @@ export default function TimelineScreen() {
 
   return (
     <ScreenScroll>
-      <View className="mb-5">
+      <View style={{ marginBottom: 20 }}>
         <SectionHeading label="Look back" title="Timeline" align="left" />
       </View>
 
       {isLoading ? (
-        <View className="gap-3">
+        <View style={{ gap: 12 }}>
           <Shimmer width="100%" height={110} rounded="xl" />
           <Shimmer width="100%" height={260} rounded="xl" />
           <Shimmer width="100%" height={140} rounded="xl" />
         </View>
       ) : periods.length ? (
-        <View className="gap-5">
+        <View style={{ gap: 20 }}>
           <MotiView {...staggerChild(0)}>
             <GlassCard padding="lg" rounded="2xl">
               <TimelineScrubber periods={periods} activeIdx={activeIdx} onChange={setActiveIdx} />
@@ -45,8 +46,8 @@ export default function TimelineScreen() {
           {explorer.data?.cells.length ? (
             <MotiView {...staggerChild(2)}>
               <GlassCard padding="lg" rounded="2xl">
-                <Text className="text-10 uppercase tracking-widest2 text-white/35">Listening activity</Text>
-                <Text className="mb-4 mt-1 text-13 text-white/45">{explorer.data.selectedRange.label}</Text>
+                <Text style={styles.eyebrow}>Listening activity</Text>
+                <Text style={styles.rangeLabel}>{explorer.data.selectedRange.label}</Text>
                 <CalendarHeatmap cells={explorer.data.cells} />
               </GlassCard>
             </MotiView>
@@ -63,8 +64,19 @@ export default function TimelineScreen() {
           {page.data?.insights.length ? <TimelineInsights insights={page.data.insights} startIndex={5} /> : null}
         </View>
       ) : (
-        <Text className="text-13 text-white/40">No timeline data yet — keep listening.</Text>
+        <Text style={styles.empty}>No timeline data yet — keep listening.</Text>
       )}
     </ScreenScroll>
   );
 }
+
+const styles = StyleSheet.create({
+  eyebrow: {
+    fontSize: fontSize[10],
+    textTransform: "uppercase",
+    letterSpacing: trackingWidest2(fontSize[10]),
+    color: alpha.white(0.35),
+  },
+  rangeLabel: { marginBottom: 16, marginTop: 4, fontSize: fontSize[13], color: alpha.white(0.45) },
+  empty: { fontSize: fontSize[13], color: alpha.white(0.4) },
+});

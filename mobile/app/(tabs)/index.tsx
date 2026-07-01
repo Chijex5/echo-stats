@@ -1,4 +1,4 @@
-import { ScrollView, View, Text } from "react-native";
+import { ScrollView, View, Text, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import { MotiView } from "moti";
 import { Gem, Shuffle, Flame, Sparkles, Disc3 } from "lucide-react-native";
@@ -8,7 +8,7 @@ import { NowPlayingPill } from "@/components/dashboard/NowPlayingPill";
 import { ExploreCTACard } from "@/components/dashboard/ExploreCTACard";
 import { RediscoveryCardView } from "@/components/dashboard/RediscoveryCardView";
 import { staggerChild } from "@/lib/motion/presets";
-import { colors } from "@/lib/theme/tokens";
+import { colors, alpha, fontSize, trackingWidest2 } from "@/lib/theme/tokens";
 import { colorForKey } from "@/lib/theme/gradients";
 import {
   useDashboardStats,
@@ -51,16 +51,16 @@ export default function OverviewScreen() {
 
   return (
     <ScreenScroll>
-      <MotiView {...staggerChild(0)} className="mb-5">
+      <MotiView {...staggerChild(0)} style={styles.section}>
         <SectionHeading label="Welcome back" title="Your listening" accentWord="pulse" />
         {nowPlaying.data ? (
-          <View className="mt-4">
+          <View style={{ marginTop: 16 }}>
             <NowPlayingPill nowPlaying={nowPlaying.data.nowPlaying} lastPlayed={nowPlaying.data.lastPlayed} />
           </View>
         ) : null}
       </MotiView>
 
-      <MotiView {...staggerChild(1)} className="mb-5">
+      <MotiView {...staggerChild(1)} style={styles.section}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
           {stats.isLoading ? (
             Array.from({ length: 7 }).map((_, i) => <Shimmer key={i} width={104} height={64} rounded="xl" />)
@@ -78,23 +78,21 @@ export default function OverviewScreen() {
         </ScrollView>
       </MotiView>
 
-      <MotiView {...staggerChild(2)} className="mb-5">
+      <MotiView {...staggerChild(2)} style={styles.section}>
         <GlassCard padding="lg" rounded="2xl">
-          <Text className="mb-1 text-10 uppercase tracking-widest2 text-white/35">Music age</Text>
+          <Text style={styles.eyebrow}>Music age</Text>
           {insights.isLoading ? (
             <Shimmer width="100%" height={80} rounded="lg" />
           ) : insights.data ? (
             <>
-              <View className="flex-row items-baseline justify-between">
-                <Text className="text-2xl font-serif italic text-white">
-                  {insights.data.analysisResult.musicAge.avgTrackAgeYears.toFixed(1)} yrs
-                </Text>
+              <View style={styles.ageRow}>
+                <Text style={styles.ageValue}>{insights.data.analysisResult.musicAge.avgTrackAgeYears.toFixed(1)} yrs</Text>
                 <Sparkline data={eraSparkline} width={120} height={40} />
               </View>
-              <Text className="mt-1 text-12 text-white/45">Average age of the music you play</Text>
+              <Text style={styles.ageCaption}>Average age of the music you play</Text>
               {personalitySegments.length ? (
-                <View className="mt-5">
-                  <Text className="mb-2 text-12 font-sans-medium text-white/70">Listening personality</Text>
+                <View style={{ marginTop: 20 }}>
+                  <Text style={styles.personalityLabel}>Listening personality</Text>
                   <ProportionalBars segments={personalitySegments} />
                 </View>
               ) : null}
@@ -103,11 +101,11 @@ export default function OverviewScreen() {
         </GlassCard>
       </MotiView>
 
-      <MotiView {...staggerChild(3)} className="mb-5">
+      <MotiView {...staggerChild(3)} style={styles.section}>
         <SectionHeading label="On repeat" title="Top tracks" align="left" />
-        <View className="mt-3">
+        <View style={{ marginTop: 12 }}>
           {topTracks.isLoading ? (
-            Array.from({ length: 4 }).map((_, i) => <Shimmer key={i} width="100%" height={56} className="mb-2" />)
+            Array.from({ length: 4 }).map((_, i) => <Shimmer key={i} width="100%" height={56} style={{ marginBottom: 8 }} />)
           ) : topTracks.data ? (
             topTracks.data.tracks.slice(0, 4).map((track) => (
               <ListRow
@@ -115,61 +113,61 @@ export default function OverviewScreen() {
                 imageUrl={track.albumImageUrl}
                 title={track.trackName}
                 subtitle={track.artistName}
-                trailing={<Text className="text-12 text-white/40">{track.playCount}×</Text>}
+                trailing={<Text style={styles.trailingCount}>{track.playCount}×</Text>}
               />
             ))
           ) : null}
         </View>
       </MotiView>
 
-      <MotiView {...staggerChild(4)} className="mb-5">
+      <MotiView {...staggerChild(4)} style={styles.section}>
         <SectionHeading label="Most played" title="Top artists" align="left" />
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mt-3" contentContainerStyle={{ gap: 12 }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 12 }} contentContainerStyle={{ gap: 12 }}>
           {topArtists.isLoading
             ? Array.from({ length: 4 }).map((_, i) => <Shimmer key={i} width={140} height={120} rounded="xl" />)
             : topArtists.data?.artists.slice(0, 4).map((artist) => (
                 <GlassCard key={artist.name} padding="sm" rounded="xl" style={{ width: 140 }}>
-                  <Text numberOfLines={1} className="text-13 font-sans-semibold text-white">
+                  <Text numberOfLines={1} style={styles.artistName}>
                     {artist.name}
                   </Text>
-                  <Text className="mb-2 text-11 text-white/45">{artist.plays} plays</Text>
+                  <Text style={styles.artistPlays}>{artist.plays} plays</Text>
                   <Sparkline data={artist.sparkline.map((p) => p.v)} width={110} height={28} color={colorForKey(artist.name)} />
                 </GlassCard>
               ))}
         </ScrollView>
       </MotiView>
 
-      <MotiView {...staggerChild(5)} className="mb-5">
+      <MotiView {...staggerChild(5)} style={styles.section}>
         <SectionHeading label="Discoveries" title="Insights" align="left" />
         {insights.isLoading ? (
-          <Shimmer width="100%" height={140} rounded="xl" className="mt-3" />
+          <Shimmer width="100%" height={140} rounded="xl" style={{ marginTop: 12 }} />
         ) : insights.data ? (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mt-3" contentContainerStyle={{ gap: 12 }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 12 }} contentContainerStyle={{ gap: 12 }}>
             <GlassCard padding="md" rounded="2xl" style={{ width: 220 }}>
-              <View className="flex-row items-center gap-2">
+              <View style={styles.cardHeader}>
                 <Gem size={14} color={colors.accentPurple} />
-                <Text className="text-11 uppercase tracking-widest2 text-white/35">Hidden gem</Text>
+                <Text style={styles.cardHeaderLabel}>Hidden gem</Text>
               </View>
               {insights.data.hiddenGem ? (
-                <View className="mt-2">
+                <View style={{ marginTop: 8 }}>
                   <ListRow
                     imageUrl={insights.data.hiddenGem.albumImageUrl}
                     title={insights.data.hiddenGem.trackName}
                     subtitle={insights.data.hiddenGem.artistName}
-                    trailing={<Text className="text-12 text-white/40">{insights.data.hiddenGem.plays}×</Text>}
+                    trailing={<Text style={styles.trailingCount}>{insights.data.hiddenGem.plays}×</Text>}
                   />
                 </View>
               ) : (
-                <Text className="mt-2 text-13 text-white/40">Keep listening to surface one.</Text>
+                <Text style={styles.emptyText}>Keep listening to surface one.</Text>
               )}
             </GlassCard>
 
             <GlassCard padding="md" rounded="2xl" style={{ width: 200 }}>
-              <View className="flex-row items-center gap-2">
+              <View style={styles.cardHeader}>
                 <Shuffle size={14} color={colors.accentBlue} />
-                <Text className="text-11 uppercase tracking-widest2 text-white/35">Genre drift</Text>
+                <Text style={styles.cardHeaderLabel}>Genre drift</Text>
               </View>
-              <Text className="mt-2 text-14 text-white/85">
+              <Text style={styles.driftText}>
                 {insights.data.genreDrift.drifted
                   ? `${insights.data.genreDrift.from ?? "Unknown"} → ${insights.data.genreDrift.to ?? "Unknown"}`
                   : "Your taste has stayed steady this month."}
@@ -177,37 +175,37 @@ export default function OverviewScreen() {
             </GlassCard>
 
             <GlassCard padding="md" rounded="2xl" style={{ width: 220 }}>
-              <View className="flex-row items-center gap-2">
+              <View style={styles.cardHeader}>
                 <Flame size={14} color={colors.accentRed} />
-                <Text className="text-11 uppercase tracking-widest2 text-white/35">Longest streak</Text>
+                <Text style={styles.cardHeaderLabel}>Longest streak</Text>
               </View>
               {insights.data.longestStreak ? (
-                <View className="mt-2">
+                <View style={{ marginTop: 8 }}>
                   <ListRow
                     imageUrl={insights.data.longestStreak.albumImageUrl}
                     title={insights.data.longestStreak.trackName}
                     subtitle={insights.data.longestStreak.artistName}
-                    trailing={<Text className="text-12 text-white/40">{insights.data.longestStreak.days}d</Text>}
+                    trailing={<Text style={styles.trailingCount}>{insights.data.longestStreak.days}d</Text>}
                   />
                 </View>
               ) : (
-                <Text className="mt-2 text-13 text-white/40">No streak yet.</Text>
+                <Text style={styles.emptyText}>No streak yet.</Text>
               )}
             </GlassCard>
           </ScrollView>
         ) : null}
       </MotiView>
 
-      <MotiView {...staggerChild(6)} className="mb-5">
+      <MotiView {...staggerChild(6)} style={styles.section}>
         <SectionHeading label="Rediscover" title="Forgotten favorites" align="left" />
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mt-3" contentContainerStyle={{ gap: 12 }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 12 }} contentContainerStyle={{ gap: 12 }}>
           {rediscovery.isLoading
             ? Array.from({ length: 4 }).map((_, i) => <Shimmer key={i} width={160} height={120} rounded="xl" />)
             : rediscovery.data?.cards.map((card) => <RediscoveryCardView key={card.key} card={card} />)}
         </ScrollView>
       </MotiView>
 
-      <MotiView {...staggerChild(7)} className="gap-3">
+      <MotiView {...staggerChild(7)} style={{ gap: 12 }}>
         <ExploreCTACard
           title="Relive your story"
           subtitle="A cinematic recap of your year in music"
@@ -224,3 +222,30 @@ export default function OverviewScreen() {
     </ScreenScroll>
   );
 }
+
+const styles = StyleSheet.create({
+  section: { marginBottom: 20 },
+  eyebrow: {
+    marginBottom: 4,
+    fontSize: fontSize[10],
+    textTransform: "uppercase",
+    letterSpacing: trackingWidest2(fontSize[10]),
+    color: alpha.white(0.35),
+  },
+  ageRow: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between" },
+  ageValue: { fontSize: fontSize[24], fontFamily: "PlayfairDisplayItalic", fontStyle: "italic", color: colors.white },
+  ageCaption: { marginTop: 4, fontSize: fontSize[12], color: alpha.white(0.45) },
+  personalityLabel: { marginBottom: 8, fontSize: fontSize[12], fontFamily: "GeistSansMedium", color: alpha.white(0.7) },
+  trailingCount: { fontSize: fontSize[12], color: alpha.white(0.4) },
+  artistName: { fontSize: fontSize[13], fontFamily: "GeistSansSemiBold", color: colors.white },
+  artistPlays: { marginBottom: 8, fontSize: fontSize[11], color: alpha.white(0.45) },
+  cardHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
+  cardHeaderLabel: {
+    fontSize: fontSize[11],
+    textTransform: "uppercase",
+    letterSpacing: trackingWidest2(fontSize[11]),
+    color: alpha.white(0.35),
+  },
+  emptyText: { marginTop: 8, fontSize: fontSize[13], color: alpha.white(0.4) },
+  driftText: { marginTop: 8, fontSize: fontSize[14], color: alpha.white(0.85) },
+});

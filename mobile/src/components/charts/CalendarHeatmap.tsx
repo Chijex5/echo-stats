@@ -30,7 +30,7 @@ export function CalendarHeatmap({ cells, cellSize = 12, gap = 3 }: CalendarHeatm
 
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-      <View className="flex-row" style={{ gap }}>
+      <View style={{ flexDirection: "row", gap }}>
         {weeks.map((week, wi) => (
           <View key={wi} style={{ gap }}>
             {week.map((cell, di) => (

@@ -1,6 +1,6 @@
-import { View, Text } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import { EyebrowLabel } from "./EyebrowLabel";
-import { cn } from "@/lib/cn";
+import { colors, alpha, fontSize } from "@/lib/theme/tokens";
 
 type SectionHeadingProps = {
   label?: string;
@@ -13,15 +13,34 @@ type SectionHeadingProps = {
 export function SectionHeading({ label, title, accentWord, subtitle, align = "left" }: SectionHeadingProps) {
   const centered = align === "center";
   return (
-    <View className={centered ? "items-center" : "items-start"}>
-      {label ? <EyebrowLabel className="mb-2">{label}</EyebrowLabel> : null}
-      <Text className={cn("text-2xl font-sans-bold text-white", centered && "text-center")}>
+    <View style={{ alignItems: centered ? "center" : "flex-start" }}>
+      {label ? <EyebrowLabel style={styles.eyebrow}>{label}</EyebrowLabel> : null}
+      <Text style={[styles.title, centered && styles.centerText]}>
         {title}
-        {accentWord ? <Text className="font-serif italic text-echo-green"> {accentWord}</Text> : null}
+        {accentWord ? <Text style={styles.accent}> {accentWord}</Text> : null}
       </Text>
-      {subtitle ? (
-        <Text className={cn("mt-1.5 text-13 text-white/45", centered && "text-center")}>{subtitle}</Text>
-      ) : null}
+      {subtitle ? <Text style={[styles.subtitle, centered && styles.centerText]}>{subtitle}</Text> : null}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  eyebrow: { marginBottom: 8 },
+  title: {
+    fontSize: fontSize[20],
+    fontFamily: "GeistSansBold",
+    color: colors.white,
+  },
+  accent: {
+    fontFamily: "PlayfairDisplayItalic",
+    fontStyle: "italic",
+    color: colors.echoGreen,
+  },
+  subtitle: {
+    marginTop: 6,
+    fontSize: fontSize[13],
+    fontFamily: "GeistSans",
+    color: alpha.white(0.45),
+  },
+  centerText: { textAlign: "center" },
+});

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ScrollView, View, Text, Pressable } from "react-native";
+import { ScrollView, View, Text, Pressable, StyleSheet } from "react-native";
 import { File } from "expo-file-system";
 import type * as DocumentPicker from "expo-document-picker";
 import { CheckCircle2, AlertCircle } from "lucide-react-native";
@@ -12,7 +12,7 @@ import { BioInput } from "@/components/onboarding/BioInput";
 import { staggerChild } from "@/lib/motion/presets";
 import { apiFetch } from "@/lib/api/client";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { colors, spacing } from "@/lib/theme/tokens";
+import { colors, alpha, spacing, fontSize } from "@/lib/theme/tokens";
 
 type Stage = "idle" | "reading" | "uploading" | "form" | "submitting" | "success" | "error";
 
@@ -192,7 +192,7 @@ export default function ImportScreen() {
           paddingBottom: spacing["4xl"],
         }}
       >
-        <MotiView {...staggerChild(0)} className="mb-6">
+        <MotiView {...staggerChild(0)} style={{ marginBottom: 24 }}>
           <SectionHeading
             label="One last step"
             title="Import your"
@@ -206,20 +206,18 @@ export default function ImportScreen() {
             {stage === "idle" && <DropZone onPick={processFiles} />}
 
             {(stage === "reading" || stage === "uploading") && (
-              <View className="items-center py-10">
-                <View className="mb-7">
+              <View style={styles.progressWrap}>
+                <View style={{ marginBottom: 28 }}>
                   <ProgressRing progress={progress} />
                 </View>
-                <Text className="mb-1.5 text-xl font-sans-semibold text-white">
-                  {stage === "reading" ? "Reading your files…" : "Uploading to your vault…"}
-                </Text>
-                <Text className="text-13 text-white/40">{progressLabel}</Text>
+                <Text style={styles.progressTitle}>{stage === "reading" ? "Reading your files…" : "Uploading to your vault…"}</Text>
+                <Text style={styles.progressLabel}>{progressLabel}</Text>
               </View>
             )}
 
             {(stage === "form" || stage === "submitting") && stats && (
-              <View className="gap-7">
-                <View className="flex-row flex-wrap gap-3">
+              <View style={{ gap: 28 }}>
+                <View style={styles.statsGrid}>
                   <StatTile label="Plays stored" value={stats.totalInserted.toLocaleString()} accentColor={colors.spotify} />
                   <StatTile label="Skips removed" value={stats.totalFiltered.toLocaleString()} />
                   <StatTile
@@ -235,23 +233,23 @@ export default function ImportScreen() {
                 </View>
 
                 <View>
-                  <Text className="mb-3 text-sm font-sans-medium text-white/80">
-                    Pick your favourite genres <Text className="text-white/40">(at least one)</Text>
+                  <Text style={styles.fieldLabel}>
+                    Pick your favourite genres <Text style={styles.fieldLabelMuted}>(at least one)</Text>
                   </Text>
                   <GenrePickerGrid selected={selectedGenres} onToggle={toggleGenre} />
                 </View>
 
                 <View>
-                  <Text className="mb-2 text-sm font-sans-medium text-white/80">
-                    Short bio <Text className="text-white/40">(optional)</Text>
+                  <Text style={[styles.fieldLabel, { marginBottom: 8 }]}>
+                    Short bio <Text style={styles.fieldLabelMuted}>(optional)</Text>
                   </Text>
                   <BioInput value={bio} onChangeText={setBio} />
                 </View>
 
                 {errorMsg ? (
-                  <View className="flex-row items-center gap-2">
+                  <View style={styles.errorRow}>
                     <AlertCircle size={14} color={colors.accentRed} />
-                    <Text className="text-sm text-red-400">{errorMsg}</Text>
+                    <Text style={styles.errorText}>{errorMsg}</Text>
                   </View>
                 ) : null}
 
@@ -266,13 +264,13 @@ export default function ImportScreen() {
             )}
 
             {stage === "error" && (
-              <View className="items-center gap-5 py-8">
-                <View className="h-16 w-16 items-center justify-center rounded-full bg-red-500/10">
+              <View style={styles.errorState}>
+                <View style={styles.errorIconWrap}>
                   <AlertCircle size={32} color={colors.accentRed} />
                 </View>
-                <View className="items-center">
-                  <Text className="mb-1 text-xl font-sans-semibold text-white">Import failed</Text>
-                  <Text className="max-w-sm text-center text-sm text-white/50">{errorMsg}</Text>
+                <View style={{ alignItems: "center" }}>
+                  <Text style={styles.errorStateTitle}>Import failed</Text>
+                  <Text style={styles.errorStateMessage}>{errorMsg}</Text>
                 </View>
                 <Pressable
                   onPress={() => {
@@ -280,20 +278,20 @@ export default function ImportScreen() {
                     setProgress(0);
                     setErrorMsg(null);
                   }}
-                  className="rounded-full border border-white/20 px-6 py-2.5"
+                  style={styles.retryButton}
                 >
-                  <Text className="text-sm text-white/90">Try again</Text>
+                  <Text style={styles.retryText}>Try again</Text>
                 </Pressable>
               </View>
             )}
 
             {stage === "success" && stats && (
-              <View className="items-center py-6">
-                <View className="mb-6 h-20 w-20 items-center justify-center rounded-full bg-spotify/20">
+              <View style={styles.successState}>
+                <View style={styles.successIconWrap}>
                   <CheckCircle2 size={40} color={colors.spotify} />
                 </View>
-                <Text className="mb-2 text-2xl font-sans-bold text-white">Import Complete!</Text>
-                <Text className="mb-8 text-center text-15 text-white/60">
+                <Text style={styles.successTitle}>Import Complete!</Text>
+                <Text style={styles.successMessage}>
                   {stats.totalInserted.toLocaleString()} plays across {stats.yearSpan} year
                   {stats.yearSpan !== 1 ? "s" : ""} — your story is ready.
                 </Text>
@@ -306,3 +304,39 @@ export default function ImportScreen() {
     </AppBackground>
   );
 }
+
+const styles = StyleSheet.create({
+  progressWrap: { alignItems: "center", paddingVertical: 40 },
+  progressTitle: { marginBottom: 6, fontSize: fontSize[20], fontFamily: "GeistSansSemiBold", color: colors.white },
+  progressLabel: { fontSize: fontSize[13], color: alpha.white(0.4) },
+  statsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
+  fieldLabel: { marginBottom: 12, fontSize: fontSize[14], fontFamily: "GeistSansMedium", color: alpha.white(0.8) },
+  fieldLabelMuted: { color: alpha.white(0.4) },
+  errorRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  errorText: { fontSize: fontSize[14], color: colors.accentRed },
+  errorState: { alignItems: "center", gap: 20, paddingVertical: 32 },
+  errorIconWrap: {
+    height: 64,
+    width: 64,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 999,
+    backgroundColor: alpha.hex(colors.accentRed, 0.1),
+  },
+  errorStateTitle: { marginBottom: 4, fontSize: fontSize[20], fontFamily: "GeistSansSemiBold", color: colors.white },
+  errorStateMessage: { maxWidth: 384, textAlign: "center", fontSize: fontSize[14], color: alpha.white(0.5) },
+  retryButton: { borderRadius: 999, borderWidth: 1, borderColor: alpha.white(0.2), paddingHorizontal: 24, paddingVertical: 10 },
+  retryText: { fontSize: fontSize[14], color: alpha.white(0.9) },
+  successState: { alignItems: "center", paddingVertical: 24 },
+  successIconWrap: {
+    marginBottom: 24,
+    height: 80,
+    width: 80,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 999,
+    backgroundColor: alpha.spotify(0.2),
+  },
+  successTitle: { marginBottom: 8, fontSize: fontSize[24], fontFamily: "GeistSansBold", color: colors.white },
+  successMessage: { marginBottom: 32, textAlign: "center", fontSize: fontSize[15], color: alpha.white(0.6) },
+});

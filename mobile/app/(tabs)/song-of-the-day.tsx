@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { View, Text } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import { MotiView } from "moti";
 import { SectionHeading, Shimmer, ScreenScroll } from "@/components/ui";
 import { staggerChild } from "@/lib/motion/presets";
 import { useSongOfTheDay } from "@/lib/api/hooks";
 import { SotdHero, TheStory, MemorySnapshot, WhyWePickedThis, RelatedForgotten, MoodReconstruction, DailyRitual, ShareSheet } from "@/components/sotd";
+import { alpha, fontSize } from "@/lib/theme/tokens";
 
 export default function SongOfTheDayScreen() {
   const sotd = useSongOfTheDay();
@@ -13,22 +14,20 @@ export default function SongOfTheDayScreen() {
 
   return (
     <ScreenScroll>
-      <View className="mb-6">
+      <View style={{ marginBottom: 24 }}>
         <SectionHeading label="Today's pick" title="Song of the day" align="left" />
       </View>
 
       {sotd.isLoading ? (
-        <View className="gap-4">
+        <View style={{ gap: 16 }}>
           <Shimmer width="100%" height={420} rounded="xl" />
           <Shimmer width="100%" height={180} rounded="xl" />
           <Shimmer width="100%" height={260} rounded="xl" />
         </View>
       ) : sotd.isError || !data ? (
-        <Text className="mt-10 text-center text-13 text-white/40">
-          Could not load today&apos;s song. Please try again.
-        </Text>
+        <Text style={styles.error}>Could not load today&apos;s song. Please try again.</Text>
       ) : (
-        <View className="gap-10">
+        <View style={{ gap: 40 }}>
           <MotiView {...staggerChild(0)}>
             <SotdHero song={data.song} stats={data.stats} onShare={() => setShareOpen(true)} />
           </MotiView>
@@ -70,3 +69,7 @@ export default function SongOfTheDayScreen() {
     </ScreenScroll>
   );
 }
+
+const styles = StyleSheet.create({
+  error: { marginTop: 40, textAlign: "center", fontSize: fontSize[13], color: alpha.white(0.4) },
+});

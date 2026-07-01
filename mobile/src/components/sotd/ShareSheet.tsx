@@ -1,10 +1,10 @@
 import { useRef, useState } from "react";
-import { View, Text, Image, Share } from "react-native";
+import { View, Text, Image, Share, StyleSheet } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { captureRef } from "react-native-view-shot";
 import { Share2, Sparkles } from "lucide-react-native";
 import { EyebrowLabel, PrimaryButton, BottomSheet } from "@/components/ui";
-import { colors } from "@/lib/theme/tokens";
+import { colors, alpha, fontSize } from "@/lib/theme/tokens";
 import type { SotdSong, SotdStats } from "@/lib/api/hooks/types";
 
 type ShareSheetProps = {
@@ -37,53 +37,43 @@ export function ShareSheet({ visible, song, stats, affinityScore, affinityLabel,
 
   return (
     <BottomSheet visible={visible} onClose={onClose}>
-      <View className="flex-row items-center gap-2">
+      <View style={styles.header}>
         <Sparkles size={14} color={colors.echoGreen} />
         <EyebrowLabel>Share card</EyebrowLabel>
       </View>
-      <Text className="mt-2 text-xl font-sans-bold text-white">Today&apos;s memory</Text>
+      <Text style={styles.title}>Today&apos;s memory</Text>
 
-      <View className="mt-5 items-center">
-        <View
-          ref={cardRef}
-          collapsable={false}
-          className="overflow-hidden rounded-3xl border border-white/10"
-          style={{ width: 280, aspectRatio: 1, backgroundColor: colors.background }}
-        >
-          <LinearGradient
-            colors={[song.gradientFrom + "55", "transparent"]}
-            style={{ position: "absolute", top: -60, left: -60, width: 220, height: 220, borderRadius: 110 }}
-          />
-          <View className="flex-1 justify-between p-5">
+      <View style={{ marginTop: 20, alignItems: "center" }}>
+        <View ref={cardRef} collapsable={false} style={styles.card}>
+          <LinearGradient colors={[song.gradientFrom + "55", "transparent"]} style={styles.glow} />
+          <View style={styles.cardInner}>
             <View>
-              <View className="h-28 w-28 overflow-hidden rounded-2xl">
+              <View style={styles.artwork}>
                 {song.albumImageUrl ? (
-                  <Image source={{ uri: song.albumImageUrl }} className="h-full w-full" />
+                  <Image source={{ uri: song.albumImageUrl }} style={styles.fill} />
                 ) : (
-                  <LinearGradient colors={[song.gradientFrom, song.gradientTo]} className="h-full w-full" />
+                  <LinearGradient colors={[song.gradientFrom, song.gradientTo]} style={styles.fill} />
                 )}
               </View>
-              <View className="mt-3 self-start rounded-full bg-white/[0.06] px-2.5 py-1">
-                <Text className="text-9 font-sans-semibold uppercase tracking-widest text-white/50">
-                  Song of the day
-                </Text>
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>Song of the day</Text>
               </View>
-              <Text numberOfLines={1} className="mt-2 text-17 font-sans-bold text-white">
+              <Text numberOfLines={1} style={styles.songTitle}>
                 {song.title}
               </Text>
-              <Text numberOfLines={1} className="mt-0.5 text-12 text-white/60">
+              <Text numberOfLines={1} style={styles.songArtist}>
                 {song.artist}
               </Text>
             </View>
 
-            <View className="flex-row items-end justify-between">
+            <View style={styles.statsRow}>
               <View>
-                <Text className="text-9 uppercase tracking-widest text-white/35">Past plays</Text>
-                <Text className="text-17 font-serif text-white">{stats.pastPlays}</Text>
+                <Text style={styles.statLabel}>Past plays</Text>
+                <Text style={styles.statValue}>{stats.pastPlays}</Text>
               </View>
               <View>
-                <Text className="text-9 uppercase tracking-widest text-white/35">Affinity</Text>
-                <Text className="text-17 font-serif text-spotify">
+                <Text style={styles.statLabel}>Affinity</Text>
+                <Text style={[styles.statValue, { color: colors.spotify }]}>
                   {affinityScore} · {affinityLabel}
                 </Text>
               </View>
@@ -92,9 +82,34 @@ export function ShareSheet({ visible, song, stats, affinityScore, affinityLabel,
         </View>
       </View>
 
-      <View className="mt-6">
+      <View style={{ marginTop: 24 }}>
         <PrimaryButton label="Share" icon={Share2} fullWidth loading={sharing} onPress={handleShare} />
       </View>
     </BottomSheet>
   );
 }
+
+const styles = StyleSheet.create({
+  fill: { height: "100%", width: "100%" },
+  header: { flexDirection: "row", alignItems: "center", gap: 8 },
+  title: { marginTop: 8, fontSize: fontSize[20], fontFamily: "GeistSansBold", color: colors.white },
+  card: {
+    width: 280,
+    aspectRatio: 1,
+    overflow: "hidden",
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: alpha.white(0.1),
+    backgroundColor: colors.background,
+  },
+  glow: { position: "absolute", top: -60, left: -60, width: 220, height: 220, borderRadius: 110 },
+  cardInner: { flex: 1, justifyContent: "space-between", padding: 20 },
+  artwork: { height: 112, width: 112, overflow: "hidden", borderRadius: 18 },
+  badge: { marginTop: 12, alignSelf: "flex-start", borderRadius: 999, backgroundColor: alpha.white(0.06), paddingHorizontal: 10, paddingVertical: 4 },
+  badgeText: { fontSize: fontSize[9], fontFamily: "GeistSansSemiBold", textTransform: "uppercase", letterSpacing: 1.5, color: alpha.white(0.5) },
+  songTitle: { marginTop: 8, fontSize: fontSize[18], fontFamily: "GeistSansBold", color: colors.white },
+  songArtist: { marginTop: 2, fontSize: fontSize[12], color: alpha.white(0.6) },
+  statsRow: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between" },
+  statLabel: { fontSize: fontSize[9], textTransform: "uppercase", letterSpacing: 1.5, color: alpha.white(0.35) },
+  statValue: { fontSize: fontSize[17], fontFamily: "PlayfairDisplayItalic", color: colors.white },
+});

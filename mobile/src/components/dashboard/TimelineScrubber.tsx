@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { View, Text, Pressable, ScrollView, type LayoutChangeEvent } from "react-native";
+import { View, Text, Pressable, ScrollView, StyleSheet, type LayoutChangeEvent } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming, runOnJS } from "react-native-reanimated";
 import { Pill } from "@/components/ui";
-import { colors, alpha } from "@/lib/theme/tokens";
+import { colors, alpha, fontSize, trackingWidest2 } from "@/lib/theme/tokens";
 import type { TimelinePagePeriod } from "@/lib/api/hooks";
 
 const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -66,44 +66,24 @@ export function TimelineScrubber({ periods, activeIdx, onChange }: TimelineScrub
 
   return (
     <View>
-      <Text className="text-10 uppercase tracking-widest2 text-white/35">Now exploring</Text>
-      <Text className="mt-1 text-xl font-sans-bold text-white">
+      <Text style={styles.eyebrow}>Now exploring</Text>
+      <Text style={styles.heading}>
         {activePeriod?.monthName} {activePeriod?.year}
       </Text>
 
-      <View className="mt-6 px-1">
+      <View style={styles.trackSection}>
         <GestureDetector gesture={pan}>
-          <View className="h-7 justify-center" onLayout={handleLayout}>
-            <View className="h-1 rounded-full bg-white/10" />
-            <Animated.View
-              style={[{ position: "absolute", left: 0, height: 4, borderRadius: 2, backgroundColor: colors.echoGreen }, fillStyle]}
-            />
-            <Animated.View
-              style={[
-                {
-                  position: "absolute",
-                  top: "50%",
-                  marginTop: -THUMB_SIZE / 2,
-                  width: THUMB_SIZE,
-                  height: THUMB_SIZE,
-                  borderRadius: THUMB_SIZE / 2,
-                  backgroundColor: colors.echoGreen,
-                  borderWidth: 2.5,
-                  borderColor: colors.white,
-                },
-                thumbStyle,
-              ]}
-            />
+          <View style={styles.trackTouchArea} onLayout={handleLayout}>
+            <View style={styles.trackBase} />
+            <Animated.View style={[styles.trackFill, fillStyle]} />
+            <Animated.View style={[styles.thumb, thumbStyle]} />
           </View>
         </GestureDetector>
 
-        <View className="mt-1 flex-row justify-between">
+        <View style={styles.yearsRow}>
           {years.map((year) => (
             <Pressable key={year} onPress={() => jumpToYear(year)}>
-              <Text
-                className="text-11 font-sans-semibold"
-                style={{ color: year === activePeriod?.year ? colors.echoGreen : alpha.white(0.35) }}
-              >
+              <Text style={[styles.yearLabel, { color: year === activePeriod?.year ? colors.echoGreen : alpha.white(0.35) }]}>
                 {year}
               </Text>
             </Pressable>
@@ -111,7 +91,7 @@ export function TimelineScrubber({ periods, activeIdx, onChange }: TimelineScrub
         </View>
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mt-4" contentContainerStyle={{ gap: 8 }}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 16 }} contentContainerStyle={{ gap: 8 }}>
         {monthsForYear.map((p) => (
           <Pill
             key={p.id}
@@ -125,3 +105,30 @@ export function TimelineScrubber({ periods, activeIdx, onChange }: TimelineScrub
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  eyebrow: {
+    fontSize: fontSize[10],
+    textTransform: "uppercase",
+    letterSpacing: trackingWidest2(fontSize[10]),
+    color: alpha.white(0.35),
+  },
+  heading: { marginTop: 4, fontSize: fontSize[20], fontFamily: "GeistSansBold", color: colors.white },
+  trackSection: { marginTop: 24, paddingHorizontal: 4 },
+  trackTouchArea: { height: 28, justifyContent: "center" },
+  trackBase: { height: 4, borderRadius: 999, backgroundColor: alpha.white(0.1) },
+  trackFill: { position: "absolute", left: 0, height: 4, borderRadius: 2, backgroundColor: colors.echoGreen },
+  thumb: {
+    position: "absolute",
+    top: "50%",
+    marginTop: -THUMB_SIZE / 2,
+    width: THUMB_SIZE,
+    height: THUMB_SIZE,
+    borderRadius: THUMB_SIZE / 2,
+    backgroundColor: colors.echoGreen,
+    borderWidth: 2.5,
+    borderColor: colors.white,
+  },
+  yearsRow: { marginTop: 4, flexDirection: "row", justifyContent: "space-between" },
+  yearLabel: { fontSize: fontSize[11], fontFamily: "GeistSansSemiBold" },
+});

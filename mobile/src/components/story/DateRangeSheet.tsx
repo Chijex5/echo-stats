@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { View, Text } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { CalendarRange } from "lucide-react-native";
 import { PrimaryButton, EyebrowLabel, BottomSheet } from "@/components/ui";
-import { colors } from "@/lib/theme/tokens";
+import { colors, alpha, fontSize, trackingWidest2 } from "@/lib/theme/tokens";
 
 function formatLabel(date: Date) {
   return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" }).format(date);
@@ -27,15 +27,15 @@ export function DateRangeSheet({
 
   return (
     <BottomSheet visible={visible} onClose={onClose}>
-      <View className="flex-row items-center gap-2">
+      <View style={styles.header}>
         <CalendarRange size={14} color={colors.echoGreen} />
         <EyebrowLabel>Date range</EyebrowLabel>
       </View>
-      <Text className="mt-2 text-xl font-sans-bold text-white">Pick your story window</Text>
+      <Text style={styles.title}>Pick your story window</Text>
 
-      <View className="mt-5 gap-5">
+      <View style={{ marginTop: 20, gap: 20 }}>
         <View>
-          <Text className="mb-2 text-11 uppercase tracking-widest2 text-white/35">From — {formatLabel(draftFrom)}</Text>
+          <Text style={styles.fieldLabel}>From — {formatLabel(draftFrom)}</Text>
           <DateTimePicker
             value={draftFrom}
             mode="date"
@@ -45,7 +45,7 @@ export function DateRangeSheet({
           />
         </View>
         <View>
-          <Text className="mb-2 text-11 uppercase tracking-widest2 text-white/35">To — {formatLabel(draftTo)}</Text>
+          <Text style={styles.fieldLabel}>To — {formatLabel(draftTo)}</Text>
           <DateTimePicker
             value={draftTo}
             mode="date"
@@ -57,9 +57,21 @@ export function DateRangeSheet({
         </View>
       </View>
 
-      <View className="mt-6">
+      <View style={{ marginTop: 24 }}>
         <PrimaryButton label="Apply" fullWidth onPress={() => onApply(draftFrom, draftTo)} />
       </View>
     </BottomSheet>
   );
 }
+
+const styles = StyleSheet.create({
+  header: { flexDirection: "row", alignItems: "center", gap: 8 },
+  title: { marginTop: 8, fontSize: fontSize[20], fontFamily: "GeistSansBold", color: colors.white },
+  fieldLabel: {
+    marginBottom: 8,
+    fontSize: fontSize[11],
+    textTransform: "uppercase",
+    letterSpacing: trackingWidest2(fontSize[11]),
+    color: alpha.white(0.35),
+  },
+});

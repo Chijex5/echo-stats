@@ -1,8 +1,8 @@
-import { View, Text } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import { TrendingUp, TrendingDown, Minus, Play } from "lucide-react-native";
 import { GlassCard, EyebrowLabel } from "@/components/ui";
 import { Sparkline } from "@/components/charts";
-import { colors, alpha } from "@/lib/theme/tokens";
+import { colors, alpha, fontSize, trackingWidest2 } from "@/lib/theme/tokens";
 import type { TopArtist, Trend } from "@/lib/api/hooks";
 import { ArtistAvatar } from "./ArtistAvatar";
 
@@ -22,44 +22,59 @@ function TrendIcon({ trend, size = 12 }: { trend: Trend; size?: number }) {
 export function FeaturedArtistCard({ artist }: { artist: TopArtist }) {
   return (
     <GlassCard padding="lg" rounded="2xl">
-      <View className="items-center">
+      <View style={styles.center}>
         <View>
           <ArtistAvatar artist={artist} size="xl" ring />
-          <View
-            className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 rounded-full px-2.5 py-0.5"
-            style={{ backgroundColor: colors.echoGreen }}
-          >
-            <Text className="text-10 font-sans-bold uppercase tracking-widest2" style={{ color: colors.onSpotify }}>#1</Text>
+          <View style={[styles.rankBadge, { backgroundColor: colors.echoGreen }]}>
+            <Text style={styles.rankText}>#1</Text>
           </View>
         </View>
 
-        <EyebrowLabel className="mt-5">Most played artist</EyebrowLabel>
-        <Text numberOfLines={1} className="mt-1.5 text-center text-26 font-sans-bold text-white">
+        <EyebrowLabel style={{ marginTop: 20 }}>Most played artist</EyebrowLabel>
+        <Text numberOfLines={1} style={styles.name}>
           {artist.name}
         </Text>
 
-        <View className="mt-3 flex-row items-center gap-4">
-          <View className="flex-row items-center gap-1.5">
+        <View style={styles.metaRow}>
+          <View style={styles.metaItem}>
             <Play size={11} color={alpha.white(0.5)} fill={alpha.white(0.5)} />
-            <Text className="text-13 text-white/50">{artist.plays.toLocaleString()} plays</Text>
+            <Text style={styles.metaText}>{artist.plays.toLocaleString()} plays</Text>
           </View>
-          <View className="flex-row items-center gap-1.5">
+          <View style={styles.metaItem}>
             <TrendIcon trend={artist.trend} />
-            <Text className="text-13" style={{ color: TREND_COLOR[artist.trend] }}>
-              {artist.deltaLabel}
-            </Text>
+            <Text style={[styles.metaText, { color: TREND_COLOR[artist.trend] }]}>{artist.deltaLabel}</Text>
           </View>
         </View>
 
-        <View className="mt-5 w-full items-center">
-          <Sparkline
-            data={artist.sparkline.map((p) => p.v)}
-            width={220}
-            height={48}
-            color={TREND_COLOR[artist.trend]}
-          />
+        <View style={styles.sparklineWrap}>
+          <Sparkline data={artist.sparkline.map((p) => p.v)} width={220} height={48} color={TREND_COLOR[artist.trend]} />
         </View>
       </View>
     </GlassCard>
   );
 }
+
+const styles = StyleSheet.create({
+  center: { alignItems: "center" },
+  rankBadge: {
+    position: "absolute",
+    bottom: -6,
+    left: "50%",
+    transform: [{ translateX: -18 }],
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 2,
+  },
+  rankText: {
+    fontSize: fontSize[10],
+    fontFamily: "GeistSansBold",
+    textTransform: "uppercase",
+    letterSpacing: trackingWidest2(fontSize[10]),
+    color: colors.onSpotify,
+  },
+  name: { marginTop: 6, textAlign: "center", fontSize: fontSize[26], fontFamily: "GeistSansBold", color: colors.white },
+  metaRow: { marginTop: 12, flexDirection: "row", alignItems: "center", gap: 16 },
+  metaItem: { flexDirection: "row", alignItems: "center", gap: 6 },
+  metaText: { fontSize: fontSize[13], color: alpha.white(0.5) },
+  sparklineWrap: { marginTop: 20, width: "100%", alignItems: "center" },
+});

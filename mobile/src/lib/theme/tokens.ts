@@ -1,10 +1,7 @@
-// The single design-token source for the mobile app. Tailwind/NativeWind
-// classes (mobile/tailwind.config.js) cover styling in JSX; this file mirrors
-// the same values as plain JS for the handful of RN APIs that only accept
-// raw numbers/strings — LinearGradient colors, StyleSheet shadow props,
-// Skia/victory-native chart props. Keep the two in sync by
-// hand; nothing outside this pair of files should declare a new color,
-// spacing, radius, or font-size literal.
+// The single design-token source for the mobile app. Every screen styles
+// itself with a local StyleSheet.create() block, and every value in that
+// block should come from here rather than a hardcoded literal — colors,
+// spacing, radius, font sizes, shadows, gradients (see ./gradients.ts).
 
 export const colors = {
   // Brand
@@ -92,6 +89,15 @@ export const alpha = {
   black: (opacity: number) => `rgba(0,0,0,${opacity})`,
   spotify: (opacity: number) => `rgba(24,216,126,${opacity})`,
   teal: (opacity: number) => `rgba(15,183,163,${opacity})`,
+  // Generic fallback for a one-off color that doesn't have its own named
+  // helper above — still routes through here instead of a raw rgba() string.
+  hex: (hex: string, opacity: number) => {
+    const n = hex.replace("#", "");
+    const r = parseInt(n.slice(0, 2), 16);
+    const g = parseInt(n.slice(2, 4), 16);
+    const b = parseInt(n.slice(4, 6), 16);
+    return `rgba(${r},${g},${b},${opacity})`;
+  },
 } as const;
 
 /** @deprecated use `alpha.white` */
@@ -103,9 +109,7 @@ export const overlay = {
   sheetPanel: "rgba(9,11,15,0.98)",
 } as const;
 
-// Spacing scale, in px, for inline RN styles that can't use Tailwind
-// (absolute-position offsets, chart/gauge geometry, etc). Mirrors the
-// `spacing` values below in tailwind.config.js.
+// Spacing scale, in px, for every margin/padding/gap value in the app.
 export const spacing = {
   xs: 4,
   sm: 8,
@@ -118,19 +122,16 @@ export const spacing = {
   "5xl": 48,
   // Shared scroll-screen content insets, replacing the paddingHorizontal:20 /
   // paddingTop:72 / paddingBottom:140 triple that used to be copy-pasted
-  // into every tab's ScrollView. Prefer `<ScreenScroll>` (components/ui) or
-  // the `px-screen-x pt-screen-top pb-screen-bottom` classes in JSX; these
-  // raw numbers exist only for non-className call sites.
+  // into every tab's ScrollView. Use `<ScreenScroll>` (components/ui).
   screenX: 20,
   screenTop: 72,
   screenBottom: 140,
 } as const;
 
-// Radius scale, in px, for inline RN styles that can't use Tailwind classes
-// (circular avatars computed as dim/2, chart geometry, etc). JSX should
-// prefer the `rounded-xl` / `rounded-2xl` / `rounded-3xl` / `rounded-sheet`
-// classes from tailwind.config.js — those three plain sizes are repeated
-// here so non-className call sites have the same numbers.
+// Radius scale, in px, for every rounded-corner value in the app —
+// StyleSheet.create objects should reference these instead of a literal
+// number (circular avatars computed as dim/2 stay ad hoc since they're
+// genuinely per-instance geometry, not a scale step).
 export const radius = {
   xl: 12,
   "2xl": 18,
@@ -139,11 +140,9 @@ export const radius = {
   full: 999,
 } as const;
 
-// Font-size scale, in px, mirroring tailwind.config.js `fontSize` (named by
-// literal pixel size, e.g. `text-11`, to avoid colliding with Tailwind's own
-// default xs/sm/base/lg/xl/2xl/3xl scale used elsewhere in the app). Use the
-// Tailwind `text-*` classes in JSX; reach for these only where a component
-// needs a raw number (e.g. an SVG/Skia <Text> size prop).
+// Font-size scale, in px, keyed by literal pixel value. Every screen's
+// StyleSheet.create block should pull its fontSize from here rather than
+// writing a new number.
 export const fontSize = {
   9: 9,
   10: 10,
@@ -153,10 +152,20 @@ export const fontSize = {
   14: 14,
   15: 15,
   17: 17,
+  18: 18,
   20: 20,
+  24: 24,
   26: 26,
   30: 30,
 } as const;
+
+// RN's letterSpacing is an absolute px number, not em-relative like CSS —
+// this reproduces the app's one recurring "tracking-widest2" (0.2em) look
+// for eyebrow/label text at a given font size instead of a magic number
+// repeated at every call site.
+export function trackingWidest2(fontSizePx: number): number {
+  return Math.round(fontSizePx * 0.2 * 10) / 10;
+}
 
 export const shadows = {
   spotifyCta: {

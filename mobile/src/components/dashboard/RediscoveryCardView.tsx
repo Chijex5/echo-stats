@@ -1,17 +1,25 @@
-import { Text, View } from "react-native";
+import { Text, View, StyleSheet } from "react-native";
 import { GlassCard } from "@/components/ui";
 import { colorForKey } from "@/lib/theme/gradients";
+import { colors, alpha, fontSize } from "@/lib/theme/tokens";
 import type { RediscoveryCard } from "@/lib/api/hooks";
 
 export function RediscoveryCardView({ card }: { card: RediscoveryCard }) {
   return (
     <GlassCard padding="md" rounded="2xl" style={{ width: 160 }}>
-      <View className="mb-2 h-2 w-2 rounded-full" style={{ backgroundColor: colorForKey(card.key) }} />
-      <Text className="text-2xl font-sans-bold text-white">{card.count}</Text>
-      <Text className="mt-1 text-13 font-sans-medium text-white/85">{card.title}</Text>
-      <Text numberOfLines={2} className="mt-1 text-11 text-white/45">
+      <View style={[styles.dot, { backgroundColor: colorForKey(card.key) }]} />
+      <Text style={styles.count}>{card.count}</Text>
+      <Text style={styles.title}>{card.title}</Text>
+      <Text numberOfLines={2} style={styles.desc}>
         {card.desc}
       </Text>
     </GlassCard>
   );
 }
+
+const styles = StyleSheet.create({
+  dot: { marginBottom: 8, height: 8, width: 8, borderRadius: 4 },
+  count: { fontSize: fontSize[24], fontFamily: "GeistSansBold", color: colors.white },
+  title: { marginTop: 4, fontSize: fontSize[13], fontFamily: "GeistSansMedium", color: alpha.white(0.85) },
+  desc: { marginTop: 4, fontSize: fontSize[11], fontFamily: "GeistSans", color: alpha.white(0.45) },
+});

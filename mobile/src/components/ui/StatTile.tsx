@@ -1,5 +1,5 @@
-import { View, Text, type DimensionValue } from "react-native";
-import { cn } from "@/lib/cn";
+import { View, Text, StyleSheet, type DimensionValue } from "react-native";
+import { colors, alpha, fontSize, trackingWidest2 } from "@/lib/theme/tokens";
 
 type StatTileProps = {
   label: string;
@@ -12,20 +12,42 @@ type StatTileProps = {
 
 export function StatTile({ label, value, variant = "default", accentColor, width }: StatTileProps) {
   return (
-    <View
-      className={cn("rounded-xl border border-white/5 bg-white/[0.03] p-3.5", width === undefined && "flex-1")}
-      style={width !== undefined ? { width } : undefined}
-    >
-      <Text className="text-10 font-sans uppercase tracking-widest2 text-white/35">{label}</Text>
-      <Text
-        className={cn(
-          "mt-1.5",
-          variant === "serif-lg" ? "text-2xl font-serif italic text-white" : "text-lg font-sans-bold text-white"
-        )}
-        style={accentColor ? { color: accentColor } : undefined}
-      >
+    <View style={[styles.tile, width === undefined ? styles.flexFill : { width }]}>
+      <Text style={styles.label}>{label}</Text>
+      <Text style={[variant === "serif-lg" ? styles.valueSerif : styles.valueBold, accentColor ? { color: accentColor } : null]}>
         {value}
       </Text>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  tile: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: alpha.white(0.05),
+    backgroundColor: alpha.white(0.03),
+    padding: 14,
+  },
+  flexFill: { flex: 1 },
+  label: {
+    fontSize: fontSize[10],
+    fontFamily: "GeistSans",
+    textTransform: "uppercase",
+    letterSpacing: trackingWidest2(fontSize[10]),
+    color: alpha.white(0.35),
+  },
+  valueBold: {
+    marginTop: 6,
+    fontSize: fontSize[18],
+    fontFamily: "GeistSansBold",
+    color: colors.white,
+  },
+  valueSerif: {
+    marginTop: 6,
+    fontSize: fontSize[24],
+    fontFamily: "PlayfairDisplayItalic",
+    fontStyle: "italic",
+    color: colors.white,
+  },
+});

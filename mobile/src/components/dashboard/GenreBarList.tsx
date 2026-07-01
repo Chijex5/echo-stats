@@ -1,6 +1,6 @@
-import { View, Text } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import Animated, { useAnimatedStyle, useDerivedValue, withTiming } from "react-native-reanimated";
-import { palettes } from "@/lib/theme/tokens";
+import { palettes, alpha, fontSize } from "@/lib/theme/tokens";
 import type { GenreNode } from "@/lib/api/hooks";
 
 const BAR_COLORS = palettes.chartCategory;
@@ -10,15 +10,15 @@ function GenreBar({ genre, pct, color, rank }: { genre: string; pct: number; col
   const style = useAnimatedStyle(() => ({ width: `${animatedPct.value}%` }));
 
   return (
-    <View className="mb-3">
-      <View className="mb-1.5 flex-row items-center justify-between">
-        <Text numberOfLines={1} className="flex-1 text-13 font-sans-medium capitalize text-white/80">
+    <View style={styles.bar}>
+      <View style={styles.header}>
+        <Text numberOfLines={1} style={styles.genre}>
           {rank}. {genre}
         </Text>
-        <Text className="text-12 text-white/40">{Math.round(pct)}%</Text>
+        <Text style={styles.pct}>{Math.round(pct)}%</Text>
       </View>
-      <View className="h-2 overflow-hidden rounded-full bg-white/5">
-        <Animated.View style={[{ height: "100%", borderRadius: 999, backgroundColor: color }, style]} />
+      <View style={styles.track}>
+        <Animated.View style={[styles.fill, { backgroundColor: color }, style]} />
       </View>
     </View>
   );
@@ -32,7 +32,7 @@ export function GenreBarList({ genres }: { genres: GenreNode[] }) {
   const top = [...genres].sort((a, b) => b.percentage - a.percentage).slice(0, 8);
 
   if (!top.length) {
-    return <Text className="text-13 text-white/40">Not enough genre data yet.</Text>;
+    return <Text style={styles.empty}>Not enough genre data yet.</Text>;
   }
 
   return (
@@ -43,3 +43,13 @@ export function GenreBarList({ genres }: { genres: GenreNode[] }) {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  bar: { marginBottom: 12 },
+  header: { marginBottom: 6, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  genre: { flex: 1, fontSize: fontSize[13], fontFamily: "GeistSansMedium", textTransform: "capitalize", color: alpha.white(0.8) },
+  pct: { fontSize: fontSize[12], color: alpha.white(0.4) },
+  track: { height: 8, overflow: "hidden", borderRadius: 999, backgroundColor: alpha.white(0.05) },
+  fill: { height: "100%", borderRadius: 999 },
+  empty: { fontSize: fontSize[13], color: alpha.white(0.4) },
+});

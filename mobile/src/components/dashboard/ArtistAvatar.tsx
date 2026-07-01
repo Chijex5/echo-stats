@@ -44,7 +44,7 @@ export function ArtistAvatar({ artist, size = "md", ring = false }: ArtistAvatar
           colors={gradient}
           style={{ width: dim, height: dim, borderRadius: dim / 2, alignItems: "center", justifyContent: "center" }}
         >
-          <Text style={{ fontSize: FONT_SIZES[size] }} className="font-sans-bold text-white">
+          <Text style={{ fontSize: FONT_SIZES[size], fontFamily: "GeistSansBold", color: colors.white }}>
             {artist.initials}
           </Text>
         </LinearGradient>

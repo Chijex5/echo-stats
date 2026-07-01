@@ -1,7 +1,7 @@
-import { View, Text } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import Svg, { Circle } from "react-native-svg";
 import Animated, { useAnimatedProps, useDerivedValue, withTiming } from "react-native-reanimated";
-import { colors, alpha } from "@/lib/theme/tokens";
+import { colors, alpha, fontSize } from "@/lib/theme/tokens";
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -36,8 +36,12 @@ export function ProgressRing({ progress, size = 96 }: ProgressRingProps) {
         />
       </Svg>
       <View style={{ position: "absolute", alignItems: "center", justifyContent: "center" }}>
-        <Text className="text-xl font-sans-semibold text-white">{Math.round(progress)}%</Text>
+        <Text style={styles.label}>{Math.round(progress)}%</Text>
       </View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  label: { fontSize: fontSize[20], fontFamily: "GeistSansSemiBold", color: colors.white },
+});

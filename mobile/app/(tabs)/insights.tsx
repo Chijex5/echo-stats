@@ -1,11 +1,11 @@
-import { ScrollView, View, Text } from "react-native";
+import { ScrollView, View, Text, StyleSheet } from "react-native";
 import { MotiView } from "moti";
 import { Gem, Shuffle, Heart, CalendarDays, Music2 } from "lucide-react-native";
 import { GlassCard, SectionHeading, ListRow, Shimmer, ScreenScroll } from "@/components/ui";
 import { RadialGauge, ProportionalBars } from "@/components/charts";
 import { GenreBarList } from "@/components/dashboard/GenreBarList";
 import { staggerChild } from "@/lib/motion/presets";
-import { colors, alpha, palettes } from "@/lib/theme/tokens";
+import { colors, alpha, palettes, fontSize, trackingWidest2 } from "@/lib/theme/tokens";
 import { useInsights } from "@/lib/api/hooks";
 
 const ERA_ORDER = ["pre-70s", "70s", "80s", "90s", "2000s", "2010s", "2020s+"];
@@ -28,21 +28,21 @@ export default function InsightsScreen() {
 
   return (
     <ScreenScroll>
-      <View className="mb-5">
+      <View style={{ marginBottom: 20 }}>
         <SectionHeading label="Discoveries" title="Insights" align="left" />
       </View>
 
       {insights.isLoading ? (
-        <View className="gap-3">
+        <View style={{ gap: 12 }}>
           <Shimmer width="100%" height={180} rounded="xl" />
           <Shimmer width="100%" height={140} rounded="xl" />
           <Shimmer width="100%" height={140} rounded="xl" />
         </View>
       ) : data ? (
-        <View className="gap-5">
+        <View style={{ gap: 20 }}>
           <MotiView {...staggerChild(0)}>
             <GlassCard padding="lg" rounded="2xl">
-              <View className="flex-row items-center gap-5">
+              <View style={styles.ageRow}>
                 <RadialGauge
                   value={data.analysisResult.musicAge.avgTrackAgeYears}
                   min={0}
@@ -50,25 +50,19 @@ export default function InsightsScreen() {
                   valueLabel={`${data.analysisResult.musicAge.avgTrackAgeYears.toFixed(1)}`}
                   label="yrs old"
                 />
-                <View className="flex-1">
-                  <Text className="text-10 uppercase tracking-widest2 text-white/35">Music age</Text>
-                  <Text className="mt-1 text-15 font-sans-semibold text-white">
-                    Your music averages {data.analysisResult.musicAge.avgTrackAgeYears.toFixed(1)} years old
-                  </Text>
-                  <Text className="mt-1.5 text-12 text-white/45">
-                    Weighted by plays: {data.analysisResult.musicAge.weightedAvgTrackAgeYears.toFixed(1)} yrs
-                  </Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.eyebrow}>Music age</Text>
+                  <Text style={styles.ageTitle}>Your music averages {data.analysisResult.musicAge.avgTrackAgeYears.toFixed(1)} years old</Text>
+                  <Text style={styles.ageSub}>Weighted by plays: {data.analysisResult.musicAge.weightedAvgTrackAgeYears.toFixed(1)} yrs</Text>
                   {data.analysisResult.musicAge.dominantReleaseYear ? (
-                    <Text className="mt-1 text-12 text-white/45">
-                      Most common release year: {data.analysisResult.musicAge.dominantReleaseYear}
-                    </Text>
+                    <Text style={styles.ageSub}>Most common release year: {data.analysisResult.musicAge.dominantReleaseYear}</Text>
                   ) : null}
                 </View>
               </View>
 
               {eraSegments.length ? (
-                <View className="mt-5">
-                  <Text className="mb-2 text-12 font-sans-medium text-white/70">Era breakdown</Text>
+                <View style={{ marginTop: 20 }}>
+                  <Text style={styles.sectionLabel}>Era breakdown</Text>
                   <ProportionalBars segments={eraSegments} />
                 </View>
               ) : null}
@@ -77,44 +71,42 @@ export default function InsightsScreen() {
 
           <MotiView {...staggerChild(1)}>
             <GlassCard padding="lg" rounded="2xl">
-              <View className="mb-4 flex-row items-center gap-2">
+              <View style={styles.cardHeader}>
                 <Music2 size={14} color={colors.echoGreen} />
-                <Text className="text-11 uppercase tracking-widest2 text-white/35">Genre breakdown</Text>
+                <Text style={styles.cardHeaderLabel}>Genre breakdown</Text>
               </View>
               <GenreBarList genres={data.analysisResult.genreProfile.nodes} />
             </GlassCard>
           </MotiView>
 
           <MotiView {...staggerChild(2)}>
-            <Text className="mb-3 text-11 font-sans-semibold uppercase tracking-widest2 text-white/30">
-              Quick facts
-            </Text>
+            <Text style={styles.quickFactsLabel}>Quick facts</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
               <GlassCard padding="md" rounded="2xl" style={{ width: 240 }}>
-                <View className="flex-row items-center gap-2">
+                <View style={styles.cardHeader}>
                   <Gem size={14} color={colors.accentPurple} />
-                  <Text className="text-11 uppercase tracking-widest2 text-white/35">Hidden gem</Text>
+                  <Text style={styles.cardHeaderLabel}>Hidden gem</Text>
                 </View>
                 {data.hiddenGem ? (
-                  <View className="mt-2">
+                  <View style={{ marginTop: 8 }}>
                     <ListRow
                       imageUrl={data.hiddenGem.albumImageUrl}
                       title={data.hiddenGem.trackName}
                       subtitle={data.hiddenGem.artistName}
-                      trailing={<Text className="text-12 text-white/40">{data.hiddenGem.plays}×</Text>}
+                      trailing={<Text style={styles.trailingText}>{data.hiddenGem.plays}×</Text>}
                     />
                   </View>
                 ) : (
-                  <Text className="mt-2 text-13 text-white/40">Keep listening to surface one.</Text>
+                  <Text style={styles.emptyText}>Keep listening to surface one.</Text>
                 )}
               </GlassCard>
 
               <GlassCard padding="md" rounded="2xl" style={{ width: 220 }}>
-                <View className="flex-row items-center gap-2">
+                <View style={styles.cardHeader}>
                   <Shuffle size={14} color={colors.accentBlue} />
-                  <Text className="text-11 uppercase tracking-widest2 text-white/35">Genre drift</Text>
+                  <Text style={styles.cardHeaderLabel}>Genre drift</Text>
                 </View>
-                <Text className="mt-2 text-14 text-white/85">
+                <Text style={styles.bodyText}>
                   {data.genreDrift.drifted
                     ? `${data.genreDrift.from ?? "Unknown"} → ${data.genreDrift.to ?? "Unknown"}`
                     : "Your taste has stayed steady this month."}
@@ -122,51 +114,53 @@ export default function InsightsScreen() {
               </GlassCard>
 
               <GlassCard padding="md" rounded="2xl" style={{ width: 220 }}>
-                <View className="flex-row items-center gap-2">
+                <View style={styles.cardHeader}>
                   <CalendarDays size={14} color={colors.accentAmber} />
-                  <Text className="text-11 uppercase tracking-widest2 text-white/35">Favorite decade</Text>
+                  <Text style={styles.cardHeaderLabel}>Favorite decade</Text>
                 </View>
                 {data.favoriteDecade.bars.some((bar) => bar.count > 0) ? (
                   <>
-                    <Text className="mt-2 text-14 text-white/85">
+                    <Text style={styles.bodyText}>
                       {data.favoriteDecade.topDecade} · {Math.round(data.favoriteDecade.topPct)}%
                     </Text>
-                    <View className="mt-3 flex-row items-end gap-1.5" style={{ height: 44 }}>
+                    <View style={styles.decadeBars}>
                       {data.favoriteDecade.bars.map((bar) => (
-                        <View key={bar.decade} className="flex-1 items-center">
+                        <View key={bar.decade} style={styles.decadeBarItem}>
                           <View
-                            className="w-full rounded-t-md"
-                            style={{
-                              height: Math.max(4, (bar.heightPct / 100) * 32),
-                              backgroundColor: bar.isTop ? colors.echoGreen : alpha.white(0.15),
-                            }}
+                            style={[
+                              styles.decadeBarFill,
+                              {
+                                height: Math.max(4, (bar.heightPct / 100) * 32),
+                                backgroundColor: bar.isTop ? colors.echoGreen : alpha.white(0.15),
+                              },
+                            ]}
                           />
-                          <Text className="mt-1 text-9 text-white/35">{bar.label}</Text>
+                          <Text style={styles.decadeBarLabel}>{bar.label}</Text>
                         </View>
                       ))}
                     </View>
                   </>
                 ) : (
-                  <Text className="mt-2 text-13 text-white/40">Not enough decade data yet.</Text>
+                  <Text style={styles.emptyText}>Not enough decade data yet.</Text>
                 )}
               </GlassCard>
 
               <GlassCard padding="md" rounded="2xl" style={{ width: 240 }}>
-                <View className="flex-row items-center gap-2">
+                <View style={styles.cardHeader}>
                   <Heart size={14} color={colors.accentRed} />
-                  <Text className="text-11 uppercase tracking-widest2 text-white/35">First song</Text>
+                  <Text style={styles.cardHeaderLabel}>First song</Text>
                 </View>
                 {data.firstSong ? (
-                  <View className="mt-2">
+                  <View style={{ marginTop: 8 }}>
                     <ListRow
                       imageUrl={data.firstSong.albumImageUrl}
                       title={data.firstSong.trackName}
                       subtitle={data.firstSong.artistName}
-                      trailing={<Text className="text-12 text-white/40">{formatDate(data.firstSong.ts)}</Text>}
+                      trailing={<Text style={styles.trailingText}>{formatDate(data.firstSong.ts)}</Text>}
                     />
                   </View>
                 ) : (
-                  <Text className="mt-2 text-13 text-white/40">No history found yet.</Text>
+                  <Text style={styles.emptyText}>No history found yet.</Text>
                 )}
               </GlassCard>
             </ScrollView>
@@ -176,3 +170,38 @@ export default function InsightsScreen() {
     </ScreenScroll>
   );
 }
+
+const styles = StyleSheet.create({
+  ageRow: { flexDirection: "row", alignItems: "center", gap: 20 },
+  eyebrow: {
+    fontSize: fontSize[10],
+    textTransform: "uppercase",
+    letterSpacing: trackingWidest2(fontSize[10]),
+    color: alpha.white(0.35),
+  },
+  ageTitle: { marginTop: 4, fontSize: fontSize[15], fontFamily: "GeistSansSemiBold", color: colors.white },
+  ageSub: { marginTop: 6, fontSize: fontSize[12], color: alpha.white(0.45) },
+  sectionLabel: { marginBottom: 8, fontSize: fontSize[12], fontFamily: "GeistSansMedium", color: alpha.white(0.7) },
+  cardHeader: { marginBottom: 16, flexDirection: "row", alignItems: "center", gap: 8 },
+  cardHeaderLabel: {
+    fontSize: fontSize[11],
+    textTransform: "uppercase",
+    letterSpacing: trackingWidest2(fontSize[11]),
+    color: alpha.white(0.35),
+  },
+  quickFactsLabel: {
+    marginBottom: 12,
+    fontSize: fontSize[11],
+    fontFamily: "GeistSansSemiBold",
+    textTransform: "uppercase",
+    letterSpacing: trackingWidest2(fontSize[11]),
+    color: alpha.white(0.3),
+  },
+  trailingText: { fontSize: fontSize[12], color: alpha.white(0.4) },
+  emptyText: { marginTop: 8, fontSize: fontSize[13], color: alpha.white(0.4) },
+  bodyText: { marginTop: 8, fontSize: fontSize[14], color: alpha.white(0.85) },
+  decadeBars: { marginTop: 12, height: 44, flexDirection: "row", alignItems: "flex-end", gap: 6 },
+  decadeBarItem: { flex: 1, alignItems: "center" },
+  decadeBarFill: { width: "100%", borderTopLeftRadius: 6, borderTopRightRadius: 6 },
+  decadeBarLabel: { marginTop: 4, fontSize: fontSize[9], color: alpha.white(0.35) },
+});

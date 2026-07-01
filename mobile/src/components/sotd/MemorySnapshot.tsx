@@ -1,9 +1,9 @@
-import { View, Text, Image } from "react-native";
+import { View, Text, Image, StyleSheet } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Music2 } from "lucide-react-native";
 import { GlassCard, SectionHeading, EyebrowLabel, StatTile } from "@/components/ui";
 import { gradientForKey } from "@/lib/theme/gradients";
-import { alpha } from "@/lib/theme/tokens";
+import { alpha, colors, fontSize } from "@/lib/theme/tokens";
 import type { SotdMemorySnapshot } from "@/lib/api/hooks/types";
 
 type MemorySnapshotProps = {
@@ -13,7 +13,7 @@ type MemorySnapshotProps = {
 export function MemorySnapshot({ data }: MemorySnapshotProps) {
   return (
     <View>
-      <View className="mb-5">
+      <View style={{ marginBottom: 20 }}>
         <SectionHeading
           label="Memory snapshot"
           title="When it peaked"
@@ -21,29 +21,29 @@ export function MemorySnapshot({ data }: MemorySnapshotProps) {
         />
       </View>
 
-      <View className="gap-4">
+      <View style={{ gap: 16 }}>
         <GlassCard padding="lg" rounded="2xl">
-          <View className="mb-3 flex-row items-center gap-1.5">
+          <View style={styles.rowHeader}>
             <Music2 size={10} color={alpha.white(0.35)} />
             <EyebrowLabel>What else you played</EyebrowLabel>
           </View>
-          <View className="gap-2.5">
+          <View style={{ gap: 10 }}>
             {data.snapshotTracks.map((t, i) => {
               const gradient = gradientForKey(t.title);
               return (
-                <View key={i} className="flex-row items-center gap-3">
-                  <View className="h-10 w-10 overflow-hidden rounded-lg">
+                <View key={i} style={styles.trackRow}>
+                  <View style={styles.trackThumb}>
                     {t.albumImageUrl ? (
-                      <Image source={{ uri: t.albumImageUrl }} className="h-full w-full" />
+                      <Image source={{ uri: t.albumImageUrl }} style={styles.fill} />
                     ) : (
-                      <LinearGradient colors={gradient} className="h-full w-full" />
+                      <LinearGradient colors={gradient} style={styles.fill} />
                     )}
                   </View>
-                  <View className="min-w-0 flex-1">
-                    <Text numberOfLines={1} className="text-14 font-sans-medium text-white">
+                  <View style={styles.trackText}>
+                    <Text numberOfLines={1} style={styles.trackTitle}>
                       {t.title}
                     </Text>
-                    <Text numberOfLines={1} className="mt-0.5 text-12 text-white/45">
+                    <Text numberOfLines={1} style={styles.trackArtist}>
                       {t.artist}
                     </Text>
                   </View>
@@ -55,34 +55,34 @@ export function MemorySnapshot({ data }: MemorySnapshotProps) {
 
         <GlassCard padding="lg" rounded="2xl">
           {data.topArtist ? (
-            <View className="mb-5 flex-row items-center gap-3">
-              <View className="h-12 w-12 overflow-hidden rounded-full">
+            <View style={styles.artistRow}>
+              <View style={styles.artistThumb}>
                 {data.topArtist.imageUrl ? (
-                  <Image source={{ uri: data.topArtist.imageUrl }} className="h-full w-full" />
+                  <Image source={{ uri: data.topArtist.imageUrl }} style={styles.fill} />
                 ) : (
-                  <LinearGradient colors={gradientForKey(data.topArtist.name)} className="h-full w-full items-center justify-center">
-                    <Text className="text-13 font-sans-bold text-white">{data.topArtist.initials}</Text>
+                  <LinearGradient colors={gradientForKey(data.topArtist.name)} style={[styles.fill, styles.center]}>
+                    <Text style={styles.artistInitials}>{data.topArtist.initials}</Text>
                   </LinearGradient>
                 )}
               </View>
               <View>
-                <Text className="text-14 font-sans-semibold text-white">{data.topArtist.name}</Text>
-                <Text className="text-12 text-white/45">{data.topArtist.plays} plays that month</Text>
+                <Text style={styles.artistName}>{data.topArtist.name}</Text>
+                <Text style={styles.artistPlays}>{data.topArtist.plays} plays that month</Text>
               </View>
             </View>
           ) : null}
-          <View className="flex-row gap-3 border-t border-white/5 pt-4">
+          <View style={styles.statsRow}>
             <StatTile label="Hours streamed" value={`${data.peakMonthHours}h`} variant="serif-lg" />
             <StatTile label="Peak period" value={data.peakMonthLabel} />
           </View>
         </GlassCard>
 
         <GlassCard padding="lg" rounded="2xl">
-          <View className="mb-3 flex-row items-center justify-between">
+          <View style={styles.snapshotHeader}>
             <EyebrowLabel>Snapshot</EyebrowLabel>
-            <Text className="text-12 font-sans-medium text-white/50">{data.peakMonthLabel}</Text>
+            <Text style={styles.peakLabel}>{data.peakMonthLabel}</Text>
           </View>
-          <View className="flex-row flex-wrap gap-2">
+          <View style={styles.collageGrid}>
             {data.snapshotCollage.map((_, i) => (
               <LinearGradient
                 key={i}
@@ -91,12 +91,33 @@ export function MemorySnapshot({ data }: MemorySnapshotProps) {
               />
             ))}
           </View>
-          <Text className="mt-3.5 text-12 leading-relaxed text-white/40">
-            You streamed <Text className="font-sans-medium text-white">{data.peakMonthHours} hours</Text> of music that
-            month.
+          <Text style={styles.collageCaption}>
+            You streamed <Text style={styles.collageCaptionStrong}>{data.peakMonthHours} hours</Text> of music that month.
           </Text>
         </GlassCard>
       </View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  fill: { height: "100%", width: "100%" },
+  center: { alignItems: "center", justifyContent: "center" },
+  rowHeader: { marginBottom: 12, flexDirection: "row", alignItems: "center", gap: 6 },
+  trackRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  trackThumb: { height: 40, width: 40, overflow: "hidden", borderRadius: 8 },
+  trackText: { flex: 1, minWidth: 0 },
+  trackTitle: { fontSize: fontSize[14], fontFamily: "GeistSansMedium", color: colors.white },
+  trackArtist: { marginTop: 2, fontSize: fontSize[12], color: alpha.white(0.45) },
+  artistRow: { marginBottom: 20, flexDirection: "row", alignItems: "center", gap: 12 },
+  artistThumb: { height: 48, width: 48, overflow: "hidden", borderRadius: 999 },
+  artistInitials: { fontSize: fontSize[13], fontFamily: "GeistSansBold", color: colors.white },
+  artistName: { fontSize: fontSize[14], fontFamily: "GeistSansSemiBold", color: colors.white },
+  artistPlays: { marginTop: 2, fontSize: fontSize[12], color: alpha.white(0.45) },
+  statsRow: { flexDirection: "row", gap: 12, borderTopWidth: 1, borderColor: alpha.white(0.05), paddingTop: 16 },
+  snapshotHeader: { marginBottom: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  peakLabel: { fontSize: fontSize[12], fontFamily: "GeistSansMedium", color: alpha.white(0.5) },
+  collageGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  collageCaption: { marginTop: 14, fontSize: fontSize[12], lineHeight: fontSize[12] * 1.6, color: alpha.white(0.4) },
+  collageCaptionStrong: { fontFamily: "GeistSansMedium", color: colors.white },
+});

@@ -1,8 +1,8 @@
-import { View, Text } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import Animated, { useAnimatedStyle, useDerivedValue, withTiming } from "react-native-reanimated";
 import { Calendar, Heart, Moon, Sparkles, CloudRain, type LucideIcon } from "lucide-react-native";
 import { GlassCard, SectionHeading, EyebrowLabel } from "@/components/ui";
-import { colors, alpha } from "@/lib/theme/tokens";
+import { colors, alpha, fontSize } from "@/lib/theme/tokens";
 import type { SotdAlgoReason, SotdAlgoIconName } from "@/lib/api/hooks/types";
 
 const ICON_MAP: Record<SotdAlgoIconName, LucideIcon> = { Calendar, Heart, Moon, Sparkles, CloudRain };
@@ -17,8 +17,8 @@ function AffinityBar({ score }: { score: number }) {
   const animatedWidth = useDerivedValue(() => withTiming(score, { duration: 1000 }));
   const style = useAnimatedStyle(() => ({ width: `${animatedWidth.value}%` }));
   return (
-    <View className="h-2 overflow-hidden rounded-full bg-white/5">
-      <Animated.View style={[{ height: "100%", backgroundColor: colors.spotify, borderRadius: 999 }, style]} />
+    <View style={styles.barTrack}>
+      <Animated.View style={[styles.barFill, style]} />
     </View>
   );
 }
@@ -26,43 +26,65 @@ function AffinityBar({ score }: { score: number }) {
 export function WhyWePickedThis({ reasons, affinityScore, affinityLabel }: WhyWePickedThisProps) {
   return (
     <View>
-      <View className="mb-5">
-        <SectionHeading
-          label="The algorithm"
-          title="Why we picked this"
-          subtitle="A glimpse at the signals choosing today's memory."
-        />
+      <View style={{ marginBottom: 20 }}>
+        <SectionHeading label="The algorithm" title="Why we picked this" subtitle="A glimpse at the signals choosing today's memory." />
       </View>
       <GlassCard padding="lg" rounded="2xl">
-        <View className="flex-row flex-wrap gap-y-6">
+        <View style={styles.reasonsGrid}>
           {reasons.map((r) => {
             const Icon = ICON_MAP[r.icon];
             return (
-              <View key={r.label} className="w-1/2 items-center px-1">
-                <View className="mb-3 h-14 w-14 items-center justify-center rounded-2xl border border-white/8 bg-white/[0.04]">
+              <View key={r.label} style={styles.reasonItem}>
+                <View style={styles.reasonIcon}>
                   <Icon size={18} color={alpha.white(0.7)} strokeWidth={1.8} />
                 </View>
-                <Text className="mb-1 text-center text-13 font-sans-semibold text-white">{r.label}</Text>
-                <Text className="text-center text-11 leading-relaxed text-white/45">{r.desc}</Text>
+                <Text style={styles.reasonLabel}>{r.label}</Text>
+                <Text style={styles.reasonDesc}>{r.desc}</Text>
               </View>
             );
           })}
         </View>
 
-        <View className="mt-7 gap-3 border-t border-white/5 pt-6">
+        <View style={styles.affinitySection}>
           <EyebrowLabel>Affinity score</EyebrowLabel>
-          <View className="flex-row items-baseline gap-2.5">
-            <Text className="text-30 font-serif text-white">{affinityScore}</Text>
-            <Text className="text-13 font-sans-medium text-spotify">{affinityLabel}</Text>
+          <View style={styles.affinityRow}>
+            <Text style={styles.affinityScore}>{affinityScore}</Text>
+            <Text style={styles.affinityLabel}>{affinityLabel}</Text>
           </View>
           <AffinityBar score={affinityScore} />
-          <View className="flex-row justify-between">
-            <Text className="text-10 text-white/30">0</Text>
-            <Text className="text-10 text-white/30">50</Text>
-            <Text className="text-10 text-white/30">100</Text>
+          <View style={styles.scaleRow}>
+            <Text style={styles.scaleLabel}>0</Text>
+            <Text style={styles.scaleLabel}>50</Text>
+            <Text style={styles.scaleLabel}>100</Text>
           </View>
         </View>
       </GlassCard>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  barTrack: { height: 8, overflow: "hidden", borderRadius: 999, backgroundColor: alpha.white(0.05) },
+  barFill: { height: "100%", backgroundColor: colors.spotify, borderRadius: 999 },
+  reasonsGrid: { flexDirection: "row", flexWrap: "wrap", rowGap: 24 },
+  reasonItem: { width: "50%", alignItems: "center", paddingHorizontal: 4 },
+  reasonIcon: {
+    marginBottom: 12,
+    height: 56,
+    width: 56,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: alpha.white(0.08),
+    backgroundColor: alpha.white(0.04),
+  },
+  reasonLabel: { marginBottom: 4, textAlign: "center", fontSize: fontSize[13], fontFamily: "GeistSansSemiBold", color: colors.white },
+  reasonDesc: { textAlign: "center", fontSize: fontSize[11], lineHeight: fontSize[11] * 1.5, color: alpha.white(0.45) },
+  affinitySection: { marginTop: 28, gap: 12, borderTopWidth: 1, borderColor: alpha.white(0.05), paddingTop: 24 },
+  affinityRow: { flexDirection: "row", alignItems: "baseline", gap: 10 },
+  affinityScore: { fontSize: fontSize[30], fontFamily: "PlayfairDisplayItalic", color: colors.white },
+  affinityLabel: { fontSize: fontSize[13], fontFamily: "GeistSansMedium", color: colors.spotify },
+  scaleRow: { flexDirection: "row", justifyContent: "space-between" },
+  scaleLabel: { fontSize: fontSize[10], color: alpha.white(0.3) },
+});

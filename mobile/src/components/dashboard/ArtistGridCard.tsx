@@ -1,8 +1,8 @@
-import { View, Text } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react-native";
 import { GlassCard } from "@/components/ui";
 import { Sparkline } from "@/components/charts";
-import { colors, alpha } from "@/lib/theme/tokens";
+import { colors, alpha, fontSize } from "@/lib/theme/tokens";
 import type { TopArtist, Trend } from "@/lib/api/hooks";
 import { ArtistAvatar } from "./ArtistAvatar";
 
@@ -22,27 +22,36 @@ function TrendIcon({ trend }: { trend: Trend }) {
 export function ArtistGridCard({ artist, rank }: { artist: TopArtist; rank: number }) {
   return (
     <GlassCard padding="sm" rounded="xl" style={{ flex: 1 }}>
-      <View className="flex-row items-center gap-2.5">
+      <View style={styles.row}>
         <ArtistAvatar artist={artist} size="sm" />
-        <View className="flex-1">
-          <Text numberOfLines={1} className="text-13 font-sans-semibold text-white">
+        <View style={{ flex: 1 }}>
+          <Text numberOfLines={1} style={styles.name}>
             {artist.name}
           </Text>
-          <View className="mt-0.5 flex-row items-center gap-1.5">
-            <Text className="font-mono text-10 text-white/25">#{rank}</Text>
-            <Text className="text-10 text-white/40">{artist.plays.toLocaleString()} plays</Text>
+          <View style={styles.metaRow}>
+            <Text style={styles.rank}>#{rank}</Text>
+            <Text style={styles.plays}>{artist.plays.toLocaleString()} plays</Text>
           </View>
         </View>
         <TrendIcon trend={artist.trend} />
       </View>
 
-      <View className="mt-2.5">
+      <View style={{ marginTop: 10 }}>
         <Sparkline data={artist.sparkline.map((p) => p.v)} width={130} height={24} color={TREND_COLOR[artist.trend]} strokeWidth={1.5} />
       </View>
 
-      <Text numberOfLines={1} className="mt-1.5 text-10 text-white/35">
+      <Text numberOfLines={1} style={styles.delta}>
         {artist.deltaLabel}
       </Text>
     </GlassCard>
   );
 }
+
+const styles = StyleSheet.create({
+  row: { flexDirection: "row", alignItems: "center", gap: 10 },
+  name: { fontSize: fontSize[13], fontFamily: "GeistSansSemiBold", color: colors.white },
+  metaRow: { marginTop: 2, flexDirection: "row", alignItems: "center", gap: 6 },
+  rank: { fontFamily: "GeistMono", fontSize: fontSize[10], color: alpha.white(0.25) },
+  plays: { fontSize: fontSize[10], color: alpha.white(0.4) },
+  delta: { marginTop: 6, fontSize: fontSize[10], color: alpha.white(0.35) },
+});

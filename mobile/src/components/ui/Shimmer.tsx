@@ -1,26 +1,23 @@
-import { View, type DimensionValue } from "react-native";
+import { View, StyleSheet, type DimensionValue, type ViewStyle } from "react-native";
 import { MotiView } from "moti";
-import { cn } from "@/lib/cn";
+import { alpha, radius } from "@/lib/theme/tokens";
 
 type ShimmerProps = {
   width?: DimensionValue;
   height?: DimensionValue;
   rounded?: "lg" | "xl" | "full";
-  className?: string;
+  style?: ViewStyle;
 };
 
-const ROUNDED = {
-  lg: "rounded-lg",
-  xl: "rounded-xl",
-  full: "rounded-full",
-} as const;
+const ROUNDED: Record<NonNullable<ShimmerProps["rounded"]>, number> = {
+  lg: 8,
+  xl: radius.xl,
+  full: radius.full,
+};
 
-export function Shimmer({ width = "100%", height = 16, rounded = "lg", className }: ShimmerProps) {
+export function Shimmer({ width = "100%", height = 16, rounded = "lg", style }: ShimmerProps) {
   return (
-    <View
-      className={cn("overflow-hidden bg-white/5", ROUNDED[rounded], className)}
-      style={{ width, height }}
-    >
+    <View style={[styles.base, { width, height, borderRadius: ROUNDED[rounded] }, style]}>
       <MotiView
         from={{ opacity: 0.3 }}
         animate={{ opacity: 0.7 }}
@@ -30,8 +27,13 @@ export function Shimmer({ width = "100%", height = 16, rounded = "lg", className
           loop: true,
           repeatReverse: true,
         }}
-        className="flex-1 bg-white/10"
+        style={styles.fill}
       />
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  base: { overflow: "hidden", backgroundColor: alpha.white(0.05) },
+  fill: { flex: 1, backgroundColor: alpha.white(0.1) },
+});

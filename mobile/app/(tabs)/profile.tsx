@@ -1,4 +1,4 @@
-import { ScrollView, View, Text } from "react-native";
+import { ScrollView, View, Text, StyleSheet } from "react-native";
 import {
   Activity,
   Archive,
@@ -22,7 +22,7 @@ import { MilestoneTimeline, type MilestoneItem } from "@/components/dashboard/Mi
 import { ServiceRow } from "@/components/dashboard/ServiceRow";
 import { HighlightsSection } from "@/components/dashboard/HighlightsSection";
 import { useProfile, type SongMoment } from "@/lib/api/hooks";
-import { colors, alpha } from "@/lib/theme/tokens";
+import { colors, alpha, fontSize, trackingWidest2 } from "@/lib/theme/tokens";
 
 function formatDate(value: string | null | undefined) {
   if (!value) return "Not yet";
@@ -37,14 +37,11 @@ function songLabel(song: SongMoment) {
 function IdentityCard({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) {
   return (
     <GlassCard padding="md" rounded="2xl" style={{ width: 168 }}>
-      <View
-        className="h-9 w-9 items-center justify-center rounded-xl border"
-        style={{ borderColor: alpha.spotify(0.2), backgroundColor: alpha.spotify(0.08) }}
-      >
+      <View style={styles.identityIcon}>
         <Icon size={16} color={colors.echoGreen} />
       </View>
-      <Text className="mt-3.5 text-10 font-sans-semibold uppercase tracking-widest2 text-white/35">{label}</Text>
-      <Text numberOfLines={1} className="mt-1.5 text-15 font-sans-semibold text-white">
+      <Text style={styles.identityLabel}>{label}</Text>
+      <Text numberOfLines={1} style={styles.identityValue}>
         {value}
       </Text>
     </GlassCard>
@@ -57,27 +54,25 @@ export default function ProfileScreen() {
 
   return (
     <ScreenScroll>
-      <View className="mb-5">
+      <View style={{ marginBottom: 20 }}>
         <SectionHeading label="Your archive" title="Profile" align="left" />
       </View>
 
       {profile.isLoading ? (
-        <View className="gap-3">
+        <View style={{ gap: 12 }}>
           <Shimmer width="100%" height={300} rounded="xl" />
-          <View className="flex-row flex-wrap gap-3">
+          <View style={styles.loadingRow}>
             {Array.from({ length: 8 }).map((_, i) => (
               <Shimmer key={i} width={100} height={64} rounded="xl" />
             ))}
           </View>
         </View>
       ) : data ? (
-        <View className="gap-8">
+        <View style={{ gap: 32 }}>
           <ProfileHero user={data.user} connectedDate={data.summary.connectedDate} />
 
           <View>
-            <Text className="mb-3 text-12 font-sans-semibold uppercase tracking-widest2 text-white/30">
-              User summary
-            </Text>
+            <Text style={styles.sectionLabel}>User summary</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
               <StatTile width={112} label="Songs analyzed" value={data.summary.totalSongsAnalyzed.toLocaleString()} />
               <StatTile width={112} label="Years imported" value={data.summary.yearsImported} />
@@ -91,9 +86,7 @@ export default function ProfileScreen() {
           </View>
 
           <View>
-            <Text className="mb-3 text-12 font-sans-semibold uppercase tracking-widest2 text-white/30">
-              Music identity
-            </Text>
+            <Text style={styles.sectionLabel}>Music identity</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
               <IdentityCard icon={Fingerprint} label="Listening personality" value={data.identity.listeningPersonality} />
               <IdentityCard icon={Archive} label="Music age" value={data.identity.musicAge} />
@@ -105,9 +98,7 @@ export default function ProfileScreen() {
           </View>
 
           <View>
-            <Text className="mb-3 text-12 font-sans-semibold uppercase tracking-widest2 text-white/30">
-              Personal milestones
-            </Text>
+            <Text style={styles.sectionLabel}>Personal milestones</Text>
             <GlassCard padding="md" rounded="2xl">
               <MilestoneTimeline
                 items={
@@ -156,22 +147,15 @@ export default function ProfileScreen() {
           </View>
 
           <View>
-            <Text className="mb-3 text-12 font-sans-semibold uppercase tracking-widest2 text-white/30">
-              Connected services
-            </Text>
-            <View className="gap-2.5">
+            <Text style={styles.sectionLabel}>Connected services</Text>
+            <View style={{ gap: 10 }}>
               <ServiceRow
                 icon={BadgeCheck}
                 title="Spotify"
                 value={data.services.spotifyConnected ? "Connected" : "Disconnected"}
                 active={data.services.spotifyConnected}
               />
-              <ServiceRow
-                icon={Clock3}
-                title="Last sync"
-                value={formatDate(data.services.lastSync)}
-                active={Boolean(data.services.lastSync)}
-              />
+              <ServiceRow icon={Clock3} title="Last sync" value={formatDate(data.services.lastSync)} active={Boolean(data.services.lastSync)} />
               <ServiceRow
                 icon={ShieldCheck}
                 title="Sync health"
@@ -189,9 +173,7 @@ export default function ProfileScreen() {
           </View>
 
           <View>
-            <Text className="mb-3 text-12 font-sans-semibold uppercase tracking-widest2 text-white/30">
-              Highlights
-            </Text>
+            <Text style={styles.sectionLabel}>Highlights</Text>
             <HighlightsSection highlights={data.highlights} />
           </View>
         </View>
@@ -199,3 +181,34 @@ export default function ProfileScreen() {
     </ScreenScroll>
   );
 }
+
+const styles = StyleSheet.create({
+  loadingRow: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
+  sectionLabel: {
+    marginBottom: 12,
+    fontSize: fontSize[12],
+    fontFamily: "GeistSansSemiBold",
+    textTransform: "uppercase",
+    letterSpacing: trackingWidest2(fontSize[12]),
+    color: alpha.white(0.3),
+  },
+  identityIcon: {
+    height: 36,
+    width: 36,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: alpha.spotify(0.2),
+    backgroundColor: alpha.spotify(0.08),
+  },
+  identityLabel: {
+    marginTop: 14,
+    fontSize: fontSize[10],
+    fontFamily: "GeistSansSemiBold",
+    textTransform: "uppercase",
+    letterSpacing: trackingWidest2(fontSize[10]),
+    color: alpha.white(0.35),
+  },
+  identityValue: { marginTop: 6, fontSize: fontSize[15], fontFamily: "GeistSansSemiBold", color: colors.white },
+});

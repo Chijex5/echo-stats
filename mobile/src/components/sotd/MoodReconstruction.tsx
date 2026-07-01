@@ -1,6 +1,6 @@
-import { View, Text } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import { GlassCard, SectionHeading, EyebrowLabel } from "@/components/ui";
-import { alpha } from "@/lib/theme/tokens";
+import { alpha, colors, fontSize } from "@/lib/theme/tokens";
 import { Sparkline } from "@/components/charts";
 import { MoodRadar } from "./MoodRadar";
 import type { SotdMoodReconstruction, SotdSong } from "@/lib/api/hooks/types";
@@ -34,7 +34,7 @@ export function MoodReconstruction({ data, song }: MoodReconstructionProps) {
 
   return (
     <View>
-      <View className="mb-5">
+      <View style={{ marginBottom: 20 }}>
         <SectionHeading
           label="Mood reconstruction"
           title="The texture of your listening"
@@ -42,29 +42,31 @@ export function MoodReconstruction({ data, song }: MoodReconstructionProps) {
         />
       </View>
 
-      <View className="gap-4">
+      <View style={{ gap: 16 }}>
         <GlassCard padding="lg" rounded="2xl">
-          <EyebrowLabel className="mb-2">Emotional fingerprint</EyebrowLabel>
-          <View className="items-center">
+          <EyebrowLabel style={{ marginBottom: 8 }}>Emotional fingerprint</EyebrowLabel>
+          <View style={{ alignItems: "center" }}>
             <MoodRadar data={moodRadar} color={song.gradientFrom} size={220} />
           </View>
         </GlassCard>
 
         <GlassCard padding="lg" rounded="2xl">
-          <View className="mb-3 flex-row items-center justify-between">
+          <View style={styles.rowHeader}>
             <EyebrowLabel>Listening by hour</EyebrowLabel>
-            <Text className="text-11 text-white/40">
-              Peak at <Text className="font-sans-medium text-white">{data.peakHourLabel}</Text>
+            <Text style={styles.peakText}>
+              Peak at <Text style={styles.peakTextStrong}>{data.peakHourLabel}</Text>
             </Text>
           </View>
-          <View className="flex-row items-end gap-[2px]" style={{ height: HOUR_BAR_HEIGHT }}>
+          <View style={[styles.hourBars, { height: HOUR_BAR_HEIGHT }]}>
             {data.hourHeat.map((h) => {
               const peak = h.hour >= 23 || h.hour <= 2;
               return (
                 <View
                   key={h.hour}
-                  className="flex-1 rounded-t-sm"
                   style={{
+                    flex: 1,
+                    borderTopLeftRadius: 2,
+                    borderTopRightRadius: 2,
                     height: Math.max(6, Math.round((h.v / maxHour) * HOUR_BAR_HEIGHT)),
                     backgroundColor: peak ? song.gradientFrom : alpha.white(0.1),
                   }}
@@ -72,21 +74,21 @@ export function MoodReconstruction({ data, song }: MoodReconstructionProps) {
               );
             })}
           </View>
-          <View className="mt-2 flex-row justify-between">
-            <Text className="text-10 text-white/30">00</Text>
-            <Text className="text-10 text-white/30">06</Text>
-            <Text className="text-10 text-white/30">12</Text>
-            <Text className="text-10 text-white/30">18</Text>
-            <Text className="text-10 text-white/30">23</Text>
+          <View style={styles.hourLabels}>
+            <Text style={styles.hourLabel}>00</Text>
+            <Text style={styles.hourLabel}>06</Text>
+            <Text style={styles.hourLabel}>12</Text>
+            <Text style={styles.hourLabel}>18</Text>
+            <Text style={styles.hourLabel}>23</Text>
           </View>
         </GlassCard>
 
         <GlassCard padding="lg" rounded="2xl">
-          <EyebrowLabel className="mb-2">Plays per month</EyebrowLabel>
+          <EyebrowLabel style={{ marginBottom: 8 }}>Plays per month</EyebrowLabel>
           <Sparkline data={data.monthTrend.map((m) => m.v)} width={290} height={70} color={song.gradientFrom} />
-          <View className="mt-1.5 flex-row justify-between">
+          <View style={styles.monthLabels}>
             {data.monthTrend.map((m) => (
-              <Text key={m.m} className="text-10 text-white/30">
+              <Text key={m.m} style={styles.hourLabel}>
                 {m.m[0]}
               </Text>
             ))}
@@ -94,14 +96,25 @@ export function MoodReconstruction({ data, song }: MoodReconstructionProps) {
         </GlassCard>
 
         <GlassCard padding="lg" rounded="2xl">
-          <EyebrowLabel className="mb-2">Repeat frequency</EyebrowLabel>
+          <EyebrowLabel style={{ marginBottom: 8 }}>Repeat frequency</EyebrowLabel>
           <Sparkline data={data.repeatCurve.map((p) => p.v)} width={290} height={70} color={song.gradientTo} />
-          <Text className="mt-2 text-12 text-white/45">
-            Most back-to-back: <Text className="font-sans-medium text-white">{data.maxRepeatsInOneDay}×</Text> in one
-            sitting.
+          <Text style={styles.repeatCaption}>
+            Most back-to-back: <Text style={styles.repeatCaptionStrong}>{data.maxRepeatsInOneDay}×</Text> in one sitting.
           </Text>
         </GlassCard>
       </View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  rowHeader: { marginBottom: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  peakText: { fontSize: fontSize[11], color: alpha.white(0.4) },
+  peakTextStrong: { fontFamily: "GeistSansMedium", color: colors.white },
+  hourBars: { flexDirection: "row", alignItems: "flex-end", gap: 2 },
+  hourLabels: { marginTop: 8, flexDirection: "row", justifyContent: "space-between" },
+  hourLabel: { fontSize: fontSize[10], color: alpha.white(0.3) },
+  monthLabels: { marginTop: 6, flexDirection: "row", justifyContent: "space-between" },
+  repeatCaption: { marginTop: 8, fontSize: fontSize[12], color: alpha.white(0.45) },
+  repeatCaptionStrong: { fontFamily: "GeistSansMedium", color: colors.white },
+});

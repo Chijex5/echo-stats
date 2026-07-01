@@ -1,8 +1,8 @@
-import { Modal, View, Pressable, type ViewStyle } from "react-native";
+import { Modal, View, Pressable, StyleSheet, type ViewStyle } from "react-native";
 import { MotiView } from "moti";
 import { X } from "lucide-react-native";
 import { sheetSlideUp } from "@/lib/motion/presets";
-import { overlay, alpha } from "@/lib/theme/tokens";
+import { overlay, alpha, radius } from "@/lib/theme/tokens";
 
 type BottomSheetProps = {
   visible: boolean;
@@ -19,20 +19,11 @@ type BottomSheetProps = {
 export function BottomSheet({ visible, onClose, children, maxHeight }: BottomSheetProps) {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable
-        style={{ flex: 1, backgroundColor: overlay.scrim, justifyContent: "flex-end" }}
-        onPress={onClose}
-      >
+      <Pressable style={styles.scrim} onPress={onClose}>
         <Pressable onPress={(e) => e.stopPropagation()}>
           <MotiView {...sheetSlideUp} style={maxHeight ? { maxHeight } : undefined}>
-            <View
-              className="rounded-t-sheet border-t border-white/[0.08] px-6 pb-10 pt-6"
-              style={{ backgroundColor: overlay.sheetPanel }}
-            >
-              <Pressable
-                onPress={onClose}
-                className="absolute right-5 top-5 h-7 w-7 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.05]"
-              >
+            <View style={styles.panel}>
+              <Pressable onPress={onClose} style={styles.closeButton}>
                 <X size={12} color={alpha.white(0.5)} />
               </Pressable>
               {children}
@@ -43,3 +34,30 @@ export function BottomSheet({ visible, onClose, children, maxHeight }: BottomShe
     </Modal>
   );
 }
+
+const styles = StyleSheet.create({
+  scrim: { flex: 1, backgroundColor: overlay.scrim, justifyContent: "flex-end" },
+  panel: {
+    borderTopLeftRadius: radius.sheet,
+    borderTopRightRadius: radius.sheet,
+    borderTopWidth: 1,
+    borderColor: alpha.white(0.08),
+    paddingHorizontal: 24,
+    paddingBottom: 40,
+    paddingTop: 24,
+    backgroundColor: overlay.sheetPanel,
+  },
+  closeButton: {
+    position: "absolute",
+    right: 20,
+    top: 20,
+    height: 28,
+    width: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: alpha.white(0.08),
+    backgroundColor: alpha.white(0.05),
+  },
+});
