@@ -2,7 +2,7 @@ import { View, Text, Image } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Music2 } from "lucide-react-native";
 import { GlassCard, SectionHeading, EyebrowLabel, StatTile } from "@/components/ui";
-import { sotdSnapshotGradientFor as snapshotGradientFor } from "@/lib/theme/gradients";
+import { gradientForKey } from "@/lib/theme/gradients";
 import { alpha } from "@/lib/theme/tokens";
 import type { SotdMemorySnapshot } from "@/lib/api/hooks/types";
 
@@ -29,7 +29,7 @@ export function MemorySnapshot({ data }: MemorySnapshotProps) {
           </View>
           <View className="gap-2.5">
             {data.snapshotTracks.map((t, i) => {
-              const gradient = snapshotGradientFor(t.color);
+              const gradient = gradientForKey(t.title);
               return (
                 <View key={i} className="flex-row items-center gap-3">
                   <View className="h-10 w-10 overflow-hidden rounded-lg">
@@ -60,7 +60,7 @@ export function MemorySnapshot({ data }: MemorySnapshotProps) {
                 {data.topArtist.imageUrl ? (
                   <Image source={{ uri: data.topArtist.imageUrl }} className="h-full w-full" />
                 ) : (
-                  <LinearGradient colors={snapshotGradientFor(data.topArtist.color)} className="h-full w-full items-center justify-center">
+                  <LinearGradient colors={gradientForKey(data.topArtist.name)} className="h-full w-full items-center justify-center">
                     <Text className="text-13 font-sans-bold text-white">{data.topArtist.initials}</Text>
                   </LinearGradient>
                 )}
@@ -83,10 +83,10 @@ export function MemorySnapshot({ data }: MemorySnapshotProps) {
             <Text className="text-12 font-sans-medium text-white/50">{data.peakMonthLabel}</Text>
           </View>
           <View className="flex-row flex-wrap gap-2">
-            {data.snapshotCollage.map((c, i) => (
+            {data.snapshotCollage.map((_, i) => (
               <LinearGradient
                 key={i}
-                colors={snapshotGradientFor(c)}
+                colors={gradientForKey(`collage-${i}`)}
                 style={{ width: "30.5%", aspectRatio: 1, borderRadius: 12, opacity: 0.55 + ((i * 13) % 5) * 0.08 }}
               />
             ))}

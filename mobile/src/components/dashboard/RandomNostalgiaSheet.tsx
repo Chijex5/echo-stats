@@ -4,7 +4,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Shuffle, X, Clock, Users, Music2 } from "lucide-react-native";
 import { GlassCard, PrimaryButton, EyebrowLabel, BottomSheet } from "@/components/ui";
 import { colors, alpha } from "@/lib/theme/tokens";
-import { timelineGradientFor } from "@/lib/theme/gradients";
+import { gradientForKey } from "@/lib/theme/gradients";
 import type { TimelinePagePeriod } from "@/lib/api/hooks";
 
 function MemoryStat({ icon: Icon, label, value }: { icon: typeof Clock; label: string; value: string }) {
@@ -56,7 +56,7 @@ function MemoryCard({ period, onAnother, onClose }: { period: TimelinePagePeriod
               {track.albumImageUrl ? (
                 <Image source={{ uri: track.albumImageUrl }} className="h-9 w-9 rounded-xl" />
               ) : (
-                <LinearGradient colors={timelineGradientFor(track.color)} style={{ width: 36, height: 36, borderRadius: 12 }} />
+                <LinearGradient colors={gradientForKey(track.title)} style={{ width: 36, height: 36, borderRadius: 12 }} />
               )}
               <View className="min-w-0 flex-1">
                 <Text numberOfLines={1} className="text-13 font-sans-medium text-white">

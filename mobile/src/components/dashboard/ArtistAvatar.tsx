@@ -2,7 +2,7 @@ import { View, Text, Image } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { MotiView } from "moti";
 import { colors } from "@/lib/theme/tokens";
-import { artistAvatarGradientFor } from "@/lib/theme/gradients";
+import { gradientForKey } from "@/lib/theme/gradients";
 import type { TopArtist } from "@/lib/api/hooks";
 
 const SIZES = { sm: 40, md: 64, lg: 96, xl: 132 } as const;
@@ -16,7 +16,7 @@ type ArtistAvatarProps = {
 
 export function ArtistAvatar({ artist, size = "md", ring = false }: ArtistAvatarProps) {
   const dim = SIZES[size];
-  const gradient = artistAvatarGradientFor(artist.color);
+  const gradient = gradientForKey(artist.name);
 
   return (
     <View style={{ width: dim, height: dim }}>

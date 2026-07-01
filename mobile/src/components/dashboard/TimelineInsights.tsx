@@ -3,7 +3,7 @@ import { MotiView } from "moti";
 import { TrendingUp, Music2, Moon } from "lucide-react-native";
 import { GlassCard } from "@/components/ui";
 import { staggerChild } from "@/lib/motion/presets";
-import { insightAccentFor } from "@/lib/theme/gradients";
+import { colorForKey } from "@/lib/theme/gradients";
 import type { TimelinePageInsight } from "@/lib/api/hooks";
 
 const ICONS = [TrendingUp, Music2, Moon];
@@ -13,7 +13,7 @@ export function TimelineInsights({ insights, startIndex }: { insights: TimelineP
     <View className="gap-3">
       {insights.map((insight, i) => {
         const Icon = ICONS[i % ICONS.length];
-        const accent = insightAccentFor(insight.accent);
+        const accent = colorForKey(insight.label);
         return (
           <MotiView key={insight.label} {...staggerChild(startIndex + i)}>
             <GlassCard padding="md" rounded="2xl">

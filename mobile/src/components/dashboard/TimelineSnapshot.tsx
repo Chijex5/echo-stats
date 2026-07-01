@@ -2,17 +2,17 @@ import { View, Text, Image } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { MotiView } from "moti";
 import { GlassCard } from "@/components/ui";
-import { timelineGradientFor as gradientFor } from "@/lib/theme/gradients";
+import { gradientForKey } from "@/lib/theme/gradients";
 import type { TimelinePagePeriod } from "@/lib/api/hooks";
 
-function ArtistBadge({ name, imageUrl, color, size }: { name: string; imageUrl?: string; color: string; size: number }) {
+function ArtistBadge({ name, imageUrl, size }: { name: string; imageUrl?: string; size: number }) {
   const initials = name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
   if (imageUrl) {
     return <Image source={{ uri: imageUrl }} style={{ width: size, height: size, borderRadius: size / 2 }} />;
   }
   return (
     <LinearGradient
-      colors={gradientFor(color)}
+      colors={gradientForKey(name)}
       style={{ width: size, height: size, borderRadius: size / 2, alignItems: "center", justifyContent: "center" }}
     >
       <Text className="text-12 font-sans-bold text-white">{initials}</Text>
@@ -37,7 +37,7 @@ export function TimelineSnapshot({ period }: { period: TimelinePagePeriod }) {
           <View className="flex-1 rounded-xl border border-white/5 bg-white/[0.03] p-3">
             <Text className="text-9 uppercase tracking-widest2 text-white/35">Top artist</Text>
             <View className="mt-2 flex-row items-center gap-2">
-              <ArtistBadge name={period.topArtist} imageUrl={period.topArtistImageUrl} color={period.topArtistColor} size={28} />
+              <ArtistBadge name={period.topArtist} imageUrl={period.topArtistImageUrl} size={28} />
               <Text numberOfLines={1} className="flex-1 text-12 font-sans-medium text-white">
                 {period.topArtist}
               </Text>
@@ -65,7 +65,7 @@ export function TimelineSnapshot({ period }: { period: TimelinePagePeriod }) {
                   {track.albumImageUrl ? (
                     <Image source={{ uri: track.albumImageUrl }} className="h-10 w-10 rounded-lg" />
                   ) : (
-                    <LinearGradient colors={gradientFor(track.color)} style={{ width: 40, height: 40, borderRadius: 10 }} />
+                    <LinearGradient colors={gradientForKey(track.title)} style={{ width: 40, height: 40, borderRadius: 10 }} />
                   )}
                   <View className="min-w-0 flex-1">
                     <Text numberOfLines={1} className="text-13 font-sans-medium text-white">

@@ -9,6 +9,7 @@ import { ExploreCTACard } from "@/components/dashboard/ExploreCTACard";
 import { RediscoveryCardView } from "@/components/dashboard/RediscoveryCardView";
 import { staggerChild } from "@/lib/motion/presets";
 import { colors } from "@/lib/theme/tokens";
+import { colorForKey } from "@/lib/theme/gradients";
 import {
   useDashboardStats,
   useNowPlayingPolling,
@@ -132,7 +133,7 @@ export default function OverviewScreen() {
                     {artist.name}
                   </Text>
                   <Text className="mb-2 text-11 text-white/45">{artist.plays} plays</Text>
-                  <Sparkline data={artist.sparkline.map((p) => p.v)} width={110} height={28} color={artist.color} />
+                  <Sparkline data={artist.sparkline.map((p) => p.v)} width={110} height={28} color={colorForKey(artist.name)} />
                 </GlassCard>
               ))}
         </ScrollView>
