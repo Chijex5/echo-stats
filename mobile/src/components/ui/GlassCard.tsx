@@ -2,7 +2,7 @@ import { View, type ViewStyle, type StyleProp } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
 import { cn } from "@/lib/cn";
-import { shadows, alpha } from "@/lib/theme/tokens";
+import { shadows, alpha, colors } from "@/lib/theme/tokens";
 
 type GlassCardProps = {
   children: React.ReactNode;
@@ -36,7 +36,12 @@ export function GlassCard({
   return (
     <View
       className={cn("overflow-hidden border border-white/[0.06]", ROUNDED[rounded], className)}
-      style={[glow ? shadows.glowSpotify : null, style]}
+      // Explicit solid backgroundColor as a guaranteed-dark base — BlurView
+      // is a native effect that can silently fail to render on some
+      // Android/web/Expo Go setups, and without this the card falls back to
+      // whatever's behind it (often the platform's default light color)
+      // instead of failing safe to the app's dark theme.
+      style={[{ backgroundColor: colors.backgroundElevated }, glow ? shadows.glowSpotify : null, style]}
     >
       <BlurView
         intensity={20}

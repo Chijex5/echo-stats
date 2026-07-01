@@ -10,7 +10,14 @@ import { colors, backgroundGradient } from "@/lib/theme/tokens";
 // don't pop/reset on every tab switch.
 export function AppBackground({ children }: { children: React.ReactNode }) {
   return (
-    <View style={styles.fill}>
+    // `flex: 1` (not just `position: absolute` inset-0) so this reliably
+    // fills its parent regardless of layout-engine quirks, plus an explicit
+    // solid backgroundColor as a guaranteed-dark base UNDER the gradient —
+    // View backgroundColor always renders, unlike the LinearGradient/
+    // BlurView native views layered on top, which can silently no-op on
+    // some Android/web/Expo Go setups and leave the screen looking washed
+    // out and light instead of failing loudly.
+    <View style={styles.root}>
       <LinearGradient colors={backgroundGradient} style={styles.fill} />
       <View style={[styles.blob, styles.blobTopLeft]}>
         <View style={[styles.blobFill, { backgroundColor: colors.echoGreen, opacity: 0.06 }]} />
@@ -26,6 +33,7 @@ export function AppBackground({ children }: { children: React.ReactNode }) {
 }
 
 const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: colors.background },
   fill: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 },
   content: { flex: 1 },
   blob: {

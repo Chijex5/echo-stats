@@ -39,7 +39,7 @@ export function CustomTabBar({ state, navigation }: TabBarProps) {
 
   return (
     <View style={{ position: "absolute", left: 16, right: 16, bottom: insets.bottom + 8 }}>
-      <View className="overflow-hidden rounded-full border border-white/10">
+      <View className="overflow-hidden rounded-full border border-white/10" style={{ backgroundColor: colors.backgroundElevated }}>
         <BlurView intensity={40} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
         <View className="flex-row items-center justify-between px-1.5 py-2">
           {TABS.map((tab) => {
