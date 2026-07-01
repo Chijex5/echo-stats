@@ -5,7 +5,6 @@ export { SectionHeading } from "./SectionHeading";
 export { StatTile } from "./StatTile";
 export { ListRow } from "./ListRow";
 export { Shimmer } from "./Shimmer";
-export { AmbientBlob } from "./AmbientBlob";
 export { AppBackground } from "./AppBackground";
 export { EyebrowLabel } from "./EyebrowLabel";
 export { BottomSheet } from "./BottomSheet";

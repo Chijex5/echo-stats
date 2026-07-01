@@ -1,7 +1,6 @@
 import { View, Pressable, Text } from "react-native";
 import type { ComponentProps } from "react";
 import { Tabs } from "expo-router";
-import { BlurView } from "expo-blur";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MotiView } from "moti";
 import { LayoutDashboard, Music2, Users, History, Lightbulb, UserRound, type LucideIcon } from "lucide-react-native";
@@ -39,8 +38,10 @@ export function CustomTabBar({ state, navigation }: TabBarProps) {
 
   return (
     <View style={{ position: "absolute", left: 16, right: 16, bottom: insets.bottom + 8 }}>
-      <View className="overflow-hidden rounded-full border border-white/10" style={{ backgroundColor: colors.backgroundElevated }}>
-        <BlurView intensity={40} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+      <View
+        className="overflow-hidden rounded-full border border-white/10"
+        style={{ backgroundColor: colors.backgroundElevated }}
+      >
         <View className="flex-row items-center justify-between px-1.5 py-2">
           {TABS.map((tab) => {
             const routeIndex = state.routes.findIndex((route) => route.name === tab.name);

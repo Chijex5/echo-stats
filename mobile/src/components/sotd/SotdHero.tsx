@@ -1,7 +1,7 @@
 import { View, Text, Image } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Play, Heart, Share2, Disc3, Sparkles } from "lucide-react-native";
-import { GlassCard, PrimaryButton, StatTile, AmbientBlob, EyebrowLabel } from "@/components/ui";
+import { GlassCard, PrimaryButton, StatTile, EyebrowLabel } from "@/components/ui";
 import { colors, alpha, shadows } from "@/lib/theme/tokens";
 import type { SotdSong, SotdStats } from "@/lib/api/hooks/types";
 
@@ -16,9 +16,6 @@ const WEEKDAY = new Date().toLocaleDateString("en-US", { weekday: "long" });
 export function SotdHero({ song, stats, onShare }: SotdHeroProps) {
   return (
     <View>
-      <AmbientBlob color={song.gradientFrom} size={340} blur={70} style={{ top: -80, left: -60 }} durationMs={8000} />
-      <AmbientBlob color={song.gradientTo} size={260} blur={70} style={{ top: 40, right: -60 }} durationMs={7000} delayMs={300} />
-
       <View className="items-center px-2">
         <View className="mb-5 flex-row items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5">
           <Sparkles size={11} color={colors.spotify} />

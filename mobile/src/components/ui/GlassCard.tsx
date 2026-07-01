@@ -1,8 +1,6 @@
 import { View, type ViewStyle, type StyleProp } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import { BlurView } from "expo-blur";
 import { cn } from "@/lib/cn";
-import { shadows, alpha, colors } from "@/lib/theme/tokens";
+import { shadows } from "@/lib/theme/tokens";
 
 type GlassCardProps = {
   children: React.ReactNode;
@@ -25,6 +23,11 @@ const ROUNDED = {
   "2xl": "rounded-2xl",
 } as const;
 
+// Flat solid card surface — one shade lighter than the app background
+// (bg-background-elevated) with a subtle border, the standard mobile
+// "elevated surface" pattern. Previously a blurred "glass" effect mirroring
+// the web app; removed because BlurView doesn't reliably render everywhere
+// and mobile should use plain, predictable solid colors.
 export function GlassCard({
   children,
   padding = "md",
@@ -35,23 +38,9 @@ export function GlassCard({
 }: GlassCardProps) {
   return (
     <View
-      className={cn("overflow-hidden border border-white/[0.06]", ROUNDED[rounded], className)}
-      // Explicit solid backgroundColor as a guaranteed-dark base — BlurView
-      // is a native effect that can silently fail to render on some
-      // Android/web/Expo Go setups, and without this the card falls back to
-      // whatever's behind it (often the platform's default light color)
-      // instead of failing safe to the app's dark theme.
-      style={[{ backgroundColor: colors.backgroundElevated }, glow ? shadows.glowSpotify : null, style]}
+      className={cn("overflow-hidden border border-white/10 bg-background-elevated", ROUNDED[rounded], className)}
+      style={[glow ? shadows.glowSpotify : null, style]}
     >
-      <BlurView
-        intensity={20}
-        tint="dark"
-        style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
-      />
-      <LinearGradient
-        colors={[alpha.white(0.02), alpha.white(0.01)]}
-        style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
-      />
       <View className={PADDING[padding]}>{children}</View>
     </View>
   );

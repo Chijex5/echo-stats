@@ -1,6 +1,5 @@
 import { View, Text, Image, useWindowDimensions } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { BlurView } from "expo-blur";
 import { MotiView } from "moti";
 import type { LucideIcon } from "lucide-react-native";
 import { DECORATIONS } from "./decorations";
@@ -70,12 +69,14 @@ export function StorySlideView({ slide, Icon }: { slide: StorySlide; Icon: Lucid
       </View>
 
       <View style={{ position: "absolute", left: 0, right: 0, bottom: 0 }}>
-        <View style={{ overflow: "hidden", borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet }}>
-          <BlurView intensity={50} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-          <LinearGradient
-            colors={[alpha.white(0.04), alpha.white(0.01)]}
-            style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
-          />
+        <View
+          style={{
+            overflow: "hidden",
+            borderTopLeftRadius: radius.sheet,
+            borderTopRightRadius: radius.sheet,
+            backgroundColor: alpha.black(0.55),
+          }}
+        >
           <View className="border-t border-white/[0.08] px-6 pb-10 pt-6">
             <View className="flex-row items-center gap-2">
               <Icon size={14} color={slide.accent} />

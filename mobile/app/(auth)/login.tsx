@@ -3,7 +3,7 @@ import { View, Text, Alert } from "react-native";
 import * as AuthSession from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
 import { Music2 } from "lucide-react-native";
-import { AppBackground, AmbientBlob, GlassCard, SectionHeading, PrimaryButton } from "@/components/ui";
+import { AppBackground, GlassCard, SectionHeading, PrimaryButton } from "@/components/ui";
 import { MotiView } from "moti";
 import { sheetSlideUp } from "@/lib/motion/presets";
 import { useAuth } from "@/lib/auth/AuthContext";
@@ -48,9 +48,6 @@ export default function LoginScreen() {
   return (
     <AppBackground>
       <View className="flex-1 items-center justify-center px-6">
-        <AmbientBlob color={colors.echoGreen} size={260} style={{ top: 80, left: -100 }} delayMs={0} />
-        <AmbientBlob color={colors.echoTeal} size={220} style={{ bottom: 120, right: -90 }} delayMs={1200} />
-
         <MotiView {...sheetSlideUp} className="w-full max-w-sm">
           <GlassCard padding="lg" rounded="2xl">
             <View className="items-center mb-6">

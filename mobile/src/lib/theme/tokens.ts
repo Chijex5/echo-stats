@@ -1,8 +1,8 @@
 // The single design-token source for the mobile app. Tailwind/NativeWind
 // classes (mobile/tailwind.config.js) cover styling in JSX; this file mirrors
 // the same values as plain JS for the handful of RN APIs that only accept
-// raw numbers/strings — LinearGradient colors, BlurView tints, StyleSheet
-// shadow props, Skia/victory-native chart props. Keep the two in sync by
+// raw numbers/strings — LinearGradient colors, StyleSheet shadow props,
+// Skia/victory-native chart props. Keep the two in sync by
 // hand; nothing outside this pair of files should declare a new color,
 // spacing, radius, or font-size literal.
 
@@ -83,8 +83,6 @@ export const palettes = {
     colors.accentEmerald,
   ],
 } as const;
-
-export const backgroundGradient = ["#07110b", "#0c0f12", "#0b1410"] as const;
 
 // Alpha ramps for glass surfaces, borders, and scrims. Components should call
 // these helpers instead of writing `rgba(255,255,255,0.06)` inline — same

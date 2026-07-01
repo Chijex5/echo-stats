@@ -4,7 +4,7 @@ import { File } from "expo-file-system";
 import type * as DocumentPicker from "expo-document-picker";
 import { CheckCircle2, AlertCircle } from "lucide-react-native";
 import { MotiView } from "moti";
-import { AppBackground, AmbientBlob, GlassCard, SectionHeading, StatTile, PrimaryButton } from "@/components/ui";
+import { AppBackground, GlassCard, SectionHeading, StatTile, PrimaryButton } from "@/components/ui";
 import { DropZone } from "@/components/onboarding/DropZone";
 import { ProgressRing } from "@/components/onboarding/ProgressRing";
 import { GenrePickerGrid } from "@/components/onboarding/GenrePickerGrid";
@@ -184,10 +184,6 @@ export default function ImportScreen() {
 
   return (
     <AppBackground>
-      <AmbientBlob color={colors.spotify} size={420} blur={90} style={{ top: 60, left: -160 }} delayMs={0} />
-      <AmbientBlob color={colors.accentPurple} size={380} blur={100} style={{ top: 280, right: -150 }} delayMs={1400} />
-      <AmbientBlob color={colors.accentBlue} size={320} blur={90} style={{ bottom: 80, left: -120 }} delayMs={2600} />
-
       <ScrollView
         contentContainerStyle={{
           flexGrow: 1,
