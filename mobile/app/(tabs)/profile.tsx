@@ -53,7 +53,7 @@ export default function ProfileScreen() {
   const data = profile.data;
 
   return (
-    <ScreenScroll>
+    <ScreenScroll style={{ backgroundColor: colors.background }}>
       <View style={{ marginBottom: 20 }}>
         <SectionHeading label="Your archive" title="Profile" align="left" />
       </View>

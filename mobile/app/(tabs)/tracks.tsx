@@ -71,7 +71,7 @@ export default function TracksScreen() {
   const rest = tracks.slice(1);
 
   return (
-    <View style={{ flex: 1, paddingTop: spacing.screenTop }}>
+    <View style={{ flex: 1, paddingTop: spacing.screenTop, backgroundColor: colors.background }}>
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
           <Text style={styles.title}>Top tracks</Text>
