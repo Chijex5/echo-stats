@@ -2,9 +2,9 @@ import { View, Pressable, Text, StyleSheet } from "react-native";
 import type { ComponentProps } from "react";
 import { Tabs } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { MotiView } from "moti";
+import { LinearGradient } from "expo-linear-gradient";
 import { LayoutDashboard, Music2, Users, History, Lightbulb, type LucideIcon } from "lucide-react-native";
-import { colors, alpha, fontSize, radius } from "@/lib/theme/tokens";
+import { colors, alpha, fontSize } from "@/lib/theme/tokens";
 
 // Derives the tabBar render-prop's parameter type from Tabs itself, since
 // expo-router vendors its own react-navigation/bottom-tabs fork with no
@@ -26,61 +26,58 @@ const TABS: TabConfig[] = [
   { name: "insights", label: "Insights", icon: Lightbulb },
 ];
 
+// Spotify-style bar: no floating card, no border — a full-width fade from
+// transparent into the page background, with the icons sitting directly on
+// it. Content scrolls underneath and dissolves into the bar.
 export function CustomTabBar({ state, navigation }: TabBarProps) {
   const insets = useSafeAreaInsets();
 
   // Story Mode is a full-screen immersive takeover (the slide IS the
-  // screen, no phone-mockup chrome) — the floating pill bar would
-  // overlap its own bottom nav, so it's hidden on that one route.
+  // screen, no phone-mockup chrome) — the bar would overlap its own
+  // bottom nav, so it's hidden on that one route.
   if (state.routes[state.index]?.name === "story") return null;
 
   return (
-    <View style={[styles.wrap, { bottom: insets.bottom + 8 }]}>
-      <View style={styles.bar}>
-        <View style={styles.row}>
-          {TABS.map((tab) => {
-            const routeIndex = state.routes.findIndex((route) => route.name === tab.name);
-            const isActive = routeIndex !== -1 && state.index === routeIndex;
-            const Icon = tab.icon;
+    <View style={styles.wrap} pointerEvents="box-none">
+      <LinearGradient
+        colors={[alpha.hex(colors.background, 0), alpha.hex(colors.background, 0.86), colors.background]}
+        locations={[0, 0.45, 1]}
+        style={StyleSheet.absoluteFill}
+        pointerEvents="none"
+      />
+      <View style={[styles.row, { paddingBottom: Math.max(insets.bottom, 10) }]}>
+        {TABS.map((tab) => {
+          const routeIndex = state.routes.findIndex((route) => route.name === tab.name);
+          const isActive = routeIndex !== -1 && state.index === routeIndex;
+          const Icon = tab.icon;
 
-            return (
-              <Pressable
-                key={tab.name}
-                onPress={() => {
-                  if (routeIndex === -1) return;
-                  const route = state.routes[routeIndex];
-                  navigation.navigate(route.name, route.params);
-                }}
-                style={styles.tab}
-              >
-                <MotiView
-                  animate={{ scale: isActive ? 1.05 : 1 }}
-                  transition={{ type: "timing", duration: 150 }}
-                  style={styles.tabInner}
-                >
-                  <Icon size={18} color={isActive ? colors.echoGreen : alpha.white(0.4)} />
-                  <Text style={[styles.label, { color: isActive ? colors.echoGreen : alpha.white(0.4) }]}>
-                    {tab.label}
-                  </Text>
-                </MotiView>
-              </Pressable>
-            );
-          })}
-        </View>
+          return (
+            <Pressable
+              key={tab.name}
+              onPress={() => {
+                if (routeIndex === -1) return;
+                const route = state.routes[routeIndex];
+                navigation.navigate(route.name, route.params);
+              }}
+              style={styles.tab}
+            >
+              <Icon
+                size={22}
+                strokeWidth={isActive ? 2.4 : 1.8}
+                color={isActive ? colors.white : alpha.white(0.45)}
+              />
+              <Text style={[styles.label, { color: isActive ? colors.white : alpha.white(0.45) }]}>{tab.label}</Text>
+            </Pressable>
+          );
+        })}
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { position: "absolute", left: 16, right: 16 },
-  bar: {
-    overflow: "hidden",
-    borderRadius: radius.full,
-    backgroundColor: colors.surfaceRaised,
-  },
-  row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 6, paddingVertical: 8 },
-  tab: { flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 8 },
-  tabInner: { alignItems: "center", gap: 2 },
-  label: { fontSize: fontSize[9], fontFamily: "GeistSansMedium" },
+  wrap: { position: "absolute", left: 0, right: 0, bottom: 0, paddingTop: 28 },
+  row: { flexDirection: "row", alignItems: "flex-end", paddingTop: 6 },
+  tab: { flex: 1, alignItems: "center", justifyContent: "center", gap: 4, paddingVertical: 4 },
+  label: { fontSize: fontSize[10], fontFamily: "GeistSansMedium" },
 });
