@@ -1,10 +1,10 @@
-import { ScrollView, View, Text, StyleSheet } from "react-native";
+import { ScrollView, View, Text, Pressable, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import { MotiView } from "moti";
-import { Gem, Shuffle, Flame, Sparkles, Disc3 } from "lucide-react-native";
-import { GlassCard, SectionHeading, StatTile, ListRow, Shimmer, ScreenScroll } from "@/components/ui";
+import { Gem, Shuffle, Flame, Sparkles, Disc3, ChevronRight } from "lucide-react-native";
+import { GlassCard, StatTile, ListRow, Shimmer, ScreenScroll } from "@/components/ui";
 import { Sparkline, ProportionalBars } from "@/components/charts";
-import { NowPlayingPill } from "@/components/dashboard/NowPlayingPill";
+import { NowPlayingHero } from "@/components/dashboard/NowPlayingHero";
 import { ExploreCTACard } from "@/components/dashboard/ExploreCTACard";
 import { RediscoveryCardView } from "@/components/dashboard/RediscoveryCardView";
 import { staggerChild } from "@/lib/motion/presets";
@@ -24,6 +24,29 @@ const ERA_ORDER = ["pre-70s", "70s", "80s", "90s", "2000s", "2010s", "2020s+"];
 function formatMonthYear(value: string | null) {
   if (!value) return "Unknown";
   return new Intl.DateTimeFormat("en", { month: "short", year: "numeric" }).format(new Date(value));
+}
+
+function timeGreeting() {
+  const h = new Date().getHours();
+  if (h < 5) return "Still up";
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
+  if (h < 22) return "Good evening";
+  return "Late night";
+}
+
+function FeedHeader({ title, onSeeAll }: { title: string; onSeeAll?: () => void }) {
+  return (
+    <View style={styles.feedHeader}>
+      <Text style={styles.feedTitle}>{title}</Text>
+      {onSeeAll ? (
+        <Pressable onPress={onSeeAll} hitSlop={8} style={styles.seeAll}>
+          <Text style={styles.seeAllText}>See all</Text>
+          <ChevronRight size={14} color={alpha.white(0.4)} />
+        </Pressable>
+      ) : null}
+    </View>
+  );
 }
 
 export default function OverviewScreen() {
@@ -51,14 +74,18 @@ export default function OverviewScreen() {
 
   return (
     <ScreenScroll style={{ backgroundColor: colors.background }}>
-      <MotiView {...staggerChild(0)} style={styles.section}>
-        <SectionHeading label="Welcome back" title="Your listening" accentWord="pulse" />
-        {nowPlaying.data ? (
-          <View style={{ marginTop: 16 }}>
-            <NowPlayingPill nowPlaying={nowPlaying.data.nowPlaying} lastPlayed={nowPlaying.data.lastPlayed} />
-          </View>
-        ) : null}
+      <MotiView {...staggerChild(0)} style={styles.header}>
+        <Text style={styles.greeting}>{timeGreeting()}</Text>
+        <Text style={styles.headerSub}>
+          Here&apos;s your <Text style={styles.headerSubAccent}>pulse</Text> today
+        </Text>
       </MotiView>
+
+      {nowPlaying.data ? (
+        <MotiView {...staggerChild(1)} style={styles.section}>
+          <NowPlayingHero nowPlaying={nowPlaying.data.nowPlaying} lastPlayed={nowPlaying.data.lastPlayed} />
+        </MotiView>
+      ) : null}
 
       <MotiView {...staggerChild(1)} style={styles.section}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
@@ -102,8 +129,8 @@ export default function OverviewScreen() {
       </MotiView>
 
       <MotiView {...staggerChild(3)} style={styles.section}>
-        <SectionHeading label="On repeat" title="Top tracks" align="left" />
-        <View style={{ marginTop: 12 }}>
+        <FeedHeader title="Top tracks" onSeeAll={() => router.push("/(tabs)/tracks")} />
+        <View>
           {topTracks.isLoading ? (
             Array.from({ length: 4 }).map((_, i) => <Shimmer key={i} width="100%" height={56} style={{ marginBottom: 8 }} />)
           ) : topTracks.data ? (
@@ -121,8 +148,8 @@ export default function OverviewScreen() {
       </MotiView>
 
       <MotiView {...staggerChild(4)} style={styles.section}>
-        <SectionHeading label="Most played" title="Top artists" align="left" />
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 12 }} contentContainerStyle={{ gap: 12 }}>
+        <FeedHeader title="Top artists" onSeeAll={() => router.push("/(tabs)/artists")} />
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
           {topArtists.isLoading
             ? Array.from({ length: 4 }).map((_, i) => <Shimmer key={i} width={140} height={120} rounded="xl" />)
             : topArtists.data?.artists.slice(0, 4).map((artist) => (
@@ -138,11 +165,11 @@ export default function OverviewScreen() {
       </MotiView>
 
       <MotiView {...staggerChild(5)} style={styles.section}>
-        <SectionHeading label="Discoveries" title="Insights" align="left" />
+        <FeedHeader title="Insights" onSeeAll={() => router.push("/(tabs)/insights")} />
         {insights.isLoading ? (
-          <Shimmer width="100%" height={140} rounded="xl" style={{ marginTop: 12 }} />
+          <Shimmer width="100%" height={140} rounded="xl" />
         ) : insights.data ? (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 12 }} contentContainerStyle={{ gap: 12 }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
             <GlassCard padding="md" rounded="2xl" style={{ width: 220 }}>
               <View style={styles.cardHeader}>
                 <Gem size={14} color={colors.accentPurple} />
@@ -197,8 +224,8 @@ export default function OverviewScreen() {
       </MotiView>
 
       <MotiView {...staggerChild(6)} style={styles.section}>
-        <SectionHeading label="Rediscover" title="Forgotten favorites" align="left" />
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 12 }} contentContainerStyle={{ gap: 12 }}>
+        <FeedHeader title="Forgotten favorites" />
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
           {rediscovery.isLoading
             ? Array.from({ length: 4 }).map((_, i) => <Shimmer key={i} width={160} height={120} rounded="xl" />)
             : rediscovery.data?.cards.map((card) => <RediscoveryCardView key={card.key} card={card} />)}
@@ -225,6 +252,14 @@ export default function OverviewScreen() {
 
 const styles = StyleSheet.create({
   section: { marginBottom: 20 },
+  header: { marginBottom: 18 },
+  greeting: { fontSize: fontSize[26], fontFamily: "GeistSansBold", color: colors.white },
+  headerSub: { marginTop: 4, fontSize: fontSize[14], fontFamily: "GeistSans", color: alpha.white(0.5) },
+  headerSubAccent: { fontFamily: "PlayfairDisplayItalic", fontStyle: "italic", color: colors.echoGreen },
+  feedHeader: { marginBottom: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  feedTitle: { fontSize: fontSize[18], fontFamily: "GeistSansBold", color: colors.white },
+  seeAll: { flexDirection: "row", alignItems: "center", gap: 1 },
+  seeAllText: { fontSize: fontSize[12], fontFamily: "GeistSansMedium", color: alpha.white(0.4) },
   eyebrow: {
     marginBottom: 4,
     fontSize: fontSize[10],
