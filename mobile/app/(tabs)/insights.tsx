@@ -4,6 +4,7 @@ import { Gem, Shuffle, Heart, CalendarDays, Music2 } from "lucide-react-native";
 import { GlassCard, SectionHeading, ListRow, Shimmer, ScreenScroll } from "@/components/ui";
 import { RadialGauge, ProportionalBars } from "@/components/charts";
 import { GenreBarList } from "@/components/dashboard/GenreBarList";
+import { ProfileHeaderButton } from "@/components/dashboard/ProfileHeaderButton";
 import { staggerChild } from "@/lib/motion/presets";
 import { colors, alpha, palettes, fontSize, trackingWidest2 } from "@/lib/theme/tokens";
 import { useInsights } from "@/lib/api/hooks";
@@ -28,8 +29,9 @@ export default function InsightsScreen() {
 
   return (
     <ScreenScroll>
-      <View style={{ marginBottom: 20 }}>
+      <View style={styles.screenHeader}>
         <SectionHeading label="Discoveries" title="Insights" align="left" />
+        <ProfileHeaderButton />
       </View>
 
       {insights.isLoading ? (
@@ -172,6 +174,7 @@ export default function InsightsScreen() {
 }
 
 const styles = StyleSheet.create({
+  screenHeader: { marginBottom: 20, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   ageRow: { flexDirection: "row", alignItems: "center", gap: 20 },
   eyebrow: {
     fontSize: fontSize[10],

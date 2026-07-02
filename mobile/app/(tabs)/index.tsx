@@ -20,6 +20,7 @@ import { GlassCard, ListRow, Shimmer, ScreenScroll } from "@/components/ui";
 import { Sparkline, ProportionalBars } from "@/components/charts";
 import { NowPlayingHero } from "@/components/dashboard/NowPlayingHero";
 import { ArtistAvatar } from "@/components/dashboard/ArtistAvatar";
+import { ProfileHeaderButton } from "@/components/dashboard/ProfileHeaderButton";
 import { ExploreCTACard } from "@/components/dashboard/ExploreCTACard";
 import { RediscoveryCardView } from "@/components/dashboard/RediscoveryCardView";
 import { staggerChild } from "@/lib/motion/presets";
@@ -132,10 +133,13 @@ export default function OverviewScreen() {
   return (
     <ScreenScroll style={{ backgroundColor: colors.background }}>
       <MotiView {...staggerChild(0)} style={styles.header}>
-        <Text style={styles.greeting}>{timeGreeting()}</Text>
-        <Text style={styles.headerSub}>
-          Here&apos;s your <Text style={styles.headerSubAccent}>pulse</Text> today
-        </Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.greeting}>{timeGreeting()}</Text>
+          <Text style={styles.headerSub}>
+            Here&apos;s your <Text style={styles.headerSubAccent}>pulse</Text> today
+          </Text>
+        </View>
+        <ProfileHeaderButton />
       </MotiView>
 
       {nowPlaying.data ? (
@@ -304,7 +308,7 @@ export default function OverviewScreen() {
 
 const styles = StyleSheet.create({
   section: { marginBottom: 24 },
-  header: { marginBottom: 18 },
+  header: { marginBottom: 18, flexDirection: "row", alignItems: "center", gap: 12 },
   greeting: { fontSize: fontSize[30], fontFamily: "GeistSansBold", color: colors.white },
   headerSub: { marginTop: 4, fontSize: fontSize[14], fontFamily: "GeistSans", color: alpha.white(0.5) },
   headerSubAccent: { fontFamily: "PlayfairDisplayItalic", fontStyle: "italic", color: colors.echoGreen },

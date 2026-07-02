@@ -3,7 +3,7 @@ import type { ComponentProps } from "react";
 import { Tabs } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MotiView } from "moti";
-import { LayoutDashboard, Music2, Users, History, Lightbulb, UserRound, type LucideIcon } from "lucide-react-native";
+import { LayoutDashboard, Music2, Users, History, Lightbulb, type LucideIcon } from "lucide-react-native";
 import { colors, alpha, fontSize, radius } from "@/lib/theme/tokens";
 
 // Derives the tabBar render-prop's parameter type from Tabs itself, since
@@ -14,18 +14,16 @@ type TabBarProps = Parameters<TabBarRenderer>[0];
 
 type TabConfig = { name: string; label: string; icon: LucideIcon };
 
-// Story Mode is registered as a (tabs) group screen (href: null) so it keeps
-// the shared AppBackground, but it's a full-screen immersive takeover reached
-// via router.push from Overview/SOTD, not this bar. Timeline lives here
-// alongside the other data screens — it isn't full-screen chrome, so hiding
-// it behind a CTA card buried it from primary navigation.
+// Profile is reached via the avatar in each screen's header (see
+// ProfileHeaderButton), Spotify-style, so it's not a tab slot here — that
+// keeps the bar to five uncluttered destinations. Story/SOTD are href:null
+// group screens reached via router.push (full-screen takeovers).
 const TABS: TabConfig[] = [
   { name: "index", label: "Overview", icon: LayoutDashboard },
   { name: "tracks", label: "Tracks", icon: Music2 },
   { name: "artists", label: "Artists", icon: Users },
   { name: "timeline", label: "Timeline", icon: History },
   { name: "insights", label: "Insights", icon: Lightbulb },
-  { name: "profile", label: "Profile", icon: UserRound },
 ];
 
 export function CustomTabBar({ state, navigation }: TabBarProps) {

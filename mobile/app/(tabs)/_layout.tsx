@@ -11,7 +11,7 @@ export default function TabsLayout() {
         <Tabs.Screen name="artists" />
         <Tabs.Screen name="timeline" />
         <Tabs.Screen name="insights" />
-        <Tabs.Screen name="profile" />
+        <Tabs.Screen name="profile" options={{ href: null }} />
         <Tabs.Screen name="story" options={{ href: null }} />
         <Tabs.Screen name="song-of-the-day" options={{ href: null }} />
       </Tabs>

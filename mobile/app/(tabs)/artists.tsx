@@ -2,6 +2,7 @@ import { FlatList, View, StyleSheet } from "react-native";
 import { SectionHeading, StatTile, Shimmer } from "@/components/ui";
 import { FeaturedArtistCard } from "@/components/dashboard/FeaturedArtistCard";
 import { ArtistGridCard } from "@/components/dashboard/ArtistGridCard";
+import { ProfileHeaderButton } from "@/components/dashboard/ProfileHeaderButton";
 import { colors, spacing } from "@/lib/theme/tokens";
 import { useTopArtists, type TopArtist } from "@/lib/api/hooks";
 
@@ -24,8 +25,9 @@ export default function ArtistsScreen() {
 
   return (
     <View style={{ flex: 1, paddingTop: spacing.screenTop }}>
-      <View style={{ paddingHorizontal: spacing.screenX }}>
+      <View style={styles.headerRow}>
         <SectionHeading label="Most played" title="Top artists" align="left" />
+        <ProfileHeaderButton />
       </View>
 
       {topArtists.isLoading ? (
@@ -61,6 +63,7 @@ export default function ArtistsScreen() {
 }
 
 const styles = StyleSheet.create({
+  headerRow: { paddingHorizontal: spacing.screenX, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   loadingWrap: { marginTop: 20, gap: 12 },
   loadingRow: { flexDirection: "row", gap: 12 },
   header: { marginBottom: 20, marginTop: 20, gap: 12 },

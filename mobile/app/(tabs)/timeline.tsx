@@ -9,6 +9,7 @@ import { TimelineSnapshot } from "@/components/dashboard/TimelineSnapshot";
 import { TimeComparisonSection } from "@/components/dashboard/TimeComparisonSection";
 import { RandomNostalgiaSheet } from "@/components/dashboard/RandomNostalgiaSheet";
 import { TimelineInsights } from "@/components/dashboard/TimelineInsights";
+import { ProfileHeaderButton } from "@/components/dashboard/ProfileHeaderButton";
 import { CalendarHeatmap } from "@/components/charts";
 import { alpha, fontSize, trackingWidest2 } from "@/lib/theme/tokens";
 
@@ -23,8 +24,9 @@ export default function TimelineScreen() {
 
   return (
     <ScreenScroll>
-      <View style={{ marginBottom: 20 }}>
+      <View style={styles.screenHeader}>
         <SectionHeading label="Look back" title="Timeline" align="left" />
+        <ProfileHeaderButton />
       </View>
 
       {isLoading ? (
@@ -71,6 +73,7 @@ export default function TimelineScreen() {
 }
 
 const styles = StyleSheet.create({
+  screenHeader: { marginBottom: 20, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   eyebrow: {
     fontSize: fontSize[10],
     textTransform: "uppercase",
