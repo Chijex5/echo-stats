@@ -13,7 +13,35 @@ function TrendIcon({ trend, size = 14 }: { trend: Trend; size?: number }) {
   return <Minus size={size} color={alpha.white(0.3)} />;
 }
 
+function formatListenTime(ms: number): string {
+  const mins = ms / 60_000;
+  if (mins < 60) return `${Math.round(mins)} min`;
+  const hours = mins / 60;
+  return hours < 10 ? `${hours.toFixed(1)} hrs` : `${Math.round(hours)} hrs`;
+}
+
+function formatDay(value: string): string {
+  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(new Date(value));
+}
+
+function relativeDays(value: string): string {
+  const days = Math.floor((Date.now() - new Date(value).getTime()) / 86_400_000);
+  if (days <= 0) return "today";
+  if (days === 1) return "1d ago";
+  if (days < 7) return `${days}d ago`;
+  return `${Math.floor(days / 7)}w ago`;
+}
+
 function FeatureTrack({ track }: { track: TopTrack }) {
+  const delta = track.playCount - track.previousPlayCount;
+  const movement =
+    track.previousPlayCount === 0
+      ? "New on rotation"
+      : delta === 0
+        ? "Same as last month"
+        : `${delta > 0 ? "+" : ""}${delta} vs last month`;
+  const movementColor = delta > 0 ? colors.positive : delta < 0 ? colors.negative : alpha.white(0.45);
+
   return (
     <View style={styles.feature}>
       {track.albumImageUrl ? (
@@ -27,12 +55,17 @@ function FeatureTrack({ track }: { track: TopTrack }) {
           {track.trackName}
         </Text>
         <Text numberOfLines={1} style={styles.featureArtist}>
-          {track.artistName}
+          {track.artistName} · {track.albumName}
         </Text>
         <View style={styles.featureStat}>
           <TrendIcon trend={track.trend} size={13} />
-          <Text style={styles.featurePlays}>{track.playCount.toLocaleString()} plays</Text>
+          <Text style={styles.featurePlays}>
+            {track.playCount.toLocaleString()} plays · {formatListenTime(track.totalMs)}
+          </Text>
         </View>
+        <Text numberOfLines={1} style={styles.featureSub}>
+          <Text style={{ color: movementColor }}>{movement}</Text> · on repeat since {formatDay(track.firstPlayed)}
+        </Text>
       </View>
     </View>
   );
@@ -57,8 +90,11 @@ function TrackRow({ track, rank }: { track: TopTrack; rank: number }) {
         </Text>
       </View>
       <View style={styles.rowTrailing}>
-        <TrendIcon trend={track.trend} />
-        <Text style={styles.rowPlays}>{track.playCount}×</Text>
+        <View style={styles.rowStat}>
+          <TrendIcon trend={track.trend} />
+          <Text style={styles.rowPlays}>{track.playCount}×</Text>
+        </View>
+        <Text style={styles.rowRecency}>{relativeDays(track.lastPlayed)}</Text>
       </View>
     </View>
   );
@@ -75,7 +111,7 @@ export default function TracksScreen() {
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
           <Text style={styles.title}>Top tracks</Text>
-          <Text style={styles.subtitle}>Your most played, all time</Text>
+          <Text style={styles.subtitle}>Your most played this month</Text>
         </View>
         <ProfileHeaderButton />
       </View>
@@ -141,6 +177,7 @@ const styles = StyleSheet.create({
   featureArtist: { marginTop: 2, fontSize: fontSize[13], color: alpha.white(0.5) },
   featureStat: { marginTop: 8, flexDirection: "row", alignItems: "center", gap: 6 },
   featurePlays: { fontSize: fontSize[12], fontFamily: "GeistSansMedium", color: alpha.white(0.6) },
+  featureSub: { marginTop: 4, fontSize: fontSize[11], fontFamily: "GeistSansMedium", color: alpha.white(0.45) },
 
   row: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 8 },
   rank: { width: 22, textAlign: "center", fontSize: fontSize[13], fontFamily: "GeistSansSemiBold" },
@@ -148,6 +185,8 @@ const styles = StyleSheet.create({
   meta: { flex: 1 },
   rowTitle: { fontSize: fontSize[14], fontFamily: "GeistSansMedium", color: colors.white },
   rowArtist: { marginTop: 2, fontSize: fontSize[12], color: alpha.white(0.45) },
-  rowTrailing: { flexDirection: "row", alignItems: "center", gap: 8 },
+  rowTrailing: { alignItems: "flex-end" },
+  rowStat: { flexDirection: "row", alignItems: "center", gap: 6 },
   rowPlays: { fontSize: fontSize[12], color: alpha.white(0.4) },
+  rowRecency: { marginTop: 2, fontSize: fontSize[10], fontFamily: "GeistSans", color: alpha.white(0.25) },
 });
