@@ -32,6 +32,7 @@ import {
   useTopTracks,
   useTopArtists,
   useRediscovery,
+  useRecentlyPlayed,
 } from "@/lib/api/hooks";
 
 const ERA_ORDER = ["pre-70s", "70s", "80s", "90s", "2000s", "2010s", "2020s+"];
@@ -48,6 +49,16 @@ function timeGreeting() {
   if (h < 17) return "Good afternoon";
   if (h < 22) return "Good evening";
   return "Late night";
+}
+
+function timeAgo(value: string) {
+  const mins = Math.floor((Date.now() - new Date(value).getTime()) / 60_000);
+  if (mins < 1) return "Just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return days < 7 ? `${days}d ago` : `${Math.floor(days / 7)}w ago`;
 }
 
 function FeedHeader({ title, onSeeAll }: { title: string; onSeeAll?: () => void }) {
@@ -103,6 +114,7 @@ export default function OverviewScreen() {
   const topTracks = useTopTracks(4);
   const topArtists = useTopArtists(6);
   const rediscovery = useRediscovery();
+  const recentlyPlayed = useRecentlyPlayed(12);
 
   const eraSparkline = insights.data
     ? ERA_ORDER.map((era) => insights.data!.analysisResult.musicAge.eraBreakdown[era]?.percentage ?? 0)
@@ -145,6 +157,34 @@ export default function OverviewScreen() {
       {nowPlaying.data ? (
         <MotiView {...staggerChild(1)} style={styles.section}>
           <NowPlayingHero nowPlaying={nowPlaying.data.nowPlaying} lastPlayed={nowPlaying.data.lastPlayed} />
+        </MotiView>
+      ) : null}
+
+      {recentlyPlayed.isLoading || recentlyPlayed.data?.tracks.length ? (
+        <MotiView {...staggerChild(2)} style={styles.section}>
+          <FeedHeader title="Recently played" />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
+            {recentlyPlayed.isLoading
+              ? Array.from({ length: 4 }).map((_, i) => <Shimmer key={i} width={104} height={150} rounded="lg" />)
+              : recentlyPlayed.data?.tracks.map((play, i) => (
+                  <View key={`${play.ts}-${i}`} style={styles.recentTile}>
+                    {play.albumImageUrl ? (
+                      <Image source={{ uri: play.albumImageUrl }} style={styles.recentArt} />
+                    ) : (
+                      <View style={[styles.recentArt, styles.recentArtFallback]}>
+                        <Music2 size={20} color={alpha.white(0.4)} />
+                      </View>
+                    )}
+                    <Text numberOfLines={1} style={styles.recentTitle}>
+                      {play.trackName}
+                    </Text>
+                    <Text numberOfLines={1} style={styles.recentSub}>
+                      {play.artistName}
+                    </Text>
+                    <Text style={styles.recentTime}>{timeAgo(play.ts)}</Text>
+                  </View>
+                ))}
+          </ScrollView>
         </MotiView>
       ) : null}
 
@@ -312,6 +352,13 @@ const styles = StyleSheet.create({
   greeting: { fontSize: fontSize[30], fontFamily: "GeistSansBold", color: colors.white },
   headerSub: { marginTop: 4, fontSize: fontSize[14], fontFamily: "GeistSans", color: alpha.white(0.5) },
   headerSubAccent: { fontFamily: "PlayfairDisplayItalic", fontStyle: "italic", color: colors.echoGreen },
+  recentTile: { width: 104 },
+  recentArt: { width: 104, height: 104, borderRadius: 10 },
+  recentArtFallback: { backgroundColor: colors.surfaceRaised, alignItems: "center", justifyContent: "center" },
+  recentTitle: { marginTop: 8, fontSize: fontSize[12], fontFamily: "GeistSansMedium", color: colors.white },
+  recentSub: { marginTop: 1, fontSize: fontSize[10], fontFamily: "GeistSans", color: alpha.white(0.45) },
+  recentTime: { marginTop: 3, fontSize: fontSize[9], fontFamily: "GeistSans", color: alpha.white(0.28) },
+
   feedHeader: { marginBottom: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   feedTitle: { fontSize: fontSize[20], fontFamily: "GeistSansBold", color: colors.white },
   seeAll: { flexDirection: "row", alignItems: "center", gap: 1 },

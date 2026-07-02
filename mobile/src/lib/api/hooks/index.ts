@@ -14,3 +14,4 @@ export * from "./useStoryMode";
 export * from "./useProfile";
 export * from "./useSongOfTheDay";
 export * from "./useImportStatus";
+export * from "./useRecentlyPlayed";

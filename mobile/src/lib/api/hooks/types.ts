@@ -26,6 +26,19 @@ export interface TopTracksResponse {
   tracks: TopTrack[];
 }
 
+// ─── Recently Played ─────────────────────────────────────────────────────────
+
+export interface RecentPlay {
+  trackName: string;
+  artistName: string;
+  albumImageUrl?: string | null;
+  ts: string;
+}
+
+export interface RecentlyPlayedResponse {
+  tracks: RecentPlay[];
+}
+
 // ─── Dashboard Stats ───────────────────────────────────────────────────────
 
 export interface DashboardStatsResponse {
