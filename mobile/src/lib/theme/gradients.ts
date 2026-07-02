@@ -31,6 +31,30 @@ export function gradientForKey(key: string): [string, string] {
   return [stops[i], stops[(i + 1) % stops.length]];
 }
 
+// Color math for depth-shading a single palette color (planet orbs, filled
+// discs): mix toward white for a lit highlight, toward black for a shadowed
+// rim. Operates only on our own token hexes — never backend strings.
+function mixHex(hex: string, target: string, t: number): string {
+  const parse = (h: string) => {
+    const n = h.replace("#", "");
+    return [parseInt(n.slice(0, 2), 16), parseInt(n.slice(2, 4), 16), parseInt(n.slice(4, 6), 16)];
+  };
+  const a = parse(hex);
+  const b = parse(target);
+  const mixed = a.map((ch, i) => Math.round(ch + (b[i] - ch) * t));
+  return `#${mixed.map((ch) => ch.toString(16).padStart(2, "0")).join("")}`;
+}
+
+/** Lighten a token hex toward white by `t` (0–1). */
+export function tint(hex: string, t: number): string {
+  return mixHex(hex, colors.white, t);
+}
+
+/** Darken a token hex toward black by `t` (0–1). */
+export function shade(hex: string, t: number): string {
+  return mixHex(hex, colors.black, t);
+}
+
 // Profile album-art placeholder tiles have no natural per-item identifier
 // (they're keyed by position in the grid), so this stays a fixed rotation
 // cycled by index rather than routed through colorForKey/gradientForKey.

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
-import Svg, { Circle, Line, Defs, RadialGradient, Stop } from "react-native-svg";
+import Svg, { Circle, Path, Defs, RadialGradient, Stop } from "react-native-svg";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -10,14 +10,15 @@ import Animated, {
   Easing,
 } from "react-native-reanimated";
 import { colors, alpha, fontSize, trackingWidest2 } from "@/lib/theme/tokens";
-import { colorForKey } from "@/lib/theme/gradients";
+import { colorForKey, tint, shade } from "@/lib/theme/gradients";
 import type { GenreProfile } from "@/lib/api/hooks";
 
 // Planets live in fixed-size boxes so the counter-rotation origin (box
 // center) coincides exactly with the circle center — labels stay upright
 // with zero wobble while the whole system orbits.
-const BOX = 92;
-const SUN = 88;
+const BOX = 96;
+const SUN = 96;
+const STAR_COUNT = 26;
 
 type Planet = {
   genre: string;
@@ -37,22 +38,48 @@ function toRad(deg: number) {
   return (deg * Math.PI) / 180;
 }
 
+// A quadratic curve from the sun toward a planet, bent consistently to one
+// side so the affinity trails read as a galaxy swirl instead of spokes.
+function swirlPath(cx: number, cy: number, x: number, y: number): string {
+  const mx = (cx + x) / 2;
+  const my = (cy + y) / 2;
+  const dx = x - cx;
+  const dy = y - cy;
+  const len = Math.hypot(dx, dy) || 1;
+  const k = len * 0.18;
+  return `M ${cx} ${cy} Q ${mx - (dy / len) * k} ${my + (dx / len) * k} ${x} ${y}`;
+}
+
 // Your genres as a planetary system: the top genre is the sun, every other
 // genre orbits it — distance = rank ring, planet size = share of listening,
-// connecting lines = the genre-affinity edges the API computes (dnaEdges).
+// swirling trails = the genre-affinity edges the API computes (dnaEdges).
 // Tap a planet to read its share in the sun.
 export function SoundDNAOrbit({ profile, size }: SoundDNAOrbitProps) {
   const rotation = useSharedValue(0);
+  const pulse = useSharedValue(1);
   useEffect(() => {
     rotation.value = withRepeat(withTiming(360, { duration: 90_000, easing: Easing.linear }), -1, false);
-    return () => cancelAnimation(rotation);
-  }, [rotation]);
+    pulse.value = withRepeat(withTiming(1.12, { duration: 2600, easing: Easing.inOut(Easing.quad) }), -1, true);
+    return () => {
+      cancelAnimation(rotation);
+      cancelAnimation(pulse);
+    };
+  }, [rotation, pulse]);
   const spin = useAnimatedStyle(() => ({ transform: [{ rotate: `${rotation.value}deg` }] }));
   const counterSpin = useAnimatedStyle(() => ({ transform: [{ rotate: `${-rotation.value}deg` }] }));
+  const pulseStyle = useAnimatedStyle(() => ({ transform: [{ scale: pulse.value }] }));
 
   const [focused, setFocused] = useState<string | null>(null);
 
-  const sorted = useMemo(() => [...profile.nodes].sort((a, b) => b.percentage - a.percentage), [profile.nodes]);
+  // "unknown" is the backend's bucket for tracks it couldn't genre-tag —
+  // it's noise, not a genre, so it never gets a planet.
+  const sorted = useMemo(
+    () =>
+      [...profile.nodes]
+        .filter((n) => n.genre.trim().toLowerCase() !== "unknown")
+        .sort((a, b) => b.percentage - a.percentage),
+    [profile.nodes]
+  );
 
   const affinity = useMemo(() => {
     const map = new Map<string, number>();
@@ -68,6 +95,22 @@ export function SoundDNAOrbit({ profile, size }: SoundDNAOrbitProps) {
   const r2 = size / 2 - 40;
   const r1 = Math.max((r2 + SUN / 2) / 2 + 6, SUN / 2 + 36);
 
+  // Deterministic starfield (seeded LCG, not Math.random) so the sky doesn't
+  // reshuffle on every re-render.
+  const stars = useMemo(() => {
+    let seed = 7;
+    const rand = () => {
+      seed = (seed * 9301 + 49297) % 233280;
+      return seed / 233280;
+    };
+    return Array.from({ length: STAR_COUNT }, () => ({
+      x: rand() * size,
+      y: rand() * H,
+      r: 0.5 + rand() * 1.1,
+      o: 0.08 + rand() * 0.24,
+    }));
+  }, [size, H]);
+
   const planets: Planet[] = useMemo(() => {
     const rest = sorted.slice(1, 8);
     const inner = rest.slice(0, 3);
@@ -78,7 +121,7 @@ export function SoundDNAOrbit({ profile, size }: SoundDNAOrbitProps) {
       placed.push({
         genre: n.genre,
         pct: n.percentage,
-        r: 13 + n.score * 15,
+        r: 14 + n.score * 15,
         x: cx + r1 * Math.cos(angle),
         y: cy + r1 * Math.sin(angle),
         color: colorForKey(n.genre),
@@ -89,7 +132,7 @@ export function SoundDNAOrbit({ profile, size }: SoundDNAOrbitProps) {
       placed.push({
         genre: n.genre,
         pct: n.percentage,
-        r: 10 + n.score * 13,
+        r: 11 + n.score * 13,
         x: cx + r2 * Math.cos(angle),
         y: cy + r2 * Math.sin(angle),
         color: colorForKey(n.genre),
@@ -109,79 +152,120 @@ export function SoundDNAOrbit({ profile, size }: SoundDNAOrbitProps) {
 
   const affinityTo = (a: string, b: string) => affinity.get([a, b].sort().join("|")) ?? 0.5;
 
+  const discBox = SUN + 28;
+
   return (
     <View style={{ width: size, height: H, alignSelf: "center" }}>
-      {/* soft glow behind the sun */}
+      {/* static sky: starfield + soft glow behind the sun */}
       <Svg width={size} height={H} style={StyleSheet.absoluteFill} pointerEvents="none">
-        <Defs>
-          <RadialGradient id="dnaGlow" cx="50%" cy="50%" r="50%">
-            <Stop offset="0%" stopColor={centerColor} stopOpacity={0.28} />
-            <Stop offset="60%" stopColor={centerColor} stopOpacity={0.08} />
-            <Stop offset="100%" stopColor={centerColor} stopOpacity={0} />
-          </RadialGradient>
-        </Defs>
-        <Circle cx={cx} cy={cy} r={size * 0.34} fill="url(#dnaGlow)" />
+        {stars.map((s, i) => (
+          <Circle key={i} cx={s.x} cy={s.y} r={s.r} fill={colors.white} opacity={s.o} />
+        ))}
       </Svg>
+      <Animated.View style={[StyleSheet.absoluteFill, pulseStyle]} pointerEvents="none">
+        <Svg width={size} height={H} style={StyleSheet.absoluteFill}>
+          <Defs>
+            <RadialGradient id="dnaGlow" cx="50%" cy="50%" r="50%">
+              <Stop offset="0%" stopColor={centerColor} stopOpacity={0.3} />
+              <Stop offset="60%" stopColor={centerColor} stopOpacity={0.08} />
+              <Stop offset="100%" stopColor={centerColor} stopOpacity={0} />
+            </RadialGradient>
+          </Defs>
+          <Circle cx={cx} cy={cy} r={size * 0.36} fill="url(#dnaGlow)" />
+        </Svg>
+      </Animated.View>
 
-      {/* rotating layer: orbit rings, affinity edges, planets */}
+      {/* rotating layer: orbit rings, affinity trails, planets */}
       <Animated.View style={[StyleSheet.absoluteFill, spin]}>
         <Svg width={size} height={H} style={StyleSheet.absoluteFill} pointerEvents="none">
-          <Circle cx={cx} cy={cy} r={r1} stroke={alpha.white(0.06)} strokeWidth={1} fill="none" />
-          <Circle cx={cx} cy={cy} r={r2} stroke={alpha.white(0.05)} strokeWidth={1} strokeDasharray="3 8" fill="none" />
-          {planets.map((p) => (
-            <Line
-              key={`sun-${p.genre}`}
-              x1={cx}
-              y1={cy}
-              x2={p.x}
-              y2={p.y}
-              stroke={p.color}
-              strokeOpacity={0.07 + (affinityTo(sun.genre, p.genre) - 0.5) * 0.5}
-              strokeWidth={1.5}
-            />
-          ))}
+          <Circle cx={cx} cy={cy} r={r1} stroke={alpha.white(0.07)} strokeWidth={1} fill="none" />
+          <Circle cx={cx} cy={cy} r={r2} stroke={alpha.white(0.06)} strokeWidth={1} strokeDasharray="3 8" fill="none" />
+          {planets.map((p) => {
+            const aff = affinityTo(sun.genre, p.genre);
+            return (
+              <Path
+                key={`sun-${p.genre}`}
+                d={swirlPath(cx, cy, p.x, p.y)}
+                stroke={p.color}
+                strokeOpacity={0.14 + (aff - 0.5) * 0.8}
+                strokeWidth={1 + (aff - 0.5) * 3}
+                strokeLinecap="round"
+                fill="none"
+              />
+            );
+          })}
           {planets.map((a, i) =>
             planets.slice(i + 1).map((b) =>
-              affinityTo(a.genre, b.genre) >= 0.8 ? (
-                <Line
+              affinityTo(a.genre, b.genre) >= 0.75 ? (
+                <Path
                   key={`pair-${a.genre}-${b.genre}`}
-                  x1={a.x}
-                  y1={a.y}
-                  x2={b.x}
-                  y2={b.y}
-                  stroke={alpha.white(0.1)}
+                  d={swirlPath(a.x, a.y, b.x, b.y)}
+                  stroke={colors.white}
+                  strokeOpacity={0.12}
                   strokeWidth={1}
+                  strokeLinecap="round"
+                  fill="none"
                 />
               ) : null
             )
           )}
         </Svg>
 
-        {planets.map((p) => {
+        {planets.map((p, i) => {
           const isFocused = focused === p.genre;
+          const dimmed = focused !== null && !isFocused;
           return (
             <View
               key={p.genre}
               pointerEvents="box-none"
-              style={{ position: "absolute", left: p.x - BOX / 2, top: p.y - BOX / 2, width: BOX, height: BOX }}
+              style={{
+                position: "absolute",
+                left: p.x - BOX / 2,
+                top: p.y - BOX / 2,
+                width: BOX,
+                height: BOX,
+                opacity: dimmed ? 0.4 : 1,
+              }}
             >
               <Animated.View style={[styles.planetBox, counterSpin]} pointerEvents="box-none">
+                <Svg width={BOX} height={BOX} style={StyleSheet.absoluteFill} pointerEvents="none">
+                  <Defs>
+                    <RadialGradient id={`pg${i}`} cx="35%" cy="30%" r="80%">
+                      <Stop offset="0%" stopColor={tint(p.color, 0.5)} />
+                      <Stop offset="55%" stopColor={p.color} />
+                      <Stop offset="100%" stopColor={shade(p.color, 0.45)} />
+                    </RadialGradient>
+                    <RadialGradient id={`ph${i}`} cx="50%" cy="50%" r="50%">
+                      <Stop offset="0%" stopColor={p.color} stopOpacity={0.35} />
+                      <Stop offset="100%" stopColor={p.color} stopOpacity={0} />
+                    </RadialGradient>
+                  </Defs>
+                  <Circle cx={BOX / 2} cy={BOX / 2} r={Math.min(p.r + 15, BOX / 2)} fill={`url(#ph${i})`} />
+                  <Circle cx={BOX / 2} cy={BOX / 2} r={p.r} fill={`url(#pg${i})`} />
+                  <Circle
+                    cx={BOX / 2}
+                    cy={BOX / 2}
+                    r={p.r + 4}
+                    stroke={p.color}
+                    strokeOpacity={isFocused ? 0.9 : 0.3}
+                    strokeWidth={isFocused ? 1.5 : 1}
+                    fill="none"
+                  />
+                </Svg>
                 <Pressable
                   onPress={() => setFocused((cur) => (cur === p.genre ? null : p.genre))}
-                  style={[
-                    styles.planet,
-                    {
-                      width: p.r * 2,
-                      height: p.r * 2,
-                      borderRadius: p.r,
-                      backgroundColor: p.color,
-                      opacity: focused && !isFocused ? 0.45 : 1,
-                    },
-                  ]}
+                  style={[styles.planet, { width: p.r * 2 + 12, height: p.r * 2 + 12, borderRadius: p.r + 6 }]}
                 >
                   {p.r >= 16 ? <Text style={styles.planetPct}>{Math.round(p.pct)}%</Text> : null}
                 </Pressable>
-                <Text numberOfLines={1} style={[styles.planetLabel, { top: BOX / 2 + p.r + 4 }]}>
+                <Text
+                  numberOfLines={1}
+                  style={[
+                    styles.planetLabel,
+                    { top: BOX / 2 + p.r + 6 },
+                    isFocused && { color: colors.white, fontFamily: "GeistSansSemiBold" },
+                  ]}
+                >
                   {p.genre}
                 </Text>
               </Animated.View>
@@ -190,12 +274,34 @@ export function SoundDNAOrbit({ profile, size }: SoundDNAOrbitProps) {
         })}
       </Animated.View>
 
-      {/* the sun — static, shows the focused genre's stats */}
-      <Pressable
-        onPress={() => setFocused(null)}
-        style={[styles.sun, { left: cx - SUN / 2, top: cy - SUN / 2, borderColor: centerColor }]}
+      {/* the sun — a static filled orb showing the focused genre's stats */}
+      <Svg
+        width={discBox}
+        height={discBox}
+        style={{ position: "absolute", left: cx - discBox / 2, top: cy - discBox / 2 }}
+        pointerEvents="none"
       >
-        <Text numberOfLines={1} style={[styles.sunGenre, { color: centerColor }]}>
+        <Defs>
+          <RadialGradient id="sunG" cx="38%" cy="30%" r="82%">
+            <Stop offset="0%" stopColor={tint(centerColor, 0.45)} />
+            <Stop offset="60%" stopColor={centerColor} />
+            <Stop offset="100%" stopColor={shade(centerColor, 0.35)} />
+          </RadialGradient>
+        </Defs>
+        <Circle cx={discBox / 2} cy={discBox / 2} r={SUN / 2} fill="url(#sunG)" />
+        <Circle
+          cx={discBox / 2}
+          cy={discBox / 2}
+          r={SUN / 2 + 8}
+          stroke={centerColor}
+          strokeOpacity={0.35}
+          strokeWidth={1}
+          strokeDasharray="2 6"
+          fill="none"
+        />
+      </Svg>
+      <Pressable onPress={() => setFocused(null)} style={[styles.sun, { left: cx - SUN / 2, top: cy - SUN / 2 }]}>
+        <Text numberOfLines={1} style={styles.sunGenre}>
           {centerName}
         </Text>
         <Text style={styles.sunPct}>{Math.round(centerPct)}%</Text>
@@ -211,35 +317,34 @@ const styles = StyleSheet.create({
   planetPct: { fontSize: fontSize[10], fontFamily: "GeistSansBold", color: colors.background },
   planetLabel: {
     position: "absolute",
-    width: 84,
-    left: (BOX - 84) / 2,
+    width: 88,
+    left: (BOX - 88) / 2,
     textAlign: "center",
     fontSize: fontSize[10],
     fontFamily: "GeistSansMedium",
-    color: alpha.white(0.6),
+    color: alpha.white(0.65),
   },
   sun: {
     position: "absolute",
     width: SUN,
     height: SUN,
     borderRadius: SUN / 2,
-    borderWidth: 2,
-    backgroundColor: colors.surface,
     alignItems: "center",
     justifyContent: "center",
   },
   sunGenre: {
-    maxWidth: SUN - 14,
+    maxWidth: SUN - 16,
     fontSize: fontSize[11],
     fontFamily: "GeistSansSemiBold",
     textTransform: "capitalize",
+    color: alpha.black(0.72),
   },
-  sunPct: { marginTop: 1, fontSize: fontSize[20], fontFamily: "GeistSansBold", color: colors.white },
+  sunPct: { marginTop: 1, fontSize: fontSize[24], fontFamily: "GeistSansBold", color: colors.black },
   sunCaption: {
     fontSize: fontSize[9],
-    fontFamily: "GeistSans",
+    fontFamily: "GeistSansMedium",
     textTransform: "uppercase",
     letterSpacing: trackingWidest2(fontSize[9]),
-    color: alpha.white(0.35),
+    color: alpha.black(0.55),
   },
 });
