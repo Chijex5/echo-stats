@@ -1,4 +1,4 @@
-import { ScrollView, View, Text, StyleSheet } from "react-native";
+import { ScrollView, View, Text, Alert, StyleSheet } from "react-native";
 import {
   Activity,
   Archive,
@@ -9,6 +9,7 @@ import {
   Fingerprint,
   Flame,
   Heart,
+  LogOut,
   Music2,
   Orbit,
   Radio,
@@ -16,12 +17,13 @@ import {
   Sparkles,
   type LucideIcon,
 } from "lucide-react-native";
-import { GlassCard, SectionHeading, StatTile, Shimmer, ScreenScroll } from "@/components/ui";
+import { GlassCard, SectionHeading, StatTile, PrimaryButton, Shimmer, ScreenScroll } from "@/components/ui";
 import { ProfileHero } from "@/components/dashboard/ProfileHero";
 import { MilestoneTimeline, type MilestoneItem } from "@/components/dashboard/MilestoneTimeline";
 import { ServiceRow } from "@/components/dashboard/ServiceRow";
 import { HighlightsSection } from "@/components/dashboard/HighlightsSection";
 import { useProfile, type SongMoment } from "@/lib/api/hooks";
+import { useAuth } from "@/lib/auth/AuthContext";
 import { colors, alpha, fontSize, trackingWidest2 } from "@/lib/theme/tokens";
 
 function formatDate(value: string | null | undefined) {
@@ -50,7 +52,15 @@ function IdentityCard({ icon: Icon, label, value }: { icon: LucideIcon; label: s
 
 export default function ProfileScreen() {
   const profile = useProfile();
+  const { logout } = useAuth();
   const data = profile.data;
+
+  function handleLogout() {
+    Alert.alert("Log out", "You'll need to reconnect Spotify to sign back in.", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Log out", style: "destructive", onPress: () => void logout() },
+    ]);
+  }
 
   return (
     <ScreenScroll style={{ backgroundColor: colors.background }}>
@@ -178,11 +188,16 @@ export default function ProfileScreen() {
           </View>
         </View>
       ) : null}
+
+      <View style={styles.logoutWrap}>
+        <PrimaryButton label="Log out" variant="outline" icon={LogOut} fullWidth onPress={handleLogout} />
+      </View>
     </ScreenScroll>
   );
 }
 
 const styles = StyleSheet.create({
+  logoutWrap: { marginTop: 32 },
   loadingRow: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
   sectionLabel: {
     marginBottom: 12,
