@@ -11,7 +11,7 @@ import { RandomNostalgiaSheet } from "@/components/dashboard/RandomNostalgiaShee
 import { TimelineInsights } from "@/components/dashboard/TimelineInsights";
 import { ProfileHeaderButton } from "@/components/dashboard/ProfileHeaderButton";
 import { CalendarHeatmap } from "@/components/charts";
-import { alpha, fontSize, trackingWidest2 } from "@/lib/theme/tokens";
+import { colors, alpha, fontSize, trackingWidest2 } from "@/lib/theme/tokens";
 
 export default function TimelineScreen() {
   const page = useTimelinePage();
@@ -23,7 +23,7 @@ export default function TimelineScreen() {
   const isLoading = page.isLoading;
 
   return (
-    <ScreenScroll>
+    <ScreenScroll style={{ backgroundColor: colors.background }}>
       <View style={styles.screenHeader}>
         <SectionHeading label="Look back" title="Timeline" align="left" />
         <ProfileHeaderButton />

@@ -115,8 +115,6 @@ const styles = StyleSheet.create({
     marginTop: 20,
     width: "100%",
     borderRadius: 18,
-    borderWidth: 1,
-    borderColor: alpha.white(0.07),
     backgroundColor: alpha.black(0.25),
     overflow: "hidden",
   },

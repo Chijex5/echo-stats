@@ -5,7 +5,7 @@ import { SectionHeading, Shimmer, ScreenScroll } from "@/components/ui";
 import { staggerChild } from "@/lib/motion/presets";
 import { useSongOfTheDay } from "@/lib/api/hooks";
 import { SotdHero, TheStory, MemorySnapshot, WhyWePickedThis, RelatedForgotten, MoodReconstruction, DailyRitual, ShareSheet } from "@/components/sotd";
-import { alpha, fontSize } from "@/lib/theme/tokens";
+import { colors, alpha, fontSize } from "@/lib/theme/tokens";
 
 export default function SongOfTheDayScreen() {
   const sotd = useSongOfTheDay();
@@ -13,7 +13,7 @@ export default function SongOfTheDayScreen() {
   const data = sotd.data;
 
   return (
-    <ScreenScroll>
+    <ScreenScroll style={{ backgroundColor: colors.background }}>
       <View style={{ marginBottom: 24 }}>
         <SectionHeading label="Today's pick" title="Song of the day" align="left" />
       </View>

@@ -28,7 +28,7 @@ export default function InsightsScreen() {
     : [];
 
   return (
-    <ScreenScroll>
+    <ScreenScroll style={{ backgroundColor: colors.background }}>
       <View style={styles.screenHeader}>
         <SectionHeading label="Discoveries" title="Insights" align="left" />
         <ProfileHeaderButton />

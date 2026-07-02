@@ -24,9 +24,7 @@ export function StatTile({ label, value, variant = "default", accentColor, width
 const styles = StyleSheet.create({
   tile: {
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: alpha.white(0.05),
-    backgroundColor: alpha.white(0.03),
+    backgroundColor: colors.surface,
     padding: 14,
   },
   flexFill: { flex: 1 },

@@ -1,4 +1,5 @@
-import { ScrollView, View, Text, Alert, StyleSheet } from "react-native";
+import { ScrollView, View, Text, Pressable, Alert, StyleSheet } from "react-native";
+import { useRouter } from "expo-router";
 import {
   Activity,
   Archive,
@@ -15,9 +16,10 @@ import {
   Radio,
   ShieldCheck,
   Sparkles,
+  X,
   type LucideIcon,
 } from "lucide-react-native";
-import { GlassCard, SectionHeading, StatTile, PrimaryButton, Shimmer, ScreenScroll } from "@/components/ui";
+import { GlassCard, StatTile, PrimaryButton, Shimmer, ScreenScroll } from "@/components/ui";
 import { ProfileHero } from "@/components/dashboard/ProfileHero";
 import { MilestoneTimeline, type MilestoneItem } from "@/components/dashboard/MilestoneTimeline";
 import { ServiceRow } from "@/components/dashboard/ServiceRow";
@@ -53,6 +55,7 @@ function IdentityCard({ icon: Icon, label, value }: { icon: LucideIcon; label: s
 export default function ProfileScreen() {
   const profile = useProfile();
   const { logout } = useAuth();
+  const router = useRouter();
   const data = profile.data;
 
   function handleLogout() {
@@ -64,8 +67,11 @@ export default function ProfileScreen() {
 
   return (
     <ScreenScroll style={{ backgroundColor: colors.background }}>
-      <View style={{ marginBottom: 20 }}>
-        <SectionHeading label="Your archive" title="Profile" align="left" />
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Profile</Text>
+        <Pressable onPress={() => router.back()} hitSlop={8} style={styles.close}>
+          <X size={18} color={alpha.white(0.6)} />
+        </Pressable>
       </View>
 
       {profile.isLoading ? (
@@ -197,6 +203,16 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
+  header: { marginBottom: 24, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  headerTitle: { fontSize: fontSize[26], fontFamily: "GeistSansBold", color: colors.white },
+  close: {
+    height: 36,
+    width: 36,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 18,
+    backgroundColor: colors.surfaceRaised,
+  },
   logoutWrap: { marginTop: 32 },
   loadingRow: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
   sectionLabel: {
