@@ -3,6 +3,8 @@ import { TrendingUp, TrendingDown, Minus } from "lucide-react-native";
 import { Shimmer } from "@/components/ui";
 import { ArtistAvatar } from "@/components/dashboard/ArtistAvatar";
 import { ProfileHeaderButton } from "@/components/dashboard/ProfileHeaderButton";
+import { Sparkline } from "@/components/charts";
+import { colorForKey } from "@/lib/theme/gradients";
 import { colors, alpha, spacing, fontSize, trackingWidest2 } from "@/lib/theme/tokens";
 import { useTopArtists, type Trend, type TopArtist } from "@/lib/api/hooks";
 
@@ -31,6 +33,10 @@ function FeatureArtist({ artist }: { artist: TopArtist }) {
         <View style={styles.featureStat}>
           <TrendIcon trend={artist.trend} size={13} />
           <Text style={styles.featurePlays}>{artist.deltaLabel}</Text>
+        </View>
+        <View style={styles.featureSpark}>
+          <Sparkline data={artist.sparkline.map((p) => p.v)} width={110} height={26} color={colorForKey(artist.name)} />
+          <Text style={styles.featureSparkLabel}>last 5 weeks</Text>
         </View>
       </View>
     </View>
@@ -66,8 +72,21 @@ function ArtistRow({ artist, rank }: { artist: TopArtist; rank: number }) {
         </Text>
       </View>
       <View style={styles.rowTrailing}>
-        <TrendIcon trend={artist.trend} />
-        <Text style={styles.rowDelta}>{artist.deltaLabel}</Text>
+        <Sparkline
+          data={artist.sparkline.map((p) => p.v)}
+          width={56}
+          height={20}
+          strokeWidth={1.5}
+          color={colorForKey(artist.name)}
+        />
+        <Text
+          style={[
+            styles.rowDelta,
+            { color: artist.delta > 0 ? colors.positive : artist.delta < 0 ? colors.negative : alpha.white(0.35) },
+          ]}
+        >
+          {artist.delta > 0 ? `+${artist.delta}` : artist.delta < 0 ? artist.delta : "—"}
+        </Text>
       </View>
     </View>
   );
@@ -85,7 +104,7 @@ export default function ArtistsScreen() {
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
           <Text style={styles.title}>Top artists</Text>
-          <Text style={styles.subtitle}>Your most played, all time</Text>
+          <Text style={styles.subtitle}>Your most played this month</Text>
         </View>
         <ProfileHeaderButton />
       </View>
@@ -153,6 +172,14 @@ const styles = StyleSheet.create({
   featureArtist: { marginTop: 2, fontSize: fontSize[13], color: alpha.white(0.5) },
   featureStat: { marginTop: 8, flexDirection: "row", alignItems: "center", gap: 6 },
   featurePlays: { fontSize: fontSize[12], fontFamily: "GeistSansMedium", color: alpha.white(0.6) },
+  featureSpark: { marginTop: 10, flexDirection: "row", alignItems: "flex-end", gap: 10 },
+  featureSparkLabel: {
+    fontSize: fontSize[9],
+    fontFamily: "GeistSans",
+    textTransform: "uppercase",
+    letterSpacing: trackingWidest2(fontSize[9]),
+    color: alpha.white(0.3),
+  },
 
   movers: { flexDirection: "row", gap: 10, marginTop: 12, marginBottom: 24 },
   mover: { flex: 1, borderRadius: 12, backgroundColor: colors.surface, padding: 14 },
@@ -171,6 +198,6 @@ const styles = StyleSheet.create({
   rowMeta: { flex: 1 },
   rowTitle: { fontSize: fontSize[14], fontFamily: "GeistSansMedium", color: colors.white },
   rowArtist: { marginTop: 2, fontSize: fontSize[12], color: alpha.white(0.45) },
-  rowTrailing: { flexDirection: "row", alignItems: "center", gap: 6 },
-  rowDelta: { fontSize: fontSize[11], color: alpha.white(0.4) },
+  rowTrailing: { alignItems: "flex-end", gap: 2 },
+  rowDelta: { fontSize: fontSize[11], fontFamily: "GeistSansMedium" },
 });
