@@ -14,6 +14,7 @@ import {
   Music2,
   Orbit,
   Radio,
+  RefreshCw,
   ShieldCheck,
   Sparkles,
   X,
@@ -24,7 +25,7 @@ import { ProfileHero } from "@/components/dashboard/ProfileHero";
 import { MilestoneTimeline, type MilestoneItem } from "@/components/dashboard/MilestoneTimeline";
 import { ServiceRow } from "@/components/dashboard/ServiceRow";
 import { HighlightsSection } from "@/components/dashboard/HighlightsSection";
-import { useProfile, type SongMoment } from "@/lib/api/hooks";
+import { useProfile, useImportStatus, type SongMoment } from "@/lib/api/hooks";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { colors, alpha, fontSize, trackingWidest2 } from "@/lib/theme/tokens";
 
@@ -54,9 +55,11 @@ function IdentityCard({ icon: Icon, label, value }: { icon: LucideIcon; label: s
 
 export default function ProfileScreen() {
   const profile = useProfile();
+  const importStatus = useImportStatus();
   const { logout } = useAuth();
   const router = useRouter();
   const data = profile.data;
+  const sync = importStatus.data;
 
   function handleLogout() {
     Alert.alert("Log out", "You'll need to reconnect Spotify to sign back in.", [
@@ -189,6 +192,30 @@ export default function ProfileScreen() {
           </View>
 
           <View>
+            <Text style={styles.sectionLabel}>Your data</Text>
+            <View style={styles.resyncCard}>
+              <Text style={styles.resyncTitle}>
+                {sync?.dueForResync ? "Time for a fresh export" : "Your vault is current"}
+              </Text>
+              <Text style={styles.resyncSub}>
+                {sync?.lastImportAt
+                  ? `Last import ${formatDate(sync.lastImportAt)} · ${sync.totalEntries.toLocaleString()} plays stored.`
+                  : "Upload a Spotify export to backfill anything the live sync missed."}{" "}
+                Re-uploading is always safe — duplicates are skipped automatically, and we&apos;ll nudge you monthly.
+              </Text>
+              <View style={{ marginTop: 14 }}>
+                <PrimaryButton
+                  label="Re-sync history"
+                  icon={RefreshCw}
+                  variant={sync?.dueForResync ? "spotify-solid" : "outline"}
+                  fullWidth
+                  onPress={() => router.push("/(tabs)/resync")}
+                />
+              </View>
+            </View>
+          </View>
+
+          <View>
             <Text style={styles.sectionLabel}>Highlights</Text>
             <HighlightsSection highlights={data.highlights} />
           </View>
@@ -242,4 +269,13 @@ const styles = StyleSheet.create({
     color: alpha.white(0.35),
   },
   identityValue: { marginTop: 6, fontSize: fontSize[15], fontFamily: "GeistSansSemiBold", color: colors.white },
+  resyncCard: { borderRadius: 18, backgroundColor: colors.surface, padding: 16 },
+  resyncTitle: { fontSize: fontSize[15], fontFamily: "GeistSansSemiBold", color: colors.white },
+  resyncSub: {
+    marginTop: 6,
+    fontSize: fontSize[12],
+    fontFamily: "GeistSans",
+    lineHeight: fontSize[12] * 1.45,
+    color: alpha.white(0.5),
+  },
 });

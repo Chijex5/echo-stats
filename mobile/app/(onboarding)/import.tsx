@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { ScrollView, View, Text, Pressable, StyleSheet } from "react-native";
-import { File } from "expo-file-system";
 import type * as DocumentPicker from "expo-document-picker";
 import { CheckCircle2, AlertCircle } from "lucide-react-native";
 import { MotiView } from "moti";
@@ -11,46 +10,17 @@ import { GenrePickerGrid } from "@/components/onboarding/GenrePickerGrid";
 import { BioInput } from "@/components/onboarding/BioInput";
 import { staggerChild } from "@/lib/motion/presets";
 import { apiFetch } from "@/lib/api/client";
+import {
+  filterJsonAssets,
+  readHistoryAssets,
+  uploadHistoryEntries,
+  type UploadTotals,
+} from "@/lib/history/uploadHistory";
+import { scheduleResyncReminder } from "@/lib/notifications/resyncReminder";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { colors, alpha, spacing, fontSize } from "@/lib/theme/tokens";
 
 type Stage = "idle" | "reading" | "uploading" | "form" | "submitting" | "success" | "error";
-
-interface RawEntry {
-  ts: string;
-  platform?: string | null;
-  ms_played: number;
-  master_metadata_track_name: string | null;
-  master_metadata_album_artist_name: string | null;
-  master_metadata_album_album_name: string | null;
-  spotify_track_uri: string | null;
-  reason_start?: string | null;
-  reason_end?: string | null;
-  shuffle?: boolean | null;
-  skipped?: boolean | null;
-  offline?: boolean | null;
-}
-
-interface ImportStats {
-  totalReceived: number;
-  totalFiltered: number;
-  totalInserted: number;
-  totalDuplicates: number;
-  yearSpan: number;
-}
-
-const BATCH_SIZE = 2_000;
-
-function chunk<T>(arr: T[], size: number): T[][] {
-  const chunks: T[][] = [];
-  for (let i = 0; i < arr.length; i += size) chunks.push(arr.slice(i, i + size));
-  return chunks;
-}
-
-function getYearSpan(entries: RawEntry[]): number {
-  const years = entries.map((e) => new Date(e.ts).getFullYear()).filter((y) => !isNaN(y));
-  return years.length ? Math.max(...years) - Math.min(...years) + 1 : 0;
-}
 
 export default function ImportScreen() {
   const { completeOnboarding } = useAuth();
@@ -58,15 +28,15 @@ export default function ImportScreen() {
   const [stage, setStage] = useState<Stage>("idle");
   const [progress, setProgress] = useState(0);
   const [progressLabel, setProgressLabel] = useState("");
-  const [stats, setStats] = useState<ImportStats | null>(null);
+  const [stats, setStats] = useState<UploadTotals | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [bio, setBio] = useState("");
 
   async function processFiles(assets: DocumentPicker.DocumentPickerAsset[]) {
-    const jsonAssets = assets.filter((a) => a.mimeType === "application/json" || a.name.endsWith(".json"));
+    const jsonAssets = filterJsonAssets(assets);
 
-    if (!jsonAssets.length) {
+    if (!jsonAssets) {
       setErrorMsg("No valid JSON files found. Extract the ZIP Spotify sends you and upload the JSON files.");
       setStage("error");
       return;
@@ -77,66 +47,16 @@ export default function ImportScreen() {
     setErrorMsg(null);
 
     try {
-      const allEntries: RawEntry[] = [];
-
-      for (let i = 0; i < jsonAssets.length; i++) {
-        const asset = jsonAssets[i];
-        setProgressLabel(`Reading ${asset.name}…`);
-
-        const text = await new File(asset.uri).text();
-
-        let parsed: unknown;
-        try {
-          parsed = JSON.parse(text);
-        } catch {
-          throw new Error(`${asset.name} is not valid JSON.`);
-        }
-        if (!Array.isArray(parsed)) {
-          throw new Error(`${asset.name} doesn't look like a Spotify streaming history file.`);
-        }
-        allEntries.push(...(parsed as RawEntry[]));
-
-        // No per-byte progress is available from a single text() read, so
-        // each completed file advances the 0–40% reading band evenly.
-        setProgress(Math.round(((i + 1) / jsonAssets.length) * 40));
-      }
-
-      const yearSpan = getYearSpan(allEntries);
+      const onProgress = (pct: number, label: string) => {
+        setProgress(pct);
+        setProgressLabel(label);
+      };
+      const allEntries = await readHistoryAssets(jsonAssets, onProgress);
 
       setStage("uploading");
-      const batches = chunk(allEntries, BATCH_SIZE);
-      const totalBatches = batches.length;
+      const totals = await uploadHistoryEntries(allEntries, onProgress);
 
-      let totalReceived = 0;
-      let totalFiltered = 0;
-      let totalInserted = 0;
-      let totalDuplicates = 0;
-
-      for (let b = 0; b < batches.length; b++) {
-        setProgressLabel(`Uploading batch ${b + 1} of ${totalBatches}…`);
-
-        const res = await apiFetch("/api/user/import-history", {
-          method: "POST",
-          body: JSON.stringify({ entries: batches[b] }),
-        });
-
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(data.error ?? `Batch ${b + 1} failed.`);
-        }
-
-        const data = await res.json();
-        totalReceived += data.received;
-        totalFiltered += data.filtered;
-        totalInserted += data.inserted;
-        totalDuplicates += data.duplicates;
-
-        setProgress(Math.round(40 + ((b + 1) / totalBatches) * 60));
-      }
-
-      setProgress(100);
-      setProgressLabel("Done");
-      setStats({ totalReceived, totalFiltered, totalInserted, totalDuplicates, yearSpan });
+      setStats(totals);
       setStage("form");
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : "Something went wrong.");
@@ -179,6 +99,9 @@ export default function ImportScreen() {
   }
 
   async function handleViewStory() {
+    // First natural moment to ask for notification permission: arm the
+    // monthly "upload a fresh export" reminder before entering the app.
+    await scheduleResyncReminder().catch(() => false);
     await completeOnboarding();
   }
 

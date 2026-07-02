@@ -197,6 +197,17 @@ export interface NowPlayingSyncResponse {
   };
 }
 
+// ─── Import Status ──────────────────────────────────────────────────────────
+
+export interface ImportStatusResponse {
+  lastImportAt: string | null;
+  daysSinceLastImport: number | null;
+  totalEntries: number;
+  latestEntryTs: string | null;
+  resyncIntervalDays: number;
+  dueForResync: boolean;
+}
+
 // ─── Timeline Explorer ──────────────────────────────────────────────────────
 
 export interface TimelineCell {

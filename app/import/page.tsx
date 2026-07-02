@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
   UploadCloud, FileJson, Lock, ShieldCheck,
@@ -71,9 +71,23 @@ function getYearSpan(entries: RawEntry[]): number {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
+// useSearchParams must live under a Suspense boundary in the app router —
+// the outer default export only provides that wrapper.
 export default function ImportPage() {
+  return (
+    <Suspense fallback={null}>
+      <ImportPageInner />
+    </Suspense>
+  );
+}
+
+function ImportPageInner() {
   const router = useRouter();
   const { update: updateSession } = useSession();
+  // ?mode=resync — the user already onboarded and is uploading a fresh
+  // export to backfill missed plays. Same upload pipeline (the unique
+  // ts+uri index dedupes server-side); skips the genre/bio form.
+  const isResync = useSearchParams().get("mode") === "resync";
 
   const [stage, setStage] = useState<Stage>("idle");
   const [progress, setProgress] = useState(0);
@@ -182,13 +196,13 @@ export default function ImportPage() {
       setProgressLabel("Done");
 
       setStats({ totalReceived, totalFiltered, totalInserted, totalDuplicates, yearSpan });
-      setStage("form");
+      setStage(isResync ? "success" : "form");
 
     } catch (err: unknown) {
       setErrorMsg(err instanceof Error ? err.message : "Something went wrong.");
       setStage("error");
     }
-  }, []);
+  }, [isResync]);
 
   // ── Genre toggle ─────────────────────────────────────────────────────────
 
@@ -245,13 +259,24 @@ export default function ImportPage() {
 
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
               <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">
-                Import your{" "}
-                <span className="font-serif-display italic text-spotify">Spotify</span>{" "}
-                history
+                {isResync ? (
+                  <>
+                    Re-sync your{" "}
+                    <span className="font-serif-display italic text-spotify">Spotify</span>{" "}
+                    history
+                  </>
+                ) : (
+                  <>
+                    Import your{" "}
+                    <span className="font-serif-display italic text-spotify">Spotify</span>{" "}
+                    history
+                  </>
+                )}
               </h1>
               <p className="text-lg text-white/60 max-w-xl leading-relaxed">
-                Upload your extended streaming history to unlock your complete
-                listening timeline, forgotten favorites, and deeply personal insights.
+                {isResync
+                  ? "Upload your newest export — we skip everything already in your vault and add only the plays we missed."
+                  : "Upload your extended streaming history to unlock your complete listening timeline, forgotten favorites, and deeply personal insights."}
               </p>
             </motion.div>
 
@@ -410,12 +435,14 @@ export default function ImportPage() {
                     <div className="w-20 h-20 rounded-full bg-spotify/20 flex items-center justify-center mb-6 text-spotify">
                       <CheckCircle2 size={40} />
                     </div>
-                    <h3 className="text-3xl font-bold mb-2">Import Complete!</h3>
+                    <h3 className="text-3xl font-bold mb-2">{isResync ? "You're up to date!" : "Import Complete!"}</h3>
                     <p className="text-white/60 mb-8">
-                      {stats.totalInserted.toLocaleString()} plays across {stats.yearSpan} year{stats.yearSpan !== 1 ? "s" : ""} — your story is ready.
+                      {isResync
+                        ? `${stats.totalInserted.toLocaleString()} new play${stats.totalInserted === 1 ? "" : "s"} added — ${stats.totalDuplicates.toLocaleString()} were already in your vault.`
+                        : `${stats.totalInserted.toLocaleString()} plays across ${stats.yearSpan} year${stats.yearSpan !== 1 ? "s" : ""} — your story is ready.`}
                     </p>
                     <button onClick={() => router.replace("/dashboard")} className="w-full py-4 rounded-full bg-spotify text-black font-semibold text-lg hover:brightness-110 transition-colors shadow-[0_0_30px_-5px_rgba(29,185,84,0.5)]">
-                      View Your Story
+                      {isResync ? "Back to Dashboard" : "View Your Story"}
                     </button>
                   </motion.div>
                 )}

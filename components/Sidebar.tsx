@@ -12,6 +12,7 @@ import {
   Sparkles,
   Smartphone,
   UserRound,
+  RefreshCw,
   Settings,
   X,
 } from "lucide-react";
@@ -83,7 +84,15 @@ function NavContent({ onNavClick }: { onNavClick?: () => void }) {
       </nav>
 
       {/* Bottom Actions */}
-      <div className="p-4 border-t border-white/5 shrink-0">
+      <div className="p-4 border-t border-white/5 shrink-0 space-y-1">
+        <Link
+          href="/import?mode=resync"
+          onClick={onNavClick}
+          className="flex items-center gap-3 px-4 py-3 rounded-xl text-white/50 hover:text-white hover:bg-white/5 transition-colors w-full"
+        >
+          <RefreshCw size={18} />
+          <span className="font-medium text-sm">Re-sync Data</span>
+        </Link>
         <button className="flex items-center gap-3 px-4 py-3 rounded-xl text-white/50 hover:text-white hover:bg-white/5 transition-colors w-full">
           <Settings size={18} />
           <span className="font-medium text-sm">Settings</span>
