@@ -4,7 +4,7 @@ import { alpha } from "@/lib/theme/tokens";
 
 // Hand-rolled 5-axis radar — victory-native (Skia) only ships cartesian/pie/
 // polar(donut) chart types, no true multi-axis radar primitive, so this
-// mirrors Sparkline/RadialGauge's existing react-native-svg pattern instead.
+// mirrors Sparkline's existing react-native-svg pattern instead.
 
 type RadarPoint = { axis: string; value: number };
 
