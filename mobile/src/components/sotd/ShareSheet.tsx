@@ -4,6 +4,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { captureRef } from "react-native-view-shot";
 import { Share2, Sparkles } from "lucide-react-native";
 import { EyebrowLabel, PrimaryButton, BottomSheet } from "@/components/ui";
+import { colorForKey, gradientForKey } from "@/lib/theme/gradients";
 import { colors, alpha, fontSize } from "@/lib/theme/tokens";
 import type { SotdSong, SotdStats } from "@/lib/api/hooks/types";
 
@@ -45,14 +46,14 @@ export function ShareSheet({ visible, song, stats, affinityScore, affinityLabel,
 
       <View style={{ marginTop: 20, alignItems: "center" }}>
         <View ref={cardRef} collapsable={false} style={styles.card}>
-          <LinearGradient colors={[song.gradientFrom + "55", "transparent"]} style={styles.glow} />
+          <LinearGradient colors={[alpha.hex(colorForKey(song.title), 0.33), "transparent"]} style={styles.glow} />
           <View style={styles.cardInner}>
             <View>
               <View style={styles.artwork}>
                 {song.albumImageUrl ? (
                   <Image source={{ uri: song.albumImageUrl }} style={styles.fill} />
                 ) : (
-                  <LinearGradient colors={[song.gradientFrom, song.gradientTo]} style={styles.fill} />
+                  <LinearGradient colors={gradientForKey(song.title)} style={styles.fill} />
                 )}
               </View>
               <View style={styles.badge}>

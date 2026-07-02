@@ -1,13 +1,13 @@
 import { View, Text, StyleSheet } from "react-native";
 import { Flame, Sparkles, Heart, Music2, type LucideIcon } from "lucide-react-native";
-import { GlassCard, EyebrowLabel } from "@/components/ui";
-import { alpha, colors, fontSize } from "@/lib/theme/tokens";
+import { alpha, colors, fontSize, radius, trackingWidest2 } from "@/lib/theme/tokens";
 import type { SotdDailyRitual } from "@/lib/api/hooks/types";
 
 type DailyRitualProps = {
   data: SotdDailyRitual;
 };
 
+// The come-back-tomorrow footer: one surface card, plain 2x2 stat grid.
 export function DailyRitual({ data }: DailyRitualProps) {
   const stats: Array<{ icon: LucideIcon; value: string; label: string }> = [
     { icon: Flame, value: String(data.streakDays), label: "Active streak" },
@@ -17,8 +17,7 @@ export function DailyRitual({ data }: DailyRitualProps) {
   ];
 
   return (
-    <GlassCard padding="lg" rounded="2xl" glow>
-      <EyebrowLabel style={{ marginBottom: 6 }}>Daily ritual</EyebrowLabel>
+    <View style={styles.card}>
       <Text style={styles.title}>
         Come back tomorrow for a new <Text style={styles.titleAccent}>memory</Text>.
       </Text>
@@ -27,30 +26,42 @@ export function DailyRitual({ data }: DailyRitualProps) {
       <View style={styles.grid}>
         {stats.map((s) => (
           <View key={s.label} style={styles.tile}>
-            <s.icon size={15} color={alpha.white(0.4)} strokeWidth={1.8} />
+            <s.icon size={14} color={alpha.white(0.4)} strokeWidth={1.8} />
             <Text style={styles.tileValue}>{s.value}</Text>
             <Text style={styles.tileLabel}>{s.label}</Text>
           </View>
         ))}
       </View>
-    </GlassCard>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  title: { marginBottom: 8, fontSize: fontSize[20], fontFamily: "GeistSansBold", lineHeight: fontSize[20] * 1.15, color: colors.white },
-  titleAccent: { fontFamily: "PlayfairDisplayItalic", fontStyle: "italic", color: colors.spotify },
-  subtitle: { marginBottom: 20, fontSize: fontSize[13], lineHeight: fontSize[13] * 1.5, color: alpha.white(0.5) },
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
-  tile: {
-    flex: 1,
-    minWidth: "44%",
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: alpha.white(0.05),
-    backgroundColor: alpha.white(0.03),
-    padding: 16,
+  card: { borderRadius: radius["2xl"], backgroundColor: colors.surface, padding: 18 },
+  title: {
+    fontSize: fontSize[20],
+    fontFamily: "GeistSansBold",
+    lineHeight: fontSize[20] * 1.2,
+    color: colors.white,
   },
-  tileValue: { marginTop: 12, fontSize: fontSize[20], fontFamily: "PlayfairDisplayItalic", color: colors.white },
-  tileLabel: { marginTop: 2, fontSize: fontSize[11], lineHeight: fontSize[11] * 1.1, color: alpha.white(0.4) },
+  titleAccent: { fontFamily: "PlayfairDisplayItalic", fontStyle: "italic", color: colors.echoGreen },
+  subtitle: {
+    marginTop: 6,
+    marginBottom: 18,
+    fontSize: fontSize[12],
+    lineHeight: fontSize[12] * 1.5,
+    fontFamily: "GeistSans",
+    color: alpha.white(0.5),
+  },
+  grid: { flexDirection: "row", flexWrap: "wrap", rowGap: 18 },
+  tile: { width: "50%", paddingRight: 12 },
+  tileValue: { marginTop: 8, fontSize: fontSize[20], fontFamily: "PlayfairDisplayItalic", color: colors.white },
+  tileLabel: {
+    marginTop: 3,
+    fontSize: fontSize[9],
+    fontFamily: "GeistSans",
+    textTransform: "uppercase",
+    letterSpacing: trackingWidest2(fontSize[9]),
+    color: alpha.white(0.4),
+  },
 });

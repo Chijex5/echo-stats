@@ -1,8 +1,7 @@
 import { View, Text, StyleSheet } from "react-native";
 import Animated, { useAnimatedStyle, useDerivedValue, withTiming } from "react-native-reanimated";
 import { Calendar, Heart, Moon, Sparkles, CloudRain, type LucideIcon } from "lucide-react-native";
-import { GlassCard, SectionHeading, EyebrowLabel } from "@/components/ui";
-import { colors, alpha, fontSize } from "@/lib/theme/tokens";
+import { colors, alpha, fontSize, radius, trackingWidest2 } from "@/lib/theme/tokens";
 import type { SotdAlgoReason, SotdAlgoIconName } from "@/lib/api/hooks/types";
 
 const ICON_MAP: Record<SotdAlgoIconName, LucideIcon> = { Calendar, Heart, Moon, Sparkles, CloudRain };
@@ -11,80 +10,90 @@ type WhyWePickedThisProps = {
   reasons: SotdAlgoReason[];
   affinityScore: number;
   affinityLabel: string;
+  accent: string;
 };
 
-function AffinityBar({ score }: { score: number }) {
+function AffinityBar({ score, accent }: { score: number; accent: string }) {
   const animatedWidth = useDerivedValue(() => withTiming(score, { duration: 1000 }));
   const style = useAnimatedStyle(() => ({ width: `${animatedWidth.value}%` }));
   return (
     <View style={styles.barTrack}>
-      <Animated.View style={[styles.barFill, style]} />
+      <Animated.View style={[styles.barFill, { backgroundColor: accent }, style]} />
     </View>
   );
 }
 
-export function WhyWePickedThis({ reasons, affinityScore, affinityLabel }: WhyWePickedThisProps) {
+// The algorithm's receipts: each signal as a left-aligned row, and the
+// affinity score as one serif number over a filled bar — no centered icon
+// grid, no bordered tiles.
+export function WhyWePickedThis({ reasons, affinityScore, affinityLabel, accent }: WhyWePickedThisProps) {
   return (
-    <View>
-      <View style={{ marginBottom: 20 }}>
-        <SectionHeading label="The algorithm" title="Why we picked this" subtitle="A glimpse at the signals choosing today's memory." />
-      </View>
-      <GlassCard padding="lg" rounded="2xl">
-        <View style={styles.reasonsGrid}>
-          {reasons.map((r) => {
-            const Icon = ICON_MAP[r.icon];
-            return (
-              <View key={r.label} style={styles.reasonItem}>
-                <View style={styles.reasonIcon}>
-                  <Icon size={18} color={alpha.white(0.7)} strokeWidth={1.8} />
-                </View>
+    <View style={styles.card}>
+      <View style={{ gap: 16 }}>
+        {reasons.map((r) => {
+          const Icon = ICON_MAP[r.icon];
+          return (
+            <View key={r.label} style={styles.reasonRow}>
+              <View style={[styles.reasonIcon, { backgroundColor: alpha.hex(accent, 0.12) }]}>
+                <Icon size={15} color={accent} strokeWidth={1.8} />
+              </View>
+              <View style={{ flex: 1 }}>
                 <Text style={styles.reasonLabel}>{r.label}</Text>
                 <Text style={styles.reasonDesc}>{r.desc}</Text>
               </View>
-            );
-          })}
-        </View>
+            </View>
+          );
+        })}
+      </View>
 
-        <View style={styles.affinitySection}>
-          <EyebrowLabel>Affinity score</EyebrowLabel>
-          <View style={styles.affinityRow}>
-            <Text style={styles.affinityScore}>{affinityScore}</Text>
-            <Text style={styles.affinityLabel}>{affinityLabel}</Text>
-          </View>
-          <AffinityBar score={affinityScore} />
-          <View style={styles.scaleRow}>
-            <Text style={styles.scaleLabel}>0</Text>
-            <Text style={styles.scaleLabel}>50</Text>
-            <Text style={styles.scaleLabel}>100</Text>
-          </View>
+      <View style={styles.affinitySection}>
+        <Text style={styles.affinityEyebrow}>Affinity score</Text>
+        <View style={styles.affinityRow}>
+          <Text style={styles.affinityScore}>{affinityScore}</Text>
+          <Text style={[styles.affinityLabel, { color: accent }]}>{affinityLabel}</Text>
         </View>
-      </GlassCard>
+        <AffinityBar score={affinityScore} accent={accent} />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  barTrack: { height: 8, overflow: "hidden", borderRadius: 999, backgroundColor: alpha.white(0.05) },
-  barFill: { height: "100%", backgroundColor: colors.spotify, borderRadius: 999 },
-  reasonsGrid: { flexDirection: "row", flexWrap: "wrap", rowGap: 24 },
-  reasonItem: { width: "50%", alignItems: "center", paddingHorizontal: 4 },
+  card: { borderRadius: radius["2xl"], backgroundColor: colors.surface, padding: 16 },
+  reasonRow: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
   reasonIcon: {
-    marginBottom: 12,
-    height: 56,
-    width: 56,
+    height: 32,
+    width: 32,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: alpha.white(0.08),
-    backgroundColor: alpha.white(0.04),
+    borderRadius: 10,
+    marginTop: 1,
   },
-  reasonLabel: { marginBottom: 4, textAlign: "center", fontSize: fontSize[13], fontFamily: "GeistSansSemiBold", color: colors.white },
-  reasonDesc: { textAlign: "center", fontSize: fontSize[11], lineHeight: fontSize[11] * 1.5, color: alpha.white(0.45) },
-  affinitySection: { marginTop: 28, gap: 12, borderTopWidth: 1, borderColor: alpha.white(0.05), paddingTop: 24 },
-  affinityRow: { flexDirection: "row", alignItems: "baseline", gap: 10 },
+  reasonLabel: { fontSize: fontSize[13], fontFamily: "GeistSansSemiBold", color: colors.white },
+  reasonDesc: {
+    marginTop: 2,
+    fontSize: fontSize[11],
+    lineHeight: fontSize[11] * 1.5,
+    fontFamily: "GeistSans",
+    color: alpha.white(0.45),
+  },
+
+  affinitySection: {
+    marginTop: 18,
+    borderTopWidth: 1,
+    borderColor: alpha.white(0.06),
+    paddingTop: 16,
+  },
+  affinityEyebrow: {
+    fontSize: fontSize[9],
+    fontFamily: "GeistSans",
+    textTransform: "uppercase",
+    letterSpacing: trackingWidest2(fontSize[9]),
+    color: alpha.white(0.35),
+  },
+  affinityRow: { marginTop: 6, marginBottom: 10, flexDirection: "row", alignItems: "baseline", gap: 10 },
   affinityScore: { fontSize: fontSize[30], fontFamily: "PlayfairDisplayItalic", color: colors.white },
-  affinityLabel: { fontSize: fontSize[13], fontFamily: "GeistSansMedium", color: colors.spotify },
-  scaleRow: { flexDirection: "row", justifyContent: "space-between" },
-  scaleLabel: { fontSize: fontSize[10], color: alpha.white(0.3) },
+  affinityLabel: { fontSize: fontSize[13], fontFamily: "GeistSansMedium" },
+  barTrack: { height: 6, overflow: "hidden", borderRadius: radius.full, backgroundColor: alpha.white(0.06) },
+  barFill: { height: "100%", borderRadius: radius.full },
 });
