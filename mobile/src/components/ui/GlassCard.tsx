@@ -1,5 +1,5 @@
 import { View, StyleSheet, type ViewStyle, type StyleProp } from "react-native";
-import { shadows, colors, radius, alpha } from "@/lib/theme/tokens";
+import { shadows, colors, radius } from "@/lib/theme/tokens";
 
 type GlassCardProps = {
   children: React.ReactNode;
@@ -21,16 +21,13 @@ const ROUNDED: Record<NonNullable<GlassCardProps["rounded"]>, number> = {
   "2xl": radius["2xl"],
 };
 
-// Flat solid card surface — one shade lighter than the app background with a
-// subtle border, the standard mobile "elevated surface" pattern. Previously
-// a blurred "glass" effect mirroring the web app; removed because BlurView
-// doesn't reliably render everywhere and mobile should use plain,
-// predictable solid colors.
+// Borderless filled card surface (Spotify-style): a neutral fill one shade
+// lighter than the near-black background reads as "elevated" without an
+// outline. Borders are a web tell — native music UIs distinguish surfaces by
+// fill alone.
 export function GlassCard({ children, padding = "md", rounded = "2xl", glow = false, style }: GlassCardProps) {
   return (
-    <View
-      style={[styles.base, { borderRadius: ROUNDED[rounded] }, glow ? shadows.glowSpotify : null, style]}
-    >
+    <View style={[styles.base, { borderRadius: ROUNDED[rounded] }, glow ? shadows.glowSpotify : null, style]}>
       <View style={{ padding: PADDING[padding] }}>{children}</View>
     </View>
   );
@@ -39,8 +36,6 @@ export function GlassCard({ children, padding = "md", rounded = "2xl", glow = fa
 const styles = StyleSheet.create({
   base: {
     overflow: "hidden",
-    borderWidth: 1,
-    borderColor: alpha.white(0.1),
-    backgroundColor: colors.backgroundElevated,
+    backgroundColor: colors.surface,
   },
 });

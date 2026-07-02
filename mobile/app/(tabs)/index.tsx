@@ -1,15 +1,29 @@
-import { ScrollView, View, Text, Pressable, StyleSheet } from "react-native";
+import { ScrollView, View, Text, Image, Pressable, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import { MotiView } from "moti";
-import { Gem, Shuffle, Flame, Sparkles, Disc3, ChevronRight } from "lucide-react-native";
-import { GlassCard, StatTile, ListRow, Shimmer, ScreenScroll } from "@/components/ui";
+import {
+  Play,
+  Clock3,
+  Music2,
+  Users,
+  Moon,
+  CalendarDays,
+  Gem,
+  Shuffle,
+  Flame,
+  Sparkles,
+  Disc3,
+  ChevronRight,
+  type LucideIcon,
+} from "lucide-react-native";
+import { GlassCard, ListRow, Shimmer, ScreenScroll } from "@/components/ui";
 import { Sparkline, ProportionalBars } from "@/components/charts";
 import { NowPlayingHero } from "@/components/dashboard/NowPlayingHero";
+import { ArtistAvatar } from "@/components/dashboard/ArtistAvatar";
 import { ExploreCTACard } from "@/components/dashboard/ExploreCTACard";
 import { RediscoveryCardView } from "@/components/dashboard/RediscoveryCardView";
 import { staggerChild } from "@/lib/motion/presets";
 import { colors, alpha, fontSize, trackingWidest2 } from "@/lib/theme/tokens";
-import { colorForKey } from "@/lib/theme/gradients";
 import {
   useDashboardStats,
   useNowPlayingPolling,
@@ -49,13 +63,44 @@ function FeedHeader({ title, onSeeAll }: { title: string; onSeeAll?: () => void 
   );
 }
 
+function ShortcutTile({ imageUrl, title, onPress }: { imageUrl: string | null; title: string; onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress} style={styles.shortcut}>
+      {imageUrl ? (
+        <Image source={{ uri: imageUrl }} style={styles.shortcutImg} />
+      ) : (
+        <View style={[styles.shortcutImg, styles.shortcutFallback]}>
+          <Music2 size={18} color={alpha.white(0.5)} />
+        </View>
+      )}
+      <Text numberOfLines={2} style={styles.shortcutText}>
+        {title}
+      </Text>
+    </Pressable>
+  );
+}
+
+function StatChip({ icon: Icon, value, label, accent }: { icon: LucideIcon; value: string; label: string; accent: string }) {
+  return (
+    <View style={styles.statChip}>
+      <View style={[styles.statIcon, { backgroundColor: alpha.hex(accent, 0.12) }]}>
+        <Icon size={14} color={accent} />
+      </View>
+      <Text numberOfLines={1} style={styles.statValue}>
+        {value}
+      </Text>
+      <Text style={styles.statLabel}>{label}</Text>
+    </View>
+  );
+}
+
 export default function OverviewScreen() {
   const router = useRouter();
   const stats = useDashboardStats();
   const nowPlaying = useNowPlayingPolling();
   const insights = useInsights();
   const topTracks = useTopTracks(4);
-  const topArtists = useTopArtists(4);
+  const topArtists = useTopArtists(6);
   const rediscovery = useRediscovery();
 
   const eraSparkline = insights.data
@@ -69,6 +114,18 @@ export default function OverviewScreen() {
         { label: "Neutral", pct: emotional.neutral, color: colors.accentPurple },
         { label: "Energetic", pct: emotional.energetic, color: colors.echoGreen },
         { label: "Intense", pct: emotional.intense, color: colors.accentRed },
+      ]
+    : [];
+
+  const statItems = stats.data
+    ? [
+        { icon: Play, label: "Total plays", value: stats.data.totalPlays.toLocaleString(), accent: colors.echoGreen },
+        { icon: Clock3, label: "Hours", value: stats.data.totalHours.toLocaleString(), accent: colors.spotify },
+        { icon: Music2, label: "Tracks", value: stats.data.uniqueTrackCount.toLocaleString(), accent: colors.accentBlue },
+        { icon: Users, label: "Artists", value: stats.data.uniqueArtistCount.toLocaleString(), accent: colors.accentPurple },
+        { icon: Flame, label: "Day streak", value: stats.data.streak.toLocaleString(), accent: colors.accentAmber },
+        { icon: Moon, label: "Night", value: `${stats.data.nightPct}%`, accent: colors.accentCyan },
+        { icon: CalendarDays, label: "First play", value: formatMonthYear(stats.data.firstPlay), accent: colors.accentRose },
       ]
     : [];
 
@@ -87,25 +144,15 @@ export default function OverviewScreen() {
         </MotiView>
       ) : null}
 
-      <MotiView {...staggerChild(1)} style={styles.section}>
+      <MotiView {...staggerChild(2)} style={styles.section}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
-          {stats.isLoading ? (
-            Array.from({ length: 7 }).map((_, i) => <Shimmer key={i} width={104} height={64} rounded="xl" />)
-          ) : stats.data ? (
-            <>
-              <StatTile width={104} label="Total plays" value={stats.data.totalPlays.toLocaleString()} />
-              <StatTile width={104} label="Hours listened" value={stats.data.totalHours.toLocaleString()} accentColor={colors.spotify} />
-              <StatTile width={104} label="Unique tracks" value={stats.data.uniqueTrackCount.toLocaleString()} />
-              <StatTile width={104} label="Unique artists" value={stats.data.uniqueArtistCount.toLocaleString()} />
-              <StatTile width={104} label="Day streak" value={stats.data.streak.toLocaleString()} accentColor={colors.accentPurple} />
-              <StatTile width={104} label="Night listening" value={`${stats.data.nightPct}%`} accentColor={colors.accentBlue} />
-              <StatTile width={104} label="First play" value={formatMonthYear(stats.data.firstPlay)} />
-            </>
-          ) : null}
+          {stats.isLoading
+            ? Array.from({ length: 7 }).map((_, i) => <Shimmer key={i} width={116} height={92} rounded="xl" />)
+            : statItems.map((s) => <StatChip key={s.label} {...s} />)}
         </ScrollView>
       </MotiView>
 
-      <MotiView {...staggerChild(2)} style={styles.section}>
+      <MotiView {...staggerChild(3)} style={styles.section}>
         <GlassCard padding="lg" rounded="2xl">
           <Text style={styles.eyebrow}>Music age</Text>
           {insights.isLoading ? (
@@ -128,43 +175,48 @@ export default function OverviewScreen() {
         </GlassCard>
       </MotiView>
 
-      <MotiView {...staggerChild(3)} style={styles.section}>
+      <MotiView {...staggerChild(4)} style={styles.section}>
         <FeedHeader title="Top tracks" onSeeAll={() => router.push("/(tabs)/tracks")} />
-        <View>
-          {topTracks.isLoading ? (
-            Array.from({ length: 4 }).map((_, i) => <Shimmer key={i} width="100%" height={56} style={{ marginBottom: 8 }} />)
-          ) : topTracks.data ? (
-            topTracks.data.tracks.slice(0, 4).map((track) => (
-              <ListRow
-                key={track.uri}
-                imageUrl={track.albumImageUrl}
-                title={track.trackName}
-                subtitle={track.artistName}
-                trailing={<Text style={styles.trailingCount}>{track.playCount}×</Text>}
-              />
-            ))
-          ) : null}
+        <View style={styles.shortcutGrid}>
+          {topTracks.isLoading
+            ? Array.from({ length: 4 }).map((_, i) => <Shimmer key={i} width="48%" height={56} rounded="lg" />)
+            : topTracks.data?.tracks
+                .slice(0, 4)
+                .map((track) => (
+                  <ShortcutTile
+                    key={track.uri}
+                    imageUrl={track.albumImageUrl}
+                    title={track.trackName}
+                    onPress={() => router.push("/(tabs)/tracks")}
+                  />
+                ))}
         </View>
       </MotiView>
 
-      <MotiView {...staggerChild(4)} style={styles.section}>
+      <MotiView {...staggerChild(5)} style={styles.section}>
         <FeedHeader title="Top artists" onSeeAll={() => router.push("/(tabs)/artists")} />
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 16 }}>
           {topArtists.isLoading
-            ? Array.from({ length: 4 }).map((_, i) => <Shimmer key={i} width={140} height={120} rounded="xl" />)
-            : topArtists.data?.artists.slice(0, 4).map((artist) => (
-                <GlassCard key={artist.name} padding="sm" rounded="xl" style={{ width: 140 }}>
-                  <Text numberOfLines={1} style={styles.artistName}>
+            ? Array.from({ length: 5 }).map((_, i) => (
+                <View key={i} style={styles.artistItem}>
+                  <Shimmer width={80} height={80} rounded="full" />
+                </View>
+              ))
+            : topArtists.data?.artists.slice(0, 6).map((artist) => (
+                <Pressable key={artist.name} onPress={() => router.push("/(tabs)/artists")} style={styles.artistItem}>
+                  <ArtistAvatar artist={artist} size="md" />
+                  <Text numberOfLines={1} style={styles.artistLabel}>
                     {artist.name}
                   </Text>
-                  <Text style={styles.artistPlays}>{artist.plays} plays</Text>
-                  <Sparkline data={artist.sparkline.map((p) => p.v)} width={110} height={28} color={colorForKey(artist.name)} />
-                </GlassCard>
+                  <Text numberOfLines={1} style={styles.artistSub}>
+                    {artist.plays.toLocaleString()} plays
+                  </Text>
+                </Pressable>
               ))}
         </ScrollView>
       </MotiView>
 
-      <MotiView {...staggerChild(5)} style={styles.section}>
+      <MotiView {...staggerChild(6)} style={styles.section}>
         <FeedHeader title="Insights" onSeeAll={() => router.push("/(tabs)/insights")} />
         {insights.isLoading ? (
           <Shimmer width="100%" height={140} rounded="xl" />
@@ -223,7 +275,7 @@ export default function OverviewScreen() {
         ) : null}
       </MotiView>
 
-      <MotiView {...staggerChild(6)} style={styles.section}>
+      <MotiView {...staggerChild(7)} style={styles.section}>
         <FeedHeader title="Forgotten favorites" />
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
           {rediscovery.isLoading
@@ -232,7 +284,7 @@ export default function OverviewScreen() {
         </ScrollView>
       </MotiView>
 
-      <MotiView {...staggerChild(7)} style={{ gap: 12 }}>
+      <MotiView {...staggerChild(8)} style={{ gap: 12 }}>
         <ExploreCTACard
           title="Relive your story"
           subtitle="A cinematic recap of your year in music"
@@ -251,15 +303,43 @@ export default function OverviewScreen() {
 }
 
 const styles = StyleSheet.create({
-  section: { marginBottom: 20 },
+  section: { marginBottom: 24 },
   header: { marginBottom: 18 },
-  greeting: { fontSize: fontSize[26], fontFamily: "GeistSansBold", color: colors.white },
+  greeting: { fontSize: fontSize[30], fontFamily: "GeistSansBold", color: colors.white },
   headerSub: { marginTop: 4, fontSize: fontSize[14], fontFamily: "GeistSans", color: alpha.white(0.5) },
   headerSubAccent: { fontFamily: "PlayfairDisplayItalic", fontStyle: "italic", color: colors.echoGreen },
-  feedHeader: { marginBottom: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  feedTitle: { fontSize: fontSize[18], fontFamily: "GeistSansBold", color: colors.white },
+  feedHeader: { marginBottom: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  feedTitle: { fontSize: fontSize[20], fontFamily: "GeistSansBold", color: colors.white },
   seeAll: { flexDirection: "row", alignItems: "center", gap: 1 },
   seeAllText: { fontSize: fontSize[12], fontFamily: "GeistSansMedium", color: alpha.white(0.4) },
+
+  shortcutGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  shortcut: {
+    flexBasis: "48%",
+    flexGrow: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    height: 56,
+    borderRadius: 8,
+    overflow: "hidden",
+    backgroundColor: colors.surface,
+  },
+  shortcutImg: { width: 56, height: 56 },
+  shortcutFallback: { alignItems: "center", justifyContent: "center", backgroundColor: alpha.white(0.06) },
+  shortcutText: { flex: 1, paddingHorizontal: 10, fontSize: fontSize[12], fontFamily: "GeistSansBold", color: colors.white },
+
+  statChip: { width: 116, borderRadius: 14, backgroundColor: colors.surface, padding: 14 },
+  statIcon: { width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center" },
+  statValue: { marginTop: 12, fontSize: fontSize[18], fontFamily: "GeistSansBold", color: colors.white },
+  statLabel: {
+    marginTop: 2,
+    fontSize: fontSize[10],
+    fontFamily: "GeistSans",
+    textTransform: "uppercase",
+    letterSpacing: trackingWidest2(fontSize[10]),
+    color: alpha.white(0.4),
+  },
+
   eyebrow: {
     marginBottom: 4,
     fontSize: fontSize[10],
@@ -271,9 +351,13 @@ const styles = StyleSheet.create({
   ageValue: { fontSize: fontSize[24], fontFamily: "PlayfairDisplayItalic", fontStyle: "italic", color: colors.white },
   ageCaption: { marginTop: 4, fontSize: fontSize[12], color: alpha.white(0.45) },
   personalityLabel: { marginBottom: 8, fontSize: fontSize[12], fontFamily: "GeistSansMedium", color: alpha.white(0.7) },
+
   trailingCount: { fontSize: fontSize[12], color: alpha.white(0.4) },
-  artistName: { fontSize: fontSize[13], fontFamily: "GeistSansSemiBold", color: colors.white },
-  artistPlays: { marginBottom: 8, fontSize: fontSize[11], color: alpha.white(0.45) },
+
+  artistItem: { width: 88, alignItems: "center" },
+  artistLabel: { marginTop: 10, fontSize: fontSize[12], fontFamily: "GeistSansSemiBold", color: colors.white, textAlign: "center" },
+  artistSub: { marginTop: 2, fontSize: fontSize[11], color: alpha.white(0.45), textAlign: "center" },
+
   cardHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
   cardHeaderLabel: {
     fontSize: fontSize[11],

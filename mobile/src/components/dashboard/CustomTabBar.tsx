@@ -79,9 +79,7 @@ const styles = StyleSheet.create({
   bar: {
     overflow: "hidden",
     borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: alpha.white(0.1),
-    backgroundColor: colors.backgroundElevated,
+    backgroundColor: colors.surfaceRaised,
   },
   row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 6, paddingVertical: 8 },
   tab: { flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 8 },

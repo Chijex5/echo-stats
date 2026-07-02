@@ -17,6 +17,10 @@ export const colors = {
   // Neutrals
   background: "#0a0a0a",
   backgroundElevated: "#0d130d",
+  // Neutral elevated card fill — reads as a raised surface on the near-black
+  // background without needing a border (Spotify-style borderless cards).
+  surface: "#191b1d",
+  surfaceRaised: "#232628",
   foreground: "#ededed",
 
   // Semantic accents — shared vocabulary for trend/mood/category coloring
@@ -157,6 +161,7 @@ export const fontSize = {
   24: 24,
   26: 26,
   30: 30,
+  34: 34,
 } as const;
 
 // RN's letterSpacing is an absolute px number, not em-relative like CSS —
