@@ -3,6 +3,7 @@ import { View } from "react-native";
 import { MotiView } from "moti";
 import Svg, { Circle, Ellipse, Path, Polygon, Rect, Line } from "react-native-svg";
 import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withTiming, Easing } from "react-native-reanimated";
+import { colors, alpha } from "@/lib/theme/tokens";
 
 type DecorationProps = { color: string; size?: number };
 
@@ -20,12 +21,12 @@ export function VinylDecoration({ color, size = 200 }: DecorationProps) {
   return (
     <Animated.View style={spin}>
       <Svg width={size} height={size} viewBox="0 0 200 200">
-        <Circle cx={100} cy={100} r={92} fill="rgba(255,255,255,0.04)" stroke={color} strokeOpacity={0.35} strokeWidth={1.5} />
+        <Circle cx={100} cy={100} r={92} fill={alpha.white(0.04)} stroke={color} strokeOpacity={0.35} strokeWidth={1.5} />
         <Circle cx={100} cy={100} r={70} fill="none" stroke={color} strokeOpacity={0.22} strokeWidth={1} />
         <Circle cx={100} cy={100} r={50} fill="none" stroke={color} strokeOpacity={0.22} strokeWidth={1} />
         <Circle cx={100} cy={100} r={30} fill="none" stroke={color} strokeOpacity={0.22} strokeWidth={1} />
         <Circle cx={100} cy={100} r={14} fill={color} fillOpacity={0.85} />
-        <Circle cx={100} cy={100} r={4} fill="#0a0a0a" />
+        <Circle cx={100} cy={100} r={4} fill={colors.background} />
       </Svg>
     </Animated.View>
   );
@@ -67,7 +68,7 @@ export function RingsYearDecoration({ color, size = 200 }: DecorationProps) {
         </Svg>
       </Animated.View>
       <Svg width={size} height={size} viewBox="0 0 200 200" style={{ position: "absolute" }}>
-        <Circle cx={100} cy={100} r={46} fill="rgba(255,255,255,0.04)" stroke={color} strokeOpacity={0.4} strokeWidth={1} />
+        <Circle cx={100} cy={100} r={46} fill={alpha.white(0.04)} stroke={color} strokeOpacity={0.4} strokeWidth={1} />
       </Svg>
     </View>
   );
@@ -108,7 +109,7 @@ export function CassetteDecoration({ color, size = 200 }: DecorationProps) {
   return (
     <View style={{ width: size, height: 200, alignItems: "center", justifyContent: "center" }}>
       <Svg width={size} height={200} viewBox={`0 0 ${size} 200`} style={{ position: "absolute" }}>
-        <Rect x={size / 2 - 90} y={40} width={180} height={120} rx={14} fill="rgba(255,255,255,0.04)" stroke={color} strokeOpacity={0.3} strokeWidth={1.5} />
+        <Rect x={size / 2 - 90} y={40} width={180} height={120} rx={14} fill={alpha.white(0.04)} stroke={color} strokeOpacity={0.3} strokeWidth={1.5} />
       </Svg>
       <CassetteReel cx={size / 2 - 45} color={color} spin={spin} />
       <CassetteReel cx={size / 2 + 45} color={color} spin={spin} />
@@ -148,7 +149,7 @@ export function DiamondDecoration({ color, size = 200 }: DecorationProps) {
       transition={{ type: "timing", duration: 1100, loop: true, repeatReverse: true }}
     >
       <Svg width={size * 0.6} height={size * 0.6} viewBox="0 0 100 100">
-        <Polygon points="50,6 78,38 50,94 22,38" fill="rgba(255,255,255,0.05)" stroke={color} strokeOpacity={0.6} strokeWidth={2} />
+        <Polygon points="50,6 78,38 50,94 22,38" fill={alpha.white(0.05)} stroke={color} strokeOpacity={0.6} strokeWidth={2} />
         <Polygon points="50,6 78,38 50,38" fill={color} fillOpacity={0.18} />
         <Polygon points="22,38 50,38 50,94" fill={color} fillOpacity={0.1} />
         <Line x1={22} y1={38} x2={78} y2={38} stroke={color} strokeOpacity={0.4} strokeWidth={1.5} />

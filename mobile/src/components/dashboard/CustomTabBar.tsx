@@ -1,11 +1,10 @@
-import { View, Pressable, Text } from "react-native";
+import { View, Pressable, Text, StyleSheet } from "react-native";
 import type { ComponentProps } from "react";
 import { Tabs } from "expo-router";
-import { BlurView } from "expo-blur";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { MotiView } from "moti";
-import { LayoutDashboard, Music2, Users, Lightbulb, UserRound, type LucideIcon } from "lucide-react-native";
-import { colors } from "@/lib/theme/tokens";
+import { LinearGradient } from "expo-linear-gradient";
+import { LayoutDashboard, Music2, Users, History, Lightbulb, type LucideIcon } from "lucide-react-native";
+import { colors, alpha, fontSize } from "@/lib/theme/tokens";
 
 // Derives the tabBar render-prop's parameter type from Tabs itself, since
 // expo-router vendors its own react-navigation/bottom-tabs fork with no
@@ -15,63 +14,70 @@ type TabBarProps = Parameters<TabBarRenderer>[0];
 
 type TabConfig = { name: string; label: string; icon: LucideIcon };
 
-// Only the 5 tab-bar slots — Timeline and Story Mode are registered as
-// (tabs) group screens (href: null) so they keep the shared AppBackground,
-// but they're reached via router.push from Overview, not this bar.
+// Profile is reached via the avatar in each screen's header (see
+// ProfileHeaderButton), Spotify-style, so it's not a tab slot here — that
+// keeps the bar to five uncluttered destinations. Story/SOTD are href:null
+// group screens reached via router.push (full-screen takeovers).
 const TABS: TabConfig[] = [
   { name: "index", label: "Overview", icon: LayoutDashboard },
   { name: "tracks", label: "Tracks", icon: Music2 },
   { name: "artists", label: "Artists", icon: Users },
+  { name: "timeline", label: "Timeline", icon: History },
   { name: "insights", label: "Insights", icon: Lightbulb },
-  { name: "profile", label: "Profile", icon: UserRound },
 ];
 
+// Spotify-style bar: no floating card, no border — a full-width fade from
+// transparent into the page background, with the icons sitting directly on
+// it. Content scrolls underneath and dissolves into the bar.
 export function CustomTabBar({ state, navigation }: TabBarProps) {
   const insets = useSafeAreaInsets();
 
   // Story Mode is a full-screen immersive takeover (the slide IS the
-  // screen, no phone-mockup chrome) — the floating pill bar would
-  // overlap its own bottom nav, so it's hidden on that one route.
+  // screen, no phone-mockup chrome) — the bar would overlap its own
+  // bottom nav, so it's hidden on that one route.
   if (state.routes[state.index]?.name === "story") return null;
 
   return (
-    <View style={{ position: "absolute", left: 16, right: 16, bottom: insets.bottom + 8 }}>
-      <View className="overflow-hidden rounded-full border border-white/10">
-        <BlurView intensity={40} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-        <View className="flex-row items-center justify-between px-2 py-2">
-          {TABS.map((tab) => {
-            const routeIndex = state.routes.findIndex((route) => route.name === tab.name);
-            const isActive = routeIndex !== -1 && state.index === routeIndex;
-            const Icon = tab.icon;
+    <View style={styles.wrap} pointerEvents="box-none">
+      <LinearGradient
+        colors={[alpha.hex(colors.background, 0), alpha.hex(colors.background, 0.86), colors.background]}
+        locations={[0, 0.45, 1]}
+        style={StyleSheet.absoluteFill}
+        pointerEvents="none"
+      />
+      <View style={[styles.row, { paddingBottom: Math.max(insets.bottom, 10) }]}>
+        {TABS.map((tab) => {
+          const routeIndex = state.routes.findIndex((route) => route.name === tab.name);
+          const isActive = routeIndex !== -1 && state.index === routeIndex;
+          const Icon = tab.icon;
 
-            return (
-              <Pressable
-                key={tab.name}
-                onPress={() => {
-                  if (routeIndex === -1) return;
-                  const route = state.routes[routeIndex];
-                  navigation.navigate(route.name, route.params);
-                }}
-                className="flex-1 items-center justify-center py-2"
-              >
-                <MotiView
-                  animate={{ scale: isActive ? 1.05 : 1 }}
-                  transition={{ type: "timing", duration: 150 }}
-                  style={{ alignItems: "center", gap: 2 }}
-                >
-                  <Icon size={20} color={isActive ? colors.echoGreen : "rgba(255,255,255,0.4)"} />
-                  <Text
-                    className="text-[10px] font-sans-medium"
-                    style={{ color: isActive ? colors.echoGreen : "rgba(255,255,255,0.4)" }}
-                  >
-                    {tab.label}
-                  </Text>
-                </MotiView>
-              </Pressable>
-            );
-          })}
-        </View>
+          return (
+            <Pressable
+              key={tab.name}
+              onPress={() => {
+                if (routeIndex === -1) return;
+                const route = state.routes[routeIndex];
+                navigation.navigate(route.name, route.params);
+              }}
+              style={styles.tab}
+            >
+              <Icon
+                size={22}
+                strokeWidth={isActive ? 2.4 : 1.8}
+                color={isActive ? colors.white : alpha.white(0.45)}
+              />
+              <Text style={[styles.label, { color: isActive ? colors.white : alpha.white(0.45) }]}>{tab.label}</Text>
+            </Pressable>
+          );
+        })}
       </View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  wrap: { position: "absolute", left: 0, right: 0, bottom: 0, paddingTop: 28 },
+  row: { flexDirection: "row", alignItems: "flex-end", paddingTop: 6 },
+  tab: { flex: 1, alignItems: "center", justifyContent: "center", gap: 4, paddingVertical: 4 },
+  label: { fontSize: fontSize[10], fontFamily: "GeistSansMedium" },
+});

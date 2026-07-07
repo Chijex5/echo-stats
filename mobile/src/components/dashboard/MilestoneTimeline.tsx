@@ -1,6 +1,6 @@
-import { View, Text } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import type { LucideIcon } from "lucide-react-native";
-import { colors } from "@/lib/theme/tokens";
+import { colors, alpha, fontSize, trackingWidest2 } from "@/lib/theme/tokens";
 
 export type MilestoneItem = {
   key: string;
@@ -21,24 +21,19 @@ export function MilestoneTimeline({ items }: { items: MilestoneItem[] }) {
         const Icon = item.icon;
         const isLast = index === items.length - 1;
         return (
-          <View key={item.key} className="flex-row gap-4">
-            <View className="items-center">
-              <View
-                className="h-9 w-9 items-center justify-center rounded-full border"
-                style={{ borderColor: "rgba(24,216,126,0.25)", backgroundColor: "rgba(24,216,126,0.08)" }}
-              >
+          <View key={item.key} style={styles.row}>
+            <View style={styles.rail}>
+              <View style={styles.iconWrap}>
                 <Icon size={16} color={colors.echoGreen} />
               </View>
-              {!isLast ? <View className="my-1 w-px flex-1" style={{ backgroundColor: "rgba(255,255,255,0.08)" }} /> : null}
+              {!isLast ? <View style={styles.connector} /> : null}
             </View>
-            <View className={isLast ? "flex-1 pb-0" : "flex-1 pb-5"}>
-              <Text className="text-[10px] font-sans-semibold uppercase tracking-widest2 text-white/35">
-                {item.title}
-              </Text>
-              <Text numberOfLines={2} className="mt-1.5 text-[14px] font-sans-semibold text-white">
+            <View style={[styles.content, { paddingBottom: isLast ? 0 : 20 }]}>
+              <Text style={styles.title}>{item.title}</Text>
+              <Text numberOfLines={2} style={styles.value}>
                 {item.value}
               </Text>
-              <Text className="mt-1 text-[12px] text-white/40">{item.meta}</Text>
+              <Text style={styles.meta}>{item.meta}</Text>
             </View>
           </View>
         );
@@ -46,3 +41,29 @@ export function MilestoneTimeline({ items }: { items: MilestoneItem[] }) {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  row: { flexDirection: "row", gap: 16 },
+  rail: { alignItems: "center" },
+  iconWrap: {
+    height: 36,
+    width: 36,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: alpha.spotify(0.25),
+    backgroundColor: alpha.spotify(0.08),
+  },
+  connector: { marginVertical: 4, width: 1, flex: 1, backgroundColor: alpha.white(0.08) },
+  content: { flex: 1 },
+  title: {
+    fontSize: fontSize[10],
+    fontFamily: "GeistSansSemiBold",
+    textTransform: "uppercase",
+    letterSpacing: trackingWidest2(fontSize[10]),
+    color: alpha.white(0.35),
+  },
+  value: { marginTop: 6, fontSize: fontSize[14], fontFamily: "GeistSansSemiBold", color: colors.white },
+  meta: { marginTop: 4, fontSize: fontSize[12], color: alpha.white(0.4) },
+});

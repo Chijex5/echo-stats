@@ -1,4 +1,5 @@
 import { ScrollView, View } from "react-native";
+import { alpha } from "@/lib/theme/tokens";
 
 type HeatmapCell = {
   date: string;
@@ -12,9 +13,9 @@ type CalendarHeatmapProps = {
 };
 
 function intensityColor(pct: number) {
-  if (pct <= 0) return "rgba(255,255,255,0.05)";
-  const alpha = 0.15 + pct * 0.65;
-  return `rgba(24,216,126,${alpha})`;
+  if (pct <= 0) return alpha.white(0.05);
+  const opacity = 0.15 + pct * 0.65;
+  return alpha.spotify(opacity);
 }
 
 // 53x7 GitHub-style contribution grid. Cells are expected oldest-first,
@@ -29,7 +30,7 @@ export function CalendarHeatmap({ cells, cellSize = 12, gap = 3 }: CalendarHeatm
 
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-      <View className="flex-row" style={{ gap }}>
+      <View style={{ flexDirection: "row", gap }}>
         {weeks.map((week, wi) => (
           <View key={wi} style={{ gap }}>
             {week.map((cell, di) => (

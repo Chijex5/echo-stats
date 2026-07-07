@@ -1,55 +1,26 @@
 import { useState } from "react";
-import { ScrollView, View, Text, Pressable } from "react-native";
-import { File } from "expo-file-system";
+import { ScrollView, View, Text, Pressable, StyleSheet } from "react-native";
 import type * as DocumentPicker from "expo-document-picker";
 import { CheckCircle2, AlertCircle } from "lucide-react-native";
 import { MotiView } from "moti";
-import { AppBackground, AmbientBlob, GlassCard, SectionHeading, StatTile, PrimaryButton } from "@/components/ui";
+import { AppBackground, GlassCard, SectionHeading, StatTile, PrimaryButton } from "@/components/ui";
 import { DropZone } from "@/components/onboarding/DropZone";
 import { ProgressRing } from "@/components/onboarding/ProgressRing";
 import { GenrePickerGrid } from "@/components/onboarding/GenrePickerGrid";
 import { BioInput } from "@/components/onboarding/BioInput";
 import { staggerChild } from "@/lib/motion/presets";
 import { apiFetch } from "@/lib/api/client";
+import {
+  filterJsonAssets,
+  readHistoryAssets,
+  uploadHistoryEntries,
+  type UploadTotals,
+} from "@/lib/history/uploadHistory";
+import { scheduleResyncReminder } from "@/lib/notifications/resyncReminder";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { colors, alpha, spacing, fontSize } from "@/lib/theme/tokens";
 
 type Stage = "idle" | "reading" | "uploading" | "form" | "submitting" | "success" | "error";
-
-interface RawEntry {
-  ts: string;
-  platform?: string | null;
-  ms_played: number;
-  master_metadata_track_name: string | null;
-  master_metadata_album_artist_name: string | null;
-  master_metadata_album_album_name: string | null;
-  spotify_track_uri: string | null;
-  reason_start?: string | null;
-  reason_end?: string | null;
-  shuffle?: boolean | null;
-  skipped?: boolean | null;
-  offline?: boolean | null;
-}
-
-interface ImportStats {
-  totalReceived: number;
-  totalFiltered: number;
-  totalInserted: number;
-  totalDuplicates: number;
-  yearSpan: number;
-}
-
-const BATCH_SIZE = 2_000;
-
-function chunk<T>(arr: T[], size: number): T[][] {
-  const chunks: T[][] = [];
-  for (let i = 0; i < arr.length; i += size) chunks.push(arr.slice(i, i + size));
-  return chunks;
-}
-
-function getYearSpan(entries: RawEntry[]): number {
-  const years = entries.map((e) => new Date(e.ts).getFullYear()).filter((y) => !isNaN(y));
-  return years.length ? Math.max(...years) - Math.min(...years) + 1 : 0;
-}
 
 export default function ImportScreen() {
   const { completeOnboarding } = useAuth();
@@ -57,15 +28,15 @@ export default function ImportScreen() {
   const [stage, setStage] = useState<Stage>("idle");
   const [progress, setProgress] = useState(0);
   const [progressLabel, setProgressLabel] = useState("");
-  const [stats, setStats] = useState<ImportStats | null>(null);
+  const [stats, setStats] = useState<UploadTotals | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [bio, setBio] = useState("");
 
   async function processFiles(assets: DocumentPicker.DocumentPickerAsset[]) {
-    const jsonAssets = assets.filter((a) => a.mimeType === "application/json" || a.name.endsWith(".json"));
+    const jsonAssets = filterJsonAssets(assets);
 
-    if (!jsonAssets.length) {
+    if (!jsonAssets) {
       setErrorMsg("No valid JSON files found. Extract the ZIP Spotify sends you and upload the JSON files.");
       setStage("error");
       return;
@@ -76,66 +47,16 @@ export default function ImportScreen() {
     setErrorMsg(null);
 
     try {
-      const allEntries: RawEntry[] = [];
-
-      for (let i = 0; i < jsonAssets.length; i++) {
-        const asset = jsonAssets[i];
-        setProgressLabel(`Reading ${asset.name}…`);
-
-        const text = await new File(asset.uri).text();
-
-        let parsed: unknown;
-        try {
-          parsed = JSON.parse(text);
-        } catch {
-          throw new Error(`${asset.name} is not valid JSON.`);
-        }
-        if (!Array.isArray(parsed)) {
-          throw new Error(`${asset.name} doesn't look like a Spotify streaming history file.`);
-        }
-        allEntries.push(...(parsed as RawEntry[]));
-
-        // No per-byte progress is available from a single text() read, so
-        // each completed file advances the 0–40% reading band evenly.
-        setProgress(Math.round(((i + 1) / jsonAssets.length) * 40));
-      }
-
-      const yearSpan = getYearSpan(allEntries);
+      const onProgress = (pct: number, label: string) => {
+        setProgress(pct);
+        setProgressLabel(label);
+      };
+      const allEntries = await readHistoryAssets(jsonAssets, onProgress);
 
       setStage("uploading");
-      const batches = chunk(allEntries, BATCH_SIZE);
-      const totalBatches = batches.length;
+      const totals = await uploadHistoryEntries(allEntries, onProgress);
 
-      let totalReceived = 0;
-      let totalFiltered = 0;
-      let totalInserted = 0;
-      let totalDuplicates = 0;
-
-      for (let b = 0; b < batches.length; b++) {
-        setProgressLabel(`Uploading batch ${b + 1} of ${totalBatches}…`);
-
-        const res = await apiFetch("/api/user/import-history", {
-          method: "POST",
-          body: JSON.stringify({ entries: batches[b] }),
-        });
-
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(data.error ?? `Batch ${b + 1} failed.`);
-        }
-
-        const data = await res.json();
-        totalReceived += data.received;
-        totalFiltered += data.filtered;
-        totalInserted += data.inserted;
-        totalDuplicates += data.duplicates;
-
-        setProgress(Math.round(40 + ((b + 1) / totalBatches) * 60));
-      }
-
-      setProgress(100);
-      setProgressLabel("Done");
-      setStats({ totalReceived, totalFiltered, totalInserted, totalDuplicates, yearSpan });
+      setStats(totals);
       setStage("form");
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : "Something went wrong.");
@@ -178,17 +99,23 @@ export default function ImportScreen() {
   }
 
   async function handleViewStory() {
+    // First natural moment to ask for notification permission: arm the
+    // monthly "upload a fresh export" reminder before entering the app.
+    await scheduleResyncReminder().catch(() => false);
     await completeOnboarding();
   }
 
   return (
     <AppBackground>
-      <AmbientBlob color="#1DB954" size={420} blur={90} style={{ top: 60, left: -160 }} delayMs={0} />
-      <AmbientBlob color="#7c3aed" size={380} blur={100} style={{ top: 280, right: -150 }} delayMs={1400} />
-      <AmbientBlob color="#2563eb" size={320} blur={90} style={{ bottom: 80, left: -120 }} delayMs={2600} />
-
-      <ScrollView contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, paddingTop: 72, paddingBottom: 48 }}>
-        <MotiView {...staggerChild(0)} className="mb-6">
+      <ScrollView
+        contentContainerStyle={{
+          flexGrow: 1,
+          paddingHorizontal: spacing.screenX,
+          paddingTop: spacing.screenTop,
+          paddingBottom: spacing["4xl"],
+        }}
+      >
+        <MotiView {...staggerChild(0)} style={{ marginBottom: 24 }}>
           <SectionHeading
             label="One last step"
             title="Import your"
@@ -202,52 +129,50 @@ export default function ImportScreen() {
             {stage === "idle" && <DropZone onPick={processFiles} />}
 
             {(stage === "reading" || stage === "uploading") && (
-              <View className="items-center py-10">
-                <View className="mb-7">
+              <View style={styles.progressWrap}>
+                <View style={{ marginBottom: 28 }}>
                   <ProgressRing progress={progress} />
                 </View>
-                <Text className="mb-1.5 text-xl font-sans-semibold text-white">
-                  {stage === "reading" ? "Reading your files…" : "Uploading to your vault…"}
-                </Text>
-                <Text className="text-[13px] text-white/40">{progressLabel}</Text>
+                <Text style={styles.progressTitle}>{stage === "reading" ? "Reading your files…" : "Uploading to your vault…"}</Text>
+                <Text style={styles.progressLabel}>{progressLabel}</Text>
               </View>
             )}
 
             {(stage === "form" || stage === "submitting") && stats && (
-              <View className="gap-7">
-                <View className="flex-row flex-wrap gap-3">
-                  <StatTile label="Plays stored" value={stats.totalInserted.toLocaleString()} accentColor="#1DB954" />
+              <View style={{ gap: 28 }}>
+                <View style={styles.statsGrid}>
+                  <StatTile label="Plays stored" value={stats.totalInserted.toLocaleString()} accentColor={colors.spotify} />
                   <StatTile label="Skips removed" value={stats.totalFiltered.toLocaleString()} />
                   <StatTile
                     label="History span"
                     value={`${stats.yearSpan} yr${stats.yearSpan !== 1 ? "s" : ""}`}
-                    accentColor="#a78bfa"
+                    accentColor={colors.accentPurple}
                   />
                   <StatTile
                     label="Duplicates"
                     value={stats.totalDuplicates > 0 ? stats.totalDuplicates.toLocaleString() : "None"}
-                    accentColor="#60a5fa"
+                    accentColor={colors.accentBlue}
                   />
                 </View>
 
                 <View>
-                  <Text className="mb-3 text-sm font-sans-medium text-white/80">
-                    Pick your favourite genres <Text className="text-white/40">(at least one)</Text>
+                  <Text style={styles.fieldLabel}>
+                    Pick your favourite genres <Text style={styles.fieldLabelMuted}>(at least one)</Text>
                   </Text>
                   <GenrePickerGrid selected={selectedGenres} onToggle={toggleGenre} />
                 </View>
 
                 <View>
-                  <Text className="mb-2 text-sm font-sans-medium text-white/80">
-                    Short bio <Text className="text-white/40">(optional)</Text>
+                  <Text style={[styles.fieldLabel, { marginBottom: 8 }]}>
+                    Short bio <Text style={styles.fieldLabelMuted}>(optional)</Text>
                   </Text>
                   <BioInput value={bio} onChangeText={setBio} />
                 </View>
 
                 {errorMsg ? (
-                  <View className="flex-row items-center gap-2">
-                    <AlertCircle size={14} color="#f87171" />
-                    <Text className="text-sm text-red-400">{errorMsg}</Text>
+                  <View style={styles.errorRow}>
+                    <AlertCircle size={14} color={colors.accentRed} />
+                    <Text style={styles.errorText}>{errorMsg}</Text>
                   </View>
                 ) : null}
 
@@ -262,13 +187,13 @@ export default function ImportScreen() {
             )}
 
             {stage === "error" && (
-              <View className="items-center gap-5 py-8">
-                <View className="h-16 w-16 items-center justify-center rounded-full bg-red-500/10">
-                  <AlertCircle size={32} color="#f87171" />
+              <View style={styles.errorState}>
+                <View style={styles.errorIconWrap}>
+                  <AlertCircle size={32} color={colors.accentRed} />
                 </View>
-                <View className="items-center">
-                  <Text className="mb-1 text-xl font-sans-semibold text-white">Import failed</Text>
-                  <Text className="max-w-sm text-center text-sm text-white/50">{errorMsg}</Text>
+                <View style={{ alignItems: "center" }}>
+                  <Text style={styles.errorStateTitle}>Import failed</Text>
+                  <Text style={styles.errorStateMessage}>{errorMsg}</Text>
                 </View>
                 <Pressable
                   onPress={() => {
@@ -276,20 +201,20 @@ export default function ImportScreen() {
                     setProgress(0);
                     setErrorMsg(null);
                   }}
-                  className="rounded-full border border-white/20 px-6 py-2.5"
+                  style={styles.retryButton}
                 >
-                  <Text className="text-sm text-white/90">Try again</Text>
+                  <Text style={styles.retryText}>Try again</Text>
                 </Pressable>
               </View>
             )}
 
             {stage === "success" && stats && (
-              <View className="items-center py-6">
-                <View className="mb-6 h-20 w-20 items-center justify-center rounded-full bg-spotify/20">
-                  <CheckCircle2 size={40} color="#1DB954" />
+              <View style={styles.successState}>
+                <View style={styles.successIconWrap}>
+                  <CheckCircle2 size={40} color={colors.spotify} />
                 </View>
-                <Text className="mb-2 text-2xl font-sans-bold text-white">Import Complete!</Text>
-                <Text className="mb-8 text-center text-[15px] text-white/60">
+                <Text style={styles.successTitle}>Import Complete!</Text>
+                <Text style={styles.successMessage}>
                   {stats.totalInserted.toLocaleString()} plays across {stats.yearSpan} year
                   {stats.yearSpan !== 1 ? "s" : ""} — your story is ready.
                 </Text>
@@ -302,3 +227,39 @@ export default function ImportScreen() {
     </AppBackground>
   );
 }
+
+const styles = StyleSheet.create({
+  progressWrap: { alignItems: "center", paddingVertical: 40 },
+  progressTitle: { marginBottom: 6, fontSize: fontSize[20], fontFamily: "GeistSansSemiBold", color: colors.white },
+  progressLabel: { fontSize: fontSize[13], color: alpha.white(0.4) },
+  statsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
+  fieldLabel: { marginBottom: 12, fontSize: fontSize[14], fontFamily: "GeistSansMedium", color: alpha.white(0.8) },
+  fieldLabelMuted: { color: alpha.white(0.4) },
+  errorRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  errorText: { fontSize: fontSize[14], color: colors.accentRed },
+  errorState: { alignItems: "center", gap: 20, paddingVertical: 32 },
+  errorIconWrap: {
+    height: 64,
+    width: 64,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 999,
+    backgroundColor: alpha.hex(colors.accentRed, 0.1),
+  },
+  errorStateTitle: { marginBottom: 4, fontSize: fontSize[20], fontFamily: "GeistSansSemiBold", color: colors.white },
+  errorStateMessage: { maxWidth: 384, textAlign: "center", fontSize: fontSize[14], color: alpha.white(0.5) },
+  retryButton: { borderRadius: 999, borderWidth: 1, borderColor: alpha.white(0.2), paddingHorizontal: 24, paddingVertical: 10 },
+  retryText: { fontSize: fontSize[14], color: alpha.white(0.9) },
+  successState: { alignItems: "center", paddingVertical: 24 },
+  successIconWrap: {
+    marginBottom: 24,
+    height: 80,
+    width: 80,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 999,
+    backgroundColor: alpha.spotify(0.2),
+  },
+  successTitle: { marginBottom: 8, fontSize: fontSize[24], fontFamily: "GeistSansBold", color: colors.white },
+  successMessage: { marginBottom: 32, textAlign: "center", fontSize: fontSize[15], color: alpha.white(0.6) },
+});

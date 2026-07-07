@@ -1,8 +1,8 @@
-import { View, Text, Image } from "react-native";
+import { View, Text, Image, Pressable, StyleSheet } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { Play, Heart, Share2, Disc3, Sparkles } from "lucide-react-native";
-import { GlassCard, PrimaryButton, StatTile, AmbientBlob, EyebrowLabel } from "@/components/ui";
-import { colors } from "@/lib/theme/tokens";
+import { Share2 } from "lucide-react-native";
+import { colorForKey, gradientForKey } from "@/lib/theme/gradients";
+import { colors, alpha, fontSize, radius, trackingWidest2 } from "@/lib/theme/tokens";
 import type { SotdSong, SotdStats } from "@/lib/api/hooks/types";
 
 type SotdHeroProps = {
@@ -11,69 +11,102 @@ type SotdHeroProps = {
   onShare: () => void;
 };
 
+const CARD_H = 360;
 const WEEKDAY = new Date().toLocaleDateString("en-US", { weekday: "long" });
 
+// Today's pick as a full-bleed cover: the album art is the canvas, the
+// facts are the caption. Share lives in the corner; there are no
+// placeholder Play/Save buttons.
 export function SotdHero({ song, stats, onShare }: SotdHeroProps) {
-  return (
-    <View>
-      <AmbientBlob color={song.gradientFrom} size={340} blur={70} style={{ top: -80, left: -60 }} durationMs={8000} />
-      <AmbientBlob color={song.gradientTo} size={260} blur={70} style={{ top: 40, right: -60 }} durationMs={7000} delayMs={300} />
+  const accent = colorForKey(song.title);
 
-      <View className="items-center px-2">
-        <View className="mb-5 flex-row items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5">
-          <Sparkles size={11} color={colors.spotify} />
-          <Text className="text-[10px] uppercase tracking-widest2 text-white/60">
-            Song of the day · {WEEKDAY}
-          </Text>
+  return (
+    <View style={styles.card}>
+      {song.albumImageUrl ? (
+        <Image source={{ uri: song.albumImageUrl }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+      ) : (
+        <LinearGradient colors={gradientForKey(song.title)} style={StyleSheet.absoluteFill} />
+      )}
+      <LinearGradient
+        colors={[alpha.black(0.3), alpha.black(0.35), alpha.black(0.96)]}
+        locations={[0, 0.45, 1]}
+        style={StyleSheet.absoluteFill}
+      />
+
+      <View style={styles.topRow}>
+        <View style={styles.chip}>
+          <View style={[styles.chipDot, { backgroundColor: accent }]} />
+          <Text style={styles.chipText}>Song of the day · {WEEKDAY}</Text>
         </View>
-        <Text className="text-center text-[26px] font-sans-bold leading-tight text-white">
-          A song you <Text className="font-serif italic text-white/90">loved</Text> once.
-        </Text>
-        <Text className="mt-2 text-center text-[13px] text-white/50">
-          A memory waiting to return. Today, we found it.
-        </Text>
+        <Pressable onPress={onShare} hitSlop={8} style={styles.shareButton}>
+          <Share2 size={15} color={colors.white} />
+        </Pressable>
       </View>
 
-      <View className="mt-7">
-        <GlassCard padding="lg" rounded="2xl" glow>
-          <View className="items-center gap-6">
-            <View className="h-44 w-44 overflow-hidden rounded-2xl" style={{ shadowColor: "#000", shadowOpacity: 0.4, shadowRadius: 20 }}>
-              {song.albumImageUrl ? (
-                <Image source={{ uri: song.albumImageUrl }} className="h-full w-full" />
-              ) : (
-                <LinearGradient colors={[song.gradientFrom, song.gradientTo]} className="h-full w-full" />
-              )}
-              <View className="absolute inset-0 bg-black/15" />
-              <Disc3 size={28} color="rgba(255,255,255,0.3)" style={{ position: "absolute", bottom: 12, right: 12 }} />
-            </View>
-
-            <View className="w-full items-center">
-              <EyebrowLabel className="mb-1.5">Forgotten favorite</EyebrowLabel>
-              <Text className="text-center text-[20px] font-sans-bold leading-tight text-white">{song.title}</Text>
-              <Text className="mt-1 text-center text-[13px] text-white/55">
-                {song.artist} · {song.album} · {song.released}
-              </Text>
-            </View>
-
-            <View className="w-full flex-row gap-3">
-              <StatTile label="Past plays" value={stats.pastPlays} variant="serif-lg" />
-              <StatTile label="Last played" value={stats.lastPlayed} />
-            </View>
-
-            <View className="w-full gap-2.5">
-              <PrimaryButton label="Play preview" variant="spotify-solid" icon={Play} fullWidth onPress={() => {}} />
-              <View className="flex-row gap-2.5">
-                <View className="flex-1">
-                  <PrimaryButton label="Save" variant="outline" icon={Heart} fullWidth onPress={() => {}} />
-                </View>
-                <View className="flex-1">
-                  <PrimaryButton label="Share card" variant="outline" icon={Share2} fullWidth onPress={onShare} />
-                </View>
-              </View>
-            </View>
-          </View>
-        </GlassCard>
+      <View style={styles.content}>
+        <Text style={[styles.eyebrow, { color: accent }]}>Forgotten favorite</Text>
+        <Text numberOfLines={2} style={styles.songTitle}>
+          {song.title}
+        </Text>
+        <Text numberOfLines={1} style={styles.songMeta}>
+          {song.artist} · {song.album} · {song.released}
+        </Text>
+        <Text style={styles.statsLine}>
+          {stats.pastPlays.toLocaleString()} past plays · last played {stats.lastPlayed}
+        </Text>
       </View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  card: {
+    height: CARD_H,
+    borderRadius: radius["3xl"],
+    overflow: "hidden",
+    backgroundColor: colors.surface,
+    justifyContent: "space-between",
+  },
+  topRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 14 },
+  chip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderRadius: radius.full,
+    backgroundColor: alpha.black(0.5),
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  chipDot: { width: 6, height: 6, borderRadius: 3 },
+  chipText: {
+    fontSize: fontSize[9],
+    fontFamily: "GeistSansSemiBold",
+    textTransform: "uppercase",
+    letterSpacing: trackingWidest2(fontSize[9]),
+    color: alpha.white(0.85),
+  },
+  shareButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: alpha.black(0.5),
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  content: { padding: 18 },
+  eyebrow: {
+    fontSize: fontSize[10],
+    fontFamily: "GeistSansSemiBold",
+    textTransform: "uppercase",
+    letterSpacing: trackingWidest2(fontSize[10]),
+  },
+  songTitle: {
+    marginTop: 6,
+    fontSize: fontSize[26],
+    fontFamily: "GeistSansBold",
+    lineHeight: fontSize[26] * 1.15,
+    color: colors.white,
+  },
+  songMeta: { marginTop: 4, fontSize: fontSize[13], fontFamily: "GeistSans", color: alpha.white(0.65) },
+  statsLine: { marginTop: 10, fontSize: fontSize[11], fontFamily: "GeistSansMedium", color: alpha.white(0.5) },
+});

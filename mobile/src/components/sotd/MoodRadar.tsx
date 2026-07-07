@@ -1,9 +1,10 @@
 import { View, Text } from "react-native";
 import Svg, { Circle, Line, Path } from "react-native-svg";
+import { alpha } from "@/lib/theme/tokens";
 
 // Hand-rolled 5-axis radar — victory-native (Skia) only ships cartesian/pie/
 // polar(donut) chart types, no true multi-axis radar primitive, so this
-// mirrors Sparkline/RadialGauge's existing react-native-svg pattern instead.
+// mirrors Sparkline's existing react-native-svg pattern instead.
 
 type RadarPoint = { axis: string; value: number };
 
@@ -48,7 +49,7 @@ export function MoodRadar({ data, color, size = 200 }: MoodRadarProps) {
             cx={cx}
             cy={cy}
             r={(outerRadius * (ring + 1)) / RINGS}
-            stroke="rgba(255,255,255,0.07)"
+            stroke={alpha.white(0.07)}
             strokeWidth={1}
             fill="transparent"
           />
@@ -56,7 +57,7 @@ export function MoodRadar({ data, color, size = 200 }: MoodRadarProps) {
 
         {data.map((_, i) => {
           const p = pointAt(i, outerRadius);
-          return <Line key={i} x1={cx} y1={cy} x2={p.x} y2={p.y} stroke="rgba(255,255,255,0.07)" strokeWidth={1} />;
+          return <Line key={i} x1={cx} y1={cy} x2={p.x} y2={p.y} stroke={alpha.white(0.07)} strokeWidth={1} />;
         })}
 
         <Path d={valuePath} stroke={color} strokeWidth={2} fill={color} fillOpacity={0.28} />
@@ -74,7 +75,7 @@ export function MoodRadar({ data, color, size = 200 }: MoodRadarProps) {
               width: 56,
               textAlign: "center",
               fontSize: 9,
-              color: "rgba(255,255,255,0.5)",
+              color: alpha.white(0.5),
             }}
           >
             {d.axis}

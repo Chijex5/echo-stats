@@ -1,7 +1,7 @@
-import { Pressable, Text, View } from "react-native";
+import { Pressable, Text, View, StyleSheet } from "react-native";
 import { ChevronRight, type LucideIcon } from "lucide-react-native";
 import { GlassCard } from "@/components/ui";
-import { colors } from "@/lib/theme/tokens";
+import { colors, alpha, fontSize } from "@/lib/theme/tokens";
 
 type ExploreCTACardProps = {
   title: string;
@@ -14,19 +14,34 @@ export function ExploreCTACard({ title, subtitle, icon: Icon, onPress }: Explore
   return (
     <Pressable onPress={onPress}>
       <GlassCard padding="md" rounded="2xl">
-        <View className="flex-row items-center gap-3">
-          <View className="h-10 w-10 items-center justify-center rounded-xl bg-echo-green/10">
+        <View style={styles.row}>
+          <View style={styles.iconWrap}>
             <Icon size={18} color={colors.echoGreen} />
           </View>
-          <View className="flex-1">
-            <Text className="text-[14px] font-sans-semibold text-white">{title}</Text>
-            <Text numberOfLines={1} className="text-[12px] text-white/45">
+          <View style={styles.text}>
+            <Text style={styles.title}>{title}</Text>
+            <Text numberOfLines={1} style={styles.subtitle}>
               {subtitle}
             </Text>
           </View>
-          <ChevronRight size={18} color="rgba(255,255,255,0.35)" />
+          <ChevronRight size={18} color={alpha.white(0.35)} />
         </View>
       </GlassCard>
     </Pressable>
   );
 }
+
+const styles = StyleSheet.create({
+  row: { flexDirection: "row", alignItems: "center", gap: 12 },
+  iconWrap: {
+    height: 40,
+    width: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 12,
+    backgroundColor: alpha.spotify(0.1),
+  },
+  text: { flex: 1 },
+  title: { fontSize: fontSize[14], fontFamily: "GeistSansSemiBold", color: colors.white },
+  subtitle: { fontSize: fontSize[12], fontFamily: "GeistSans", color: alpha.white(0.45) },
+});

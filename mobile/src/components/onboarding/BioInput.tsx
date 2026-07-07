@@ -1,4 +1,5 @@
-import { View, TextInput, Text } from "react-native";
+import { View, TextInput, Text, StyleSheet } from "react-native";
+import { alpha, fontSize } from "@/lib/theme/tokens";
 
 type BioInputProps = {
   value: string;
@@ -12,13 +13,28 @@ export function BioInput({ value, onChangeText }: BioInputProps) {
         value={value}
         onChangeText={onChangeText}
         placeholder="What does music mean to you?"
-        placeholderTextColor="rgba(255,255,255,0.25)"
+        placeholderTextColor={alpha.white(0.25)}
         maxLength={500}
         multiline
-        className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-[14px] text-white/90"
-        style={{ minHeight: 76, textAlignVertical: "top" }}
+        style={styles.input}
       />
-      <Text className="mt-1 text-right text-[11px] text-white/25">{value.length}/500</Text>
+      <Text style={styles.counter}>{value.length}/500</Text>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  input: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: alpha.white(0.1),
+    backgroundColor: alpha.white(0.04),
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: fontSize[14],
+    color: alpha.white(0.9),
+    minHeight: 76,
+    textAlignVertical: "top",
+  },
+  counter: { marginTop: 4, textAlign: "right", fontSize: fontSize[11], color: alpha.white(0.25) },
+});

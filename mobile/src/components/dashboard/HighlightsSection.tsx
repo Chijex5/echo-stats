@@ -1,39 +1,28 @@
-import { View, Text, Image } from "react-native";
+import { View, Text, Image, StyleSheet } from "react-native";
 import { Disc3 } from "lucide-react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { GlassCard, EyebrowLabel } from "@/components/ui";
+import { alpha, colors, fontSize } from "@/lib/theme/tokens";
+import { albumPlaceholderGradient, FALLBACK_ARTIST_GRADIENT } from "@/lib/theme/gradients";
 import type { ProfileResponse } from "@/lib/api/hooks";
-
-const ALBUM_GRADIENTS: [string, string][] = [
-  ["#6ee7b7", "#0f172a"],
-  ["#d8b4fe", "#000000"],
-  ["#a5b4fc", "#0f172a"],
-  ["#fde68a", "#1c1917"],
-  ["#a7f3d0", "#000000"],
-  ["#e9d5ff", "#18181b"],
-];
 
 function AlbumTile({ album, index }: { album: ProfileResponse["highlights"]["topAlbums"][number]; index: number }) {
   return (
-    <View className="aspect-square flex-1 overflow-hidden rounded-2xl">
+    <View style={styles.albumTile}>
       {album.albumImageUrl ? (
-        <View className="h-full w-full">
-          <Image source={{ uri: album.albumImageUrl }} style={{ width: "100%", height: "100%" }} />
-          <View className="absolute inset-0 justify-between p-2.5" style={{ backgroundColor: "rgba(0,0,0,0.25)" }}>
-            <Text className="text-[8px] font-sans-bold uppercase tracking-widest2 text-white/70">
-              {album.plays} plays
-            </Text>
-            <Text numberOfLines={2} className="text-[11px] font-sans-semibold leading-tight text-white">
+        <View style={styles.albumFill}>
+          <Image source={{ uri: album.albumImageUrl }} style={styles.albumFill} />
+          <View style={[styles.albumOverlay, { backgroundColor: alpha.black(0.25) }]}>
+            <Text style={styles.albumPlaysLight}>{album.plays} plays</Text>
+            <Text numberOfLines={2} style={styles.albumTitleLight}>
               {album._id}
             </Text>
           </View>
         </View>
       ) : (
-        <LinearGradient colors={ALBUM_GRADIENTS[index % ALBUM_GRADIENTS.length]} className="h-full w-full justify-between p-2.5">
-          <Text className="text-[8px] font-sans-bold uppercase tracking-widest2 text-black/50">
-            {album.plays} plays
-          </Text>
-          <Text numberOfLines={2} className="text-[11px] font-sans-semibold leading-tight text-black/80">
+        <LinearGradient colors={albumPlaceholderGradient(index)} style={styles.albumOverlay}>
+          <Text style={styles.albumPlaysDark}>{album.plays} plays</Text>
+          <Text numberOfLines={2} style={styles.albumTitleDark}>
             {album._id}
           </Text>
         </LinearGradient>
@@ -46,17 +35,17 @@ export function HighlightsSection({ highlights }: { highlights: ProfileResponse[
   const albums = highlights.topAlbums.slice(0, 6);
 
   return (
-    <View className="gap-3">
+    <View style={{ gap: 12 }}>
       {albums.length ? (
         <GlassCard padding="md" rounded="2xl">
-          <View className="mb-4 flex-row items-center justify-between">
+          <View style={styles.collageHeader}>
             <View>
               <EyebrowLabel>Top album art collage</EyebrowLabel>
-              <Text className="mt-1 text-[15px] font-sans-semibold text-white">Albums that colored the archive</Text>
+              <Text style={styles.collageTitle}>Albums that colored the archive</Text>
             </View>
-            <Disc3 size={18} color="rgba(24,216,126,0.7)" />
+            <Disc3 size={18} color={alpha.spotify(0.7)} />
           </View>
-          <View className="flex-row flex-wrap gap-2.5">
+          <View style={styles.albumGrid}>
             {albums.map((album, i) => (
               <View key={`${album._id}-${i}`} style={{ width: "31%" }}>
                 <AlbumTile album={album} index={i} />
@@ -66,35 +55,30 @@ export function HighlightsSection({ highlights }: { highlights: ProfileResponse[
         </GlassCard>
       ) : null}
 
-      <View className="flex-row gap-3">
+      <View style={styles.row}>
         <GlassCard padding="md" rounded="2xl" style={{ flex: 1 }}>
           <EyebrowLabel>Most played artist</EyebrowLabel>
           {highlights.mostPlayedArtist ? (
             <>
-              <View className="mt-4" style={{ width: 56, height: 56 }}>
+              <View style={{ marginTop: 16, width: 56, height: 56 }}>
                 {highlights.mostPlayedArtist.artistImageUrl ? (
                   <Image
                     source={{ uri: highlights.mostPlayedArtist.artistImageUrl }}
                     style={{ width: 56, height: 56, borderRadius: 28 }}
                   />
                 ) : (
-                  <LinearGradient
-                    colors={["#6ee7b7", "#818cf8"]}
-                    style={{ width: 56, height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center" }}
-                  >
-                    <Text className="text-[16px] font-sans-bold text-black">
-                      {highlights.mostPlayedArtist._id.slice(0, 2).toUpperCase()}
-                    </Text>
+                  <LinearGradient colors={FALLBACK_ARTIST_GRADIENT} style={styles.artistFallback}>
+                    <Text style={styles.artistInitials}>{highlights.mostPlayedArtist._id.slice(0, 2).toUpperCase()}</Text>
                   </LinearGradient>
                 )}
               </View>
-              <Text numberOfLines={1} className="mt-3 text-[15px] font-sans-bold text-white">
+              <Text numberOfLines={1} style={styles.artistName}>
                 {highlights.mostPlayedArtist._id}
               </Text>
-              <Text className="mt-1 text-[12px] text-white/40">{highlights.mostPlayedArtist.plays} lifetime plays</Text>
+              <Text style={styles.mutedSmall}>{highlights.mostPlayedArtist.plays} lifetime plays</Text>
             </>
           ) : (
-            <Text className="mt-4 text-[13px] text-white/40">Still emerging</Text>
+            <Text style={styles.emptyText}>Still emerging</Text>
           )}
         </GlassCard>
 
@@ -102,24 +86,43 @@ export function HighlightsSection({ highlights }: { highlights: ProfileResponse[
           <EyebrowLabel>Favorite song this year</EyebrowLabel>
           {highlights.favoriteSongThisYear ? (
             <>
-              <Text numberOfLines={2} className="mt-4 text-[15px] font-sans-semibold leading-snug text-white">
+              <Text numberOfLines={2} style={styles.songTitle}>
                 {highlights.favoriteSongThisYear.trackName} — {highlights.favoriteSongThisYear.artistName}
               </Text>
-              <Text className="mt-2 text-[12px] text-white/40">{highlights.favoriteSongThisYear.plays} plays this year</Text>
+              <Text style={styles.mutedSmall}>{highlights.favoriteSongThisYear.plays} plays this year</Text>
             </>
           ) : (
-            <Text className="mt-4 text-[13px] text-white/40">No track yet</Text>
+            <Text style={styles.emptyText}>No track yet</Text>
           )}
         </GlassCard>
       </View>
 
       <GlassCard padding="md" rounded="2xl">
         <EyebrowLabel>Forgotten favorites</EyebrowLabel>
-        <Text className="mt-3 text-[32px] font-sans-bold text-white">{highlights.forgottenFavoriteCount}</Text>
-        <Text className="mt-1.5 text-[13px] text-white/40">
-          Tracks with enough history to deserve a rediscovery pass.
-        </Text>
+        <Text style={styles.bigCount}>{highlights.forgottenFavoriteCount}</Text>
+        <Text style={styles.mutedSmall}>Tracks with enough history to deserve a rediscovery pass.</Text>
       </GlassCard>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  albumTile: { aspectRatio: 1, flex: 1, overflow: "hidden", borderRadius: 18 },
+  albumFill: { height: "100%", width: "100%" },
+  albumOverlay: { flex: 1, justifyContent: "space-between", padding: 10, position: "absolute", top: 0, left: 0, right: 0, bottom: 0 },
+  albumPlaysLight: { fontSize: fontSize[9], fontFamily: "GeistSansBold", textTransform: "uppercase", letterSpacing: 1.5, color: alpha.white(0.7) },
+  albumTitleLight: { fontSize: fontSize[11], fontFamily: "GeistSansSemiBold", lineHeight: fontSize[11] * 1.1, color: colors.white },
+  albumPlaysDark: { fontSize: fontSize[9], fontFamily: "GeistSansBold", textTransform: "uppercase", letterSpacing: 1.5, color: alpha.black(0.5) },
+  albumTitleDark: { fontSize: fontSize[11], fontFamily: "GeistSansSemiBold", lineHeight: fontSize[11] * 1.1, color: alpha.black(0.8) },
+  collageHeader: { marginBottom: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  collageTitle: { marginTop: 4, fontSize: fontSize[15], fontFamily: "GeistSansSemiBold", color: colors.white },
+  albumGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  row: { flexDirection: "row", gap: 12 },
+  artistFallback: { width: 56, height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center" },
+  artistInitials: { fontSize: fontSize[17], fontFamily: "GeistSansBold", color: colors.black },
+  artistName: { marginTop: 12, fontSize: fontSize[15], fontFamily: "GeistSansBold", color: colors.white },
+  mutedSmall: { marginTop: 4, fontSize: fontSize[12], color: alpha.white(0.4) },
+  emptyText: { marginTop: 16, fontSize: fontSize[13], color: alpha.white(0.4) },
+  songTitle: { marginTop: 16, fontSize: fontSize[15], fontFamily: "GeistSansSemiBold", lineHeight: fontSize[15] * 1.3, color: colors.white },
+  bigCount: { marginTop: 12, fontSize: fontSize[30], fontFamily: "GeistSansBold", color: colors.white },
+});

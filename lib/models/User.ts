@@ -14,6 +14,9 @@ export interface IUser extends Document {
   // App-specific fields populated at /import
   favoriteGenres?: string[];
   bio?: string;
+  // Last time this user uploaded a streaming-history export (initial import
+  // or re-sync) — drives the "re-sync due" nudge on web and mobile.
+  lastImportAt?: Date;
   // Mobile session revocation counter — bumped on logout to invalidate
   // every outstanding mobile refresh token for this user.
   mobileTokenVersion: number;
@@ -36,6 +39,7 @@ const UserSchema = new Schema<IUser>(
     // App-specific
     favoriteGenres:      [{ type: String }],
     bio:                 { type: String, maxlength: 500 },
+    lastImportAt:        { type: Date },
     mobileTokenVersion:  { type: Number, default: 0 },
   },
   { timestamps: true }

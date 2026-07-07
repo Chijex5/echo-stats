@@ -1,70 +1,156 @@
 import { useState } from "react";
-import { ScrollView, View, Text } from "react-native";
+import { ScrollView, View, Text, Pressable, StyleSheet } from "react-native";
 import { MotiView } from "moti";
-import { GlassCard, SectionHeading, Shimmer } from "@/components/ui";
-import { staggerChild } from "@/lib/motion/presets";
-import { useTimelinePage, useTimelineExplorer } from "@/lib/api/hooks";
-import { TimelineScrubber } from "@/components/dashboard/TimelineScrubber";
-import { TimelineSnapshot } from "@/components/dashboard/TimelineSnapshot";
-import { TimeComparisonSection } from "@/components/dashboard/TimeComparisonSection";
-import { RandomNostalgiaSheet } from "@/components/dashboard/RandomNostalgiaSheet";
-import { TimelineInsights } from "@/components/dashboard/TimelineInsights";
+import { Shuffle, TrendingUp, Music2, Moon } from "lucide-react-native";
+import { Shimmer } from "@/components/ui";
+import { ProfileHeaderButton } from "@/components/dashboard/ProfileHeaderButton";
+import { MonthChapterHero } from "@/components/timeline/MonthChapterHero";
+import { YearRail } from "@/components/timeline/YearRail";
+import { ThenVsNow } from "@/components/timeline/ThenVsNow";
+import { RandomMemorySheet } from "@/components/timeline/RandomMemorySheet";
 import { CalendarHeatmap } from "@/components/charts";
+import { staggerChild } from "@/lib/motion/presets";
+import { colorForKey } from "@/lib/theme/gradients";
+import { colors, alpha, spacing, fontSize, radius, trackingWidest2 } from "@/lib/theme/tokens";
+import { useTimelinePage, useTimelineExplorer } from "@/lib/api/hooks";
+
+const INSIGHT_ICONS = [TrendingUp, Music2, Moon];
+
+function SectionTitle({ title, sub }: { title: string; sub: string }) {
+  return (
+    <View style={styles.sectionTitle}>
+      <Text style={styles.sectionTitleText}>{title}</Text>
+      <Text style={styles.sectionSubText}>{sub}</Text>
+    </View>
+  );
+}
 
 export default function TimelineScreen() {
   const page = useTimelinePage();
   const explorer = useTimelineExplorer();
-  const [activeIdx, setActiveIdx] = useState(0);
+  const [memoryOpen, setMemoryOpen] = useState(false);
 
   const periods = page.data?.periods ?? [];
-  const activePeriod = periods[activeIdx] ?? periods[0];
-  const isLoading = page.isLoading;
+  const latest = periods.at(-1);
+  const insights = page.data?.insights ?? [];
 
   return (
-    <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 72, paddingBottom: 140 }}>
-      <View className="mb-5">
-        <SectionHeading label="Look back" title="Timeline" align="left" />
-      </View>
-
-      {isLoading ? (
-        <View className="gap-3">
-          <Shimmer width="100%" height={110} rounded="xl" />
-          <Shimmer width="100%" height={260} rounded="xl" />
-          <Shimmer width="100%" height={140} rounded="xl" />
+    <View style={{ flex: 1, paddingTop: spacing.screenTop, backgroundColor: colors.background }}>
+      <ScrollView
+        contentContainerStyle={{ paddingHorizontal: spacing.screenX, paddingBottom: spacing.screenBottom }}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.header}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.title}>Rewind</Text>
+            <Text style={styles.subtitle}>Your listening, month by month</Text>
+          </View>
+          <Pressable
+            onPress={() => setMemoryOpen(true)}
+            disabled={!periods.length}
+            style={styles.shuffleButton}
+            hitSlop={8}
+          >
+            <Shuffle size={16} color={periods.length ? colors.white : alpha.white(0.3)} />
+          </Pressable>
+          <ProfileHeaderButton />
         </View>
-      ) : periods.length ? (
-        <View className="gap-5">
-          <MotiView {...staggerChild(0)}>
-            <GlassCard padding="lg" rounded="2xl">
-              <TimelineScrubber periods={periods} activeIdx={activeIdx} onChange={setActiveIdx} />
-            </GlassCard>
-          </MotiView>
 
-          {activePeriod ? <TimelineSnapshot period={activePeriod} /> : null}
+        {page.isLoading ? (
+          <View style={{ gap: 14 }}>
+            <Shimmer width="100%" height={230} rounded="xl" />
+            <Shimmer width="100%" height={140} rounded="xl" />
+            <Shimmer width="100%" height={260} rounded="xl" />
+          </View>
+        ) : periods.length ? (
+          <View>
+            {latest ? (
+              <MotiView {...staggerChild(0)} style={styles.section}>
+                <MonthChapterHero period={latest} />
+              </MotiView>
+            ) : null}
 
-          {explorer.data?.cells.length ? (
-            <MotiView {...staggerChild(2)}>
-              <GlassCard padding="lg" rounded="2xl">
-                <Text className="text-[10px] uppercase tracking-widest2 text-white/35">Listening activity</Text>
-                <Text className="mb-4 mt-1 text-[13px] text-white/45">{explorer.data.selectedRange.label}</Text>
-                <CalendarHeatmap cells={explorer.data.cells} />
-              </GlassCard>
+            <MotiView {...staggerChild(1)} style={styles.section}>
+              <SectionTitle title="Then vs now" sub="You, about a year apart" />
+              <ThenVsNow periods={periods} />
             </MotiView>
-          ) : null}
 
-          <MotiView {...staggerChild(3)}>
-            <TimeComparisonSection periods={periods} />
-          </MotiView>
+            <MotiView {...staggerChild(2)} style={styles.section}>
+              <SectionTitle title="The archive" sub="Tap a month to reopen it" />
+              <YearRail periods={periods} yearHours={page.data?.yearHours ?? []} />
+            </MotiView>
 
-          <MotiView {...staggerChild(4)}>
-            <RandomNostalgiaSheet periods={periods} />
-          </MotiView>
+            {explorer.data?.cells.length ? (
+              <MotiView {...staggerChild(3)} style={styles.section}>
+                <SectionTitle title="Listening activity" sub={explorer.data.selectedRange.label} />
+                <View style={styles.heatmapCard}>
+                  <CalendarHeatmap cells={explorer.data.cells} />
+                </View>
+              </MotiView>
+            ) : null}
 
-          {page.data?.insights.length ? <TimelineInsights insights={page.data.insights} startIndex={5} /> : null}
-        </View>
-      ) : (
-        <Text className="text-[13px] text-white/40">No timeline data yet — keep listening.</Text>
-      )}
-    </ScrollView>
+            {insights.length ? (
+              <MotiView {...staggerChild(4)}>
+                <SectionTitle title="Patterns" sub="What the years add up to" />
+                <View style={{ gap: 10 }}>
+                  {insights.map((insight, i) => {
+                    const Icon = INSIGHT_ICONS[i % INSIGHT_ICONS.length];
+                    const accent = colorForKey(insight.label);
+                    return (
+                      <View key={insight.label} style={styles.insightCard}>
+                        <View style={styles.insightHead}>
+                          <Icon size={13} color={accent} />
+                          <Text style={styles.insightLabel}>{insight.label}</Text>
+                        </View>
+                        <Text style={styles.insightTitle}>{insight.title}</Text>
+                        <Text style={styles.insightSub}>{insight.sub}</Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              </MotiView>
+            ) : null}
+          </View>
+        ) : (
+          <Text style={styles.empty}>No timeline data yet — keep listening.</Text>
+        )}
+      </ScrollView>
+
+      <RandomMemorySheet periods={periods} visible={memoryOpen} onClose={() => setMemoryOpen(false)} />
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  header: { marginBottom: 24, flexDirection: "row", alignItems: "center", gap: 12 },
+  title: { fontSize: fontSize[26], fontFamily: "GeistSansBold", color: colors.white },
+  subtitle: { marginTop: 2, fontSize: fontSize[13], fontFamily: "GeistSans", color: alpha.white(0.45) },
+  shuffleButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.surfaceRaised,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  section: { marginBottom: 28 },
+  sectionTitle: { marginBottom: 14 },
+  sectionTitleText: { fontSize: fontSize[20], fontFamily: "GeistSansBold", color: colors.white },
+  sectionSubText: { marginTop: 3, fontSize: fontSize[12], fontFamily: "GeistSans", color: alpha.white(0.45) },
+
+  heatmapCard: { borderRadius: radius["2xl"], backgroundColor: colors.surface, padding: 16 },
+
+  insightCard: { borderRadius: radius["2xl"], backgroundColor: colors.surface, padding: 16 },
+  insightHead: { flexDirection: "row", alignItems: "center", gap: 8 },
+  insightLabel: {
+    fontSize: fontSize[10],
+    fontFamily: "GeistSans",
+    textTransform: "uppercase",
+    letterSpacing: trackingWidest2(fontSize[10]),
+    color: alpha.white(0.35),
+  },
+  insightTitle: { marginTop: 8, fontSize: fontSize[15], fontFamily: "GeistSansSemiBold", color: colors.white },
+  insightSub: { marginTop: 3, fontSize: fontSize[12], fontFamily: "GeistSans", color: alpha.white(0.45) },
+  empty: { fontSize: fontSize[13], fontFamily: "GeistSans", color: alpha.white(0.4) },
+});

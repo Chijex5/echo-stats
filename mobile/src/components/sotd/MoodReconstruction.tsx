@@ -1,15 +1,15 @@
-import { View, Text } from "react-native";
-import { GlassCard, SectionHeading, EyebrowLabel } from "@/components/ui";
+import { View, Text, StyleSheet } from "react-native";
+import { alpha, colors, fontSize, radius, trackingWidest2 } from "@/lib/theme/tokens";
 import { Sparkline } from "@/components/charts";
 import { MoodRadar } from "./MoodRadar";
-import type { SotdMoodReconstruction, SotdSong } from "@/lib/api/hooks/types";
+import type { SotdMoodReconstruction } from "@/lib/api/hooks/types";
 
 type MoodReconstructionProps = {
   data: SotdMoodReconstruction;
-  song: SotdSong;
+  accent: string;
 };
 
-const HOUR_BAR_HEIGHT = 110;
+const HOUR_BAR_HEIGHT = 96;
 
 function buildMoodRadar(hourHeat: SotdMoodReconstruction["hourHeat"]) {
   const total = hourHeat.reduce((s, h) => s + h.v, 0) || 1;
@@ -27,80 +27,95 @@ function buildMoodRadar(hourHeat: SotdMoodReconstruction["hourHeat"]) {
   ];
 }
 
-export function MoodReconstruction({ data, song }: MoodReconstructionProps) {
+// Two borderless cards instead of four glass ones: the emotional
+// fingerprint + hour-of-day shape together, then the two long-run curves
+// (monthly plays, repeat frequency) stacked compactly. All series colored
+// by the page accent — never the backend's gradient hints.
+export function MoodReconstruction({ data, accent }: MoodReconstructionProps) {
   const moodRadar = buildMoodRadar(data.hourHeat);
   const maxHour = Math.max(...data.hourHeat.map((h) => h.v), 1);
 
   return (
-    <View>
-      <View className="mb-5">
-        <SectionHeading
-          label="Mood reconstruction"
-          title="The texture of your listening"
-          subtitle="When this song lived in heavy rotation."
-        />
+    <View style={{ gap: 14 }}>
+      <View style={styles.card}>
+        <Text style={styles.groupLabel}>Emotional fingerprint</Text>
+        <View style={{ alignItems: "center" }}>
+          <MoodRadar data={moodRadar} color={accent} size={210} />
+        </View>
+
+        <View style={styles.divider} />
+        <View style={styles.rowHeader}>
+          <Text style={styles.groupLabel}>Listening by hour</Text>
+          <Text style={styles.peakText}>
+            Peak at <Text style={styles.peakTextStrong}>{data.peakHourLabel}</Text>
+          </Text>
+        </View>
+        <View style={[styles.hourBars, { height: HOUR_BAR_HEIGHT }]}>
+          {data.hourHeat.map((h) => {
+            const peak = h.hour >= 23 || h.hour <= 2;
+            return (
+              <View
+                key={h.hour}
+                style={{
+                  flex: 1,
+                  borderTopLeftRadius: 2,
+                  borderTopRightRadius: 2,
+                  height: Math.max(6, Math.round((h.v / maxHour) * HOUR_BAR_HEIGHT)),
+                  backgroundColor: peak ? accent : alpha.white(0.1),
+                }}
+              />
+            );
+          })}
+        </View>
+        <View style={styles.hourLabels}>
+          <Text style={styles.axisLabel}>00</Text>
+          <Text style={styles.axisLabel}>06</Text>
+          <Text style={styles.axisLabel}>12</Text>
+          <Text style={styles.axisLabel}>18</Text>
+          <Text style={styles.axisLabel}>23</Text>
+        </View>
       </View>
 
-      <View className="gap-4">
-        <GlassCard padding="lg" rounded="2xl">
-          <EyebrowLabel className="mb-2">Emotional fingerprint</EyebrowLabel>
-          <View className="items-center">
-            <MoodRadar data={moodRadar} color={song.gradientFrom} size={220} />
-          </View>
-        </GlassCard>
-
-        <GlassCard padding="lg" rounded="2xl">
-          <View className="mb-3 flex-row items-center justify-between">
-            <EyebrowLabel>Listening by hour</EyebrowLabel>
-            <Text className="text-[11px] text-white/40">
-              Peak at <Text className="font-sans-medium text-white">{data.peakHourLabel}</Text>
+      <View style={styles.card}>
+        <Text style={styles.groupLabel}>Plays per month</Text>
+        <Sparkline data={data.monthTrend.map((m) => m.v)} width={290} height={60} color={accent} />
+        <View style={styles.monthLabels}>
+          {data.monthTrend.map((m) => (
+            <Text key={m.m} style={styles.axisLabel}>
+              {m.m[0]}
             </Text>
-          </View>
-          <View className="flex-row items-end gap-[2px]" style={{ height: HOUR_BAR_HEIGHT }}>
-            {data.hourHeat.map((h) => {
-              const peak = h.hour >= 23 || h.hour <= 2;
-              return (
-                <View
-                  key={h.hour}
-                  className="flex-1 rounded-t-sm"
-                  style={{
-                    height: Math.max(6, Math.round((h.v / maxHour) * HOUR_BAR_HEIGHT)),
-                    backgroundColor: peak ? song.gradientFrom : "rgba(255,255,255,0.10)",
-                  }}
-                />
-              );
-            })}
-          </View>
-          <View className="mt-2 flex-row justify-between">
-            <Text className="text-[10px] text-white/30">00</Text>
-            <Text className="text-[10px] text-white/30">06</Text>
-            <Text className="text-[10px] text-white/30">12</Text>
-            <Text className="text-[10px] text-white/30">18</Text>
-            <Text className="text-[10px] text-white/30">23</Text>
-          </View>
-        </GlassCard>
+          ))}
+        </View>
 
-        <GlassCard padding="lg" rounded="2xl">
-          <EyebrowLabel className="mb-2">Plays per month</EyebrowLabel>
-          <Sparkline data={data.monthTrend.map((m) => m.v)} width={290} height={70} color={song.gradientFrom} />
-          <View className="mt-1.5 flex-row justify-between">
-            {data.monthTrend.map((m) => (
-              <Text key={m.m} className="text-[10px] text-white/30">
-                {m.m[0]}
-              </Text>
-            ))}
-          </View>
-        </GlassCard>
-
-        <GlassCard padding="lg" rounded="2xl">
-          <EyebrowLabel className="mb-2">Repeat frequency</EyebrowLabel>
-          <Sparkline data={data.repeatCurve.map((p) => p.v)} width={290} height={70} color={song.gradientTo} />
-          <Text className="mt-2 text-[12px] text-white/45">
-            Most back-to-back: <Text className="font-sans-medium text-white">{data.maxRepeatsInOneDay}×</Text> in one
-            sitting.
-          </Text>
-        </GlassCard>
+        <View style={styles.divider} />
+        <Text style={styles.groupLabel}>Repeat frequency</Text>
+        <Sparkline data={data.repeatCurve.map((p) => p.v)} width={290} height={60} color={accent} />
+        <Text style={styles.repeatCaption}>
+          Most back-to-back: <Text style={styles.repeatCaptionStrong}>{data.maxRepeatsInOneDay}×</Text> in one sitting.
+        </Text>
       </View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  card: { borderRadius: radius["2xl"], backgroundColor: colors.surface, padding: 16 },
+  groupLabel: {
+    marginBottom: 10,
+    fontSize: fontSize[9],
+    fontFamily: "GeistSans",
+    textTransform: "uppercase",
+    letterSpacing: trackingWidest2(fontSize[9]),
+    color: alpha.white(0.35),
+  },
+  divider: { marginVertical: 16, height: 1, backgroundColor: alpha.white(0.06) },
+  rowHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  peakText: { marginBottom: 10, fontSize: fontSize[11], fontFamily: "GeistSans", color: alpha.white(0.4) },
+  peakTextStrong: { fontFamily: "GeistSansMedium", color: colors.white },
+  hourBars: { flexDirection: "row", alignItems: "flex-end", gap: 2 },
+  hourLabels: { marginTop: 8, flexDirection: "row", justifyContent: "space-between" },
+  axisLabel: { fontSize: fontSize[10], fontFamily: "GeistSans", color: alpha.white(0.3) },
+  monthLabels: { marginTop: 6, flexDirection: "row", justifyContent: "space-between" },
+  repeatCaption: { marginTop: 8, fontSize: fontSize[12], fontFamily: "GeistSans", color: alpha.white(0.45) },
+  repeatCaptionStrong: { fontFamily: "GeistSansMedium", color: colors.white },
+});

@@ -1,7 +1,6 @@
-import { Pressable, Text, type StyleProp, type ViewStyle } from "react-native";
+import { Pressable, Text, StyleSheet, type StyleProp, type ViewStyle } from "react-native";
 import type { LucideIcon } from "lucide-react-native";
-import { cn } from "@/lib/cn";
-import { shadows } from "@/lib/theme/tokens";
+import { shadows, colors, alpha, radius, fontSize } from "@/lib/theme/tokens";
 
 type PillVariant = "default" | "spotify" | "outline";
 
@@ -14,37 +13,53 @@ type PillProps = {
   style?: StyleProp<ViewStyle>;
 };
 
-const BASE = "flex-row items-center gap-1.5 rounded-full px-3.5 py-2 border";
-
-const VARIANT_UNSELECTED: Record<PillVariant, string> = {
-  default: "bg-white/[0.03] border-white/10",
-  spotify: "bg-white/[0.03] border-white/10",
-  outline: "bg-transparent border-white/10",
+const VARIANT_UNSELECTED: Record<PillVariant, ViewStyle> = {
+  default: { backgroundColor: alpha.white(0.03), borderColor: alpha.white(0.1) },
+  spotify: { backgroundColor: alpha.white(0.03), borderColor: alpha.white(0.1) },
+  outline: { backgroundColor: "transparent", borderColor: alpha.white(0.1) },
 };
 
-const VARIANT_SELECTED: Record<PillVariant, string> = {
-  default: "bg-white/10 border-white/20",
-  spotify: "bg-spotify/15 border-spotify/40",
-  outline: "bg-white/5 border-white/30",
+const VARIANT_SELECTED: Record<PillVariant, ViewStyle> = {
+  default: { backgroundColor: alpha.white(0.1), borderColor: alpha.white(0.2) },
+  spotify: { backgroundColor: alpha.spotify(0.15), borderColor: alpha.spotify(0.4) },
+  outline: { backgroundColor: alpha.white(0.05), borderColor: alpha.white(0.3) },
 };
 
-const LABEL_SELECTED: Record<PillVariant, string> = {
-  default: "text-white/90",
-  spotify: "text-spotify-light",
-  outline: "text-white/90",
+const LABEL_COLOR: Record<PillVariant, string> = {
+  default: alpha.white(0.9),
+  spotify: colors.spotifyLight,
+  outline: alpha.white(0.9),
 };
 
 export function Pill({ label, selected = false, variant = "default", icon: Icon, onPress, style }: PillProps) {
   return (
     <Pressable
       onPress={onPress}
-      className={cn(BASE, selected ? VARIANT_SELECTED[variant] : VARIANT_UNSELECTED[variant])}
-      style={[selected && variant === "spotify" ? shadows.glowSpotify : null, style]}
+      style={[
+        styles.base,
+        selected ? VARIANT_SELECTED[variant] : VARIANT_UNSELECTED[variant],
+        selected && variant === "spotify" ? shadows.glowSpotify : null,
+        style,
+      ]}
     >
-      {Icon ? <Icon size={13} color={selected ? "#22e065" : "rgba(255,255,255,0.6)"} /> : null}
-      <Text className={cn("text-[13px] font-sans", selected ? LABEL_SELECTED[variant] : "text-white/60")}>
-        {label}
-      </Text>
+      {Icon ? <Icon size={13} color={selected ? colors.spotifyLight : alpha.white(0.6)} /> : null}
+      <Text style={[styles.label, { color: selected ? LABEL_COLOR[variant] : alpha.white(0.6) }]}>{label}</Text>
     </Pressable>
   );
 }
+
+const styles = StyleSheet.create({
+  base: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderRadius: radius.full,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderWidth: 1,
+  },
+  label: {
+    fontSize: fontSize[13],
+    fontFamily: "GeistSans",
+  },
+});

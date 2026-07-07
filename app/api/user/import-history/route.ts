@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionUserId } from "@/lib/get-session-user-id";
 import { connectDB } from "@/lib/db";
 import StreamEntry from "@/lib/models/StreamEntry";
+import User from "@/lib/models/User";
 import mongoose from "mongoose";
 import { z } from "zod";
 
@@ -118,6 +119,10 @@ export async function POST(req: NextRequest) {
       duplicates = docs.length - inserted;
     }
   }
+
+  // Stamp the import time (initial upload and every re-sync) — /api/user/
+  // import-status reads this to decide when the monthly re-sync nudge is due.
+  await User.findByIdAndUpdate(userId, { $set: { lastImportAt: new Date() } });
 
   return NextResponse.json({
     received:   rawEntries.length,

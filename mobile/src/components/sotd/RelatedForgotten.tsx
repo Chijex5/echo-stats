@@ -1,49 +1,69 @@
-import { ScrollView, View, Text, Image } from "react-native";
+import { ScrollView, View, Text, Image, StyleSheet } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { Clock } from "lucide-react-native";
-import { GlassCard, SectionHeading } from "@/components/ui";
-import { gradientFor } from "./sotdColors";
+import { gradientForKey } from "@/lib/theme/gradients";
+import { alpha, colors, fontSize, radius, trackingWidest2 } from "@/lib/theme/tokens";
 import type { SotdRelatedTrack } from "@/lib/api/hooks/types";
 
 type RelatedForgottenProps = {
   related: SotdRelatedTrack[];
 };
 
+// Horizontal shelf of the next resurfacing candidates — artwork-led tiles
+// on plain surface fills.
 export function RelatedForgotten({ related }: RelatedForgottenProps) {
   return (
-    <View>
-      <View className="mb-5">
-        <SectionHeading label="More memories" title="Other forgotten favorites" subtitle="What we'd resurface next." />
-      </View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
-        {related.map((r, i) => (
-          <GlassCard key={r.title + i} padding="sm" rounded="2xl" style={{ width: 160 }}>
-            <View className="overflow-hidden rounded-xl" style={{ aspectRatio: 1 }}>
-              {r.albumImageUrl ? (
-                <Image source={{ uri: r.albumImageUrl }} className="h-full w-full" />
-              ) : (
-                <LinearGradient colors={gradientFor(r.color)} className="h-full w-full" />
-              )}
-              <View className="absolute inset-0 bg-black/12" />
-              <View className="absolute left-2 top-2 rounded-full bg-black/45 px-2 py-1">
-                <Text className="text-[9px] font-sans-semibold uppercase tracking-widest text-white/90">{r.tag}</Text>
-              </View>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
+      {related.map((r, i) => (
+        <View key={r.title + i} style={styles.tile}>
+          <View style={styles.artwork}>
+            {r.albumImageUrl ? (
+              <Image source={{ uri: r.albumImageUrl }} style={styles.fill} />
+            ) : (
+              <LinearGradient colors={gradientForKey(r.title)} style={styles.fill} />
+            )}
+            <View style={styles.tagWrap}>
+              <Text style={styles.tagText}>{r.tag}</Text>
             </View>
-            <Text numberOfLines={1} className="mt-2.5 text-[13px] font-sans-semibold text-white">
+          </View>
+          <View style={styles.meta}>
+            <Text numberOfLines={1} style={styles.title}>
               {r.title}
             </Text>
-            <Text numberOfLines={1} className="mt-0.5 text-[11px] text-white/45">
+            <Text numberOfLines={1} style={styles.artist}>
               {r.artist}
             </Text>
-            <View className="mt-2 flex-row items-center gap-1.5">
-              <Clock size={10} color="rgba(255,255,255,0.35)" />
-              <Text numberOfLines={1} className="flex-1 text-[10px] text-white/35">
-                Last played {r.lastPlayed}
-              </Text>
-            </View>
-          </GlassCard>
-        ))}
-      </ScrollView>
-    </View>
+            <Text numberOfLines={1} style={styles.lastPlayed}>
+              Last played {r.lastPlayed}
+            </Text>
+          </View>
+        </View>
+      ))}
+    </ScrollView>
   );
 }
+
+const styles = StyleSheet.create({
+  fill: { height: "100%", width: "100%" },
+  tile: { width: 150, borderRadius: radius["2xl"], backgroundColor: colors.surface, overflow: "hidden" },
+  artwork: { aspectRatio: 1 },
+  tagWrap: {
+    position: "absolute",
+    left: 8,
+    top: 8,
+    borderRadius: radius.full,
+    backgroundColor: alpha.black(0.5),
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  tagText: {
+    fontSize: fontSize[9],
+    fontFamily: "GeistSansSemiBold",
+    textTransform: "uppercase",
+    letterSpacing: trackingWidest2(fontSize[9]),
+    color: alpha.white(0.9),
+  },
+  meta: { padding: 10 },
+  title: { fontSize: fontSize[13], fontFamily: "GeistSansSemiBold", color: colors.white },
+  artist: { marginTop: 2, fontSize: fontSize[11], fontFamily: "GeistSans", color: alpha.white(0.45) },
+  lastPlayed: { marginTop: 6, fontSize: fontSize[10], fontFamily: "GeistSans", color: alpha.white(0.3) },
+});

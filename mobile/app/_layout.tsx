@@ -1,4 +1,3 @@
-import "../global.css";
 import { useEffect } from "react";
 import { View, ActivityIndicator } from "react-native";
 import { Slot, useRouter, useSegments } from "expo-router";
@@ -8,7 +7,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { useFonts } from "expo-font";
 import { StatusBar } from "expo-status-bar";
 import { AuthProvider, useAuth } from "@/lib/auth/AuthContext";
-import { queryClient } from "@/lib/api/queryClient";
+import { queryClient, registerQueryFocusManager } from "@/lib/api/queryClient";
 import { fontsToLoad } from "@/lib/fonts";
 import { colors } from "@/lib/theme/tokens";
 
@@ -51,6 +50,8 @@ function RootNavigator() {
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts(fontsToLoad);
+
+  useEffect(() => registerQueryFocusManager(), []);
 
   if (!fontsLoaded) return <LoadingScreen />;
 

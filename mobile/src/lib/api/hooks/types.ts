@@ -26,6 +26,19 @@ export interface TopTracksResponse {
   tracks: TopTrack[];
 }
 
+// ─── Recently Played ─────────────────────────────────────────────────────────
+
+export interface RecentPlay {
+  trackName: string;
+  artistName: string;
+  albumImageUrl?: string | null;
+  ts: string;
+}
+
+export interface RecentlyPlayedResponse {
+  tracks: RecentPlay[];
+}
+
 // ─── Dashboard Stats ───────────────────────────────────────────────────────
 
 export interface DashboardStatsResponse {
@@ -195,6 +208,17 @@ export interface NowPlayingSyncResponse {
     inserted: number;
     syncedAt: string;
   };
+}
+
+// ─── Import Status ──────────────────────────────────────────────────────────
+
+export interface ImportStatusResponse {
+  lastImportAt: string | null;
+  daysSinceLastImport: number | null;
+  totalEntries: number;
+  latestEntryTs: string | null;
+  resyncIntervalDays: number;
+  dueForResync: boolean;
 }
 
 // ─── Timeline Explorer ──────────────────────────────────────────────────────

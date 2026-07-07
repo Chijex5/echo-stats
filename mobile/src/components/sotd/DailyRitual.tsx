@@ -1,12 +1,13 @@
-import { View, Text } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import { Flame, Sparkles, Heart, Music2, type LucideIcon } from "lucide-react-native";
-import { GlassCard, EyebrowLabel } from "@/components/ui";
+import { alpha, colors, fontSize, radius, trackingWidest2 } from "@/lib/theme/tokens";
 import type { SotdDailyRitual } from "@/lib/api/hooks/types";
 
 type DailyRitualProps = {
   data: SotdDailyRitual;
 };
 
+// The come-back-tomorrow footer: one surface card, plain 2x2 stat grid.
 export function DailyRitual({ data }: DailyRitualProps) {
   const stats: Array<{ icon: LucideIcon; value: string; label: string }> = [
     { icon: Flame, value: String(data.streakDays), label: "Active streak" },
@@ -16,24 +17,51 @@ export function DailyRitual({ data }: DailyRitualProps) {
   ];
 
   return (
-    <GlassCard padding="lg" rounded="2xl" glow>
-      <EyebrowLabel className="mb-1.5">Daily ritual</EyebrowLabel>
-      <Text className="mb-2 text-[20px] font-sans-bold leading-tight text-white">
-        Come back tomorrow for a new <Text className="font-serif italic text-spotify">memory</Text>.
+    <View style={styles.card}>
+      <Text style={styles.title}>
+        Come back tomorrow for a new <Text style={styles.titleAccent}>memory</Text>.
       </Text>
-      <Text className="mb-5 text-[13px] leading-relaxed text-white/50">
-        One resurfaced favorite each morning. Your streak grows every time you stop by.
-      </Text>
+      <Text style={styles.subtitle}>One resurfaced favorite each morning. Your streak grows every time you stop by.</Text>
 
-      <View className="flex-row flex-wrap gap-3">
+      <View style={styles.grid}>
         {stats.map((s) => (
-          <View key={s.label} className="flex-1 rounded-2xl border border-white/5 bg-white/[0.03] p-4" style={{ minWidth: "44%" }}>
-            <s.icon size={15} color="rgba(255,255,255,0.4)" strokeWidth={1.8} />
-            <Text className="mt-3 text-[20px] font-serif text-white">{s.value}</Text>
-            <Text className="mt-0.5 text-[11px] leading-tight text-white/40">{s.label}</Text>
+          <View key={s.label} style={styles.tile}>
+            <s.icon size={14} color={alpha.white(0.4)} strokeWidth={1.8} />
+            <Text style={styles.tileValue}>{s.value}</Text>
+            <Text style={styles.tileLabel}>{s.label}</Text>
           </View>
         ))}
       </View>
-    </GlassCard>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  card: { borderRadius: radius["2xl"], backgroundColor: colors.surface, padding: 18 },
+  title: {
+    fontSize: fontSize[20],
+    fontFamily: "GeistSansBold",
+    lineHeight: fontSize[20] * 1.2,
+    color: colors.white,
+  },
+  titleAccent: { fontFamily: "PlayfairDisplayItalic", fontStyle: "italic", color: colors.echoGreen },
+  subtitle: {
+    marginTop: 6,
+    marginBottom: 18,
+    fontSize: fontSize[12],
+    lineHeight: fontSize[12] * 1.5,
+    fontFamily: "GeistSans",
+    color: alpha.white(0.5),
+  },
+  grid: { flexDirection: "row", flexWrap: "wrap", rowGap: 18 },
+  tile: { width: "50%", paddingRight: 12 },
+  tileValue: { marginTop: 8, fontSize: fontSize[20], fontFamily: "PlayfairDisplayItalic", color: colors.white },
+  tileLabel: {
+    marginTop: 3,
+    fontSize: fontSize[9],
+    fontFamily: "GeistSans",
+    textTransform: "uppercase",
+    letterSpacing: trackingWidest2(fontSize[9]),
+    color: alpha.white(0.4),
+  },
+});
