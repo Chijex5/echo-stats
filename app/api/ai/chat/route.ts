@@ -130,10 +130,11 @@ function enqueueEvent(controller: ReadableStreamDefaultController<Uint8Array>, e
 // ECONNREFUSED, certificate error, timeout, etc.) lives in `cause`, not `message`.
 function logGoogleCallError(label: string, error: unknown) {
   if (error instanceof Error) {
+    const cause = error.cause;
     console.error(`[ai/chat] ${label} threw:`, {
       name: error.name,
       message: error.message,
-      cause: (error as any).cause,
+      cause,
       stack: error.stack,
     });
   } else {
@@ -236,7 +237,7 @@ export async function POST(req: NextRequest) {
 
   const context = await buildMusicContext(userId);
   console.log("[ai/chat] built music context", {
-    contextLength: typeof context === "string" ? context.length : undefined,
+    contextLength: typeof context === "string" ? (context as string).length : undefined,
   });
 
   const latestQuestion = parsed.data.messages.at(-1)?.content ?? "Summarize my listening history.";
