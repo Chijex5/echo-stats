@@ -6,7 +6,14 @@ import { Bot, Send, Sparkles, User } from "lucide-react";
 type ChatMessage = {
   role: "user" | "assistant";
   content: string;
+  isLoadingCommand?: boolean;
 };
+
+type ChatStreamEvent =
+  | { type: "assistant_delta"; text: string }
+  | { type: "assistant_done" }
+  | { type: "command_loading"; loading: boolean; label?: string }
+  | { type: "error"; error: string };
 
 const STARTERS = [
   "Summarize my last 30 days in a funny way.",
@@ -51,24 +58,66 @@ export function AIChat() {
         throw new Error(data?.error ?? "AI chat failed");
       }
 
-      const assistantIndex = nextMessages.length;
+      let assistantIndex = nextMessages.length;
       setMessages((current) => [...current, { role: "assistant", content: "" }]);
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
+      let buffer = "";
+
+      function applyEvent(event: ChatStreamEvent) {
+        if (event.type === "assistant_delta") {
+          setMessages((current) =>
+            current.map((message, index) =>
+              index === assistantIndex
+                ? { ...message, content: `${message.content}${event.text}` }
+                : message
+            )
+          );
+          return;
+        }
+
+        if (event.type === "assistant_done") {
+          assistantIndex += 1;
+          return;
+        }
+
+        if (event.type === "command_loading") {
+          if (event.loading) {
+            setMessages((current) => [
+              ...current,
+              {
+                role: "assistant",
+                content: event.label ?? "Working on that…",
+                isLoadingCommand: true,
+              },
+              { role: "assistant", content: "" },
+            ]);
+            assistantIndex += 1;
+          } else {
+            setMessages((current) => current.filter((message) => !message.isLoadingCommand));
+            assistantIndex -= 1;
+          }
+          return;
+        }
+
+        if (event.type === "error") {
+          throw new Error(event.error);
+        }
+      }
 
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
 
-        const chunk = decoder.decode(value, { stream: true });
-        setMessages((current) =>
-          current.map((message, index) =>
-            index === assistantIndex
-              ? { ...message, content: `${message.content}${chunk}` }
-              : message
-          )
-        );
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          applyEvent(JSON.parse(line) as ChatStreamEvent);
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "AI chat failed");
@@ -108,6 +157,7 @@ export function AIChat() {
             {message.role === "assistant" && <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-spotify/15 text-spotify"><Bot size={16} /></div>}
             <div className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-4 py-3 text-sm leading-relaxed ${message.role === "user" ? "bg-spotify text-black" : "bg-white/10 text-white/80"}`}>
               {message.content}
+              {message.isLoadingCommand && <span className="ml-2 inline-block h-2 w-2 animate-pulse rounded-full bg-spotify" />}
             </div>
             {message.role === "user" && <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-white"><User size={16} /></div>}
           </div>
