@@ -41,7 +41,7 @@ function streamError(message: string, status: number) {
 
 function getGoogleConfig() {
   const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
-  const model = process.env.GOOGLE_AI_MODEL ?? "gemini-2.5-flash---";
+  const model = process.env.GOOGLE_AI_MODEL ?? "gemini-3.1-flash-lite";
   
   return { apiKey, model };
 }
