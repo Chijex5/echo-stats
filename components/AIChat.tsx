@@ -75,6 +75,7 @@ export function AIChat() {
         const data = await res.json().catch(() => null);
         throw new Error(data?.error ?? "AI chat failed");
       }
+      console.log(res.body)
 
       let assistantIndex = nextMessages.length;
       setMessages((current) => [...current, { role: "assistant", content: "" }]);
