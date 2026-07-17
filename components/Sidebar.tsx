@@ -15,6 +15,7 @@ import {
   RefreshCw,
   Settings,
   X,
+  MessageCircle,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -25,6 +26,7 @@ const navItems = [
   { icon: Music2,          label: "Top Tracks",     path: "/dashboard/tracks" },
   { icon: Users,           label: "Top Artists",    path: "/dashboard/artists" },
   { icon: Lightbulb,       label: "Insights",       path: "/dashboard/insights" },
+  { icon: MessageCircle,   label: "AI Chat",        path: "/dashboard/chat" },
   { icon: History,         label: "Timeline",       path: "/dashboard/timeline" },
   { icon: Sparkles,        label: "Song of the Day",path: "/dashboard/sotd" },
   { icon: Smartphone,      label: "Story Mode",     path: "/dashboard/story" },
