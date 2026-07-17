@@ -41,7 +41,7 @@ function streamError(message: string, status: number) {
 
 function getGoogleConfig() {
   const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
-  const model = process.env.GOOGLE_AI_MODEL ?? "gemini-2.5-flash-lite";
+  const model = process.env.GOOGLE_AI_MODEL ?? "gemini-3.1-flash-lite";
   console.log("[ai/chat] getGoogleConfig ->", {
     hasApiKey: Boolean(apiKey),
     apiKeyLength: apiKey?.length ?? 0,
