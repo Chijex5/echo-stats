@@ -41,12 +41,8 @@ function streamError(message: string, status: number) {
 
 function getGoogleConfig() {
   const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
-  const model = process.env.GOOGLE_AI_MODEL ?? "gemini-3.1-flash-lite";
-  console.log("[ai/chat] getGoogleConfig ->", {
-    hasApiKey: Boolean(apiKey),
-    apiKeyLength: apiKey?.length ?? 0,
-    model,
-  });
+  const model = process.env.GOOGLE_AI_MODEL ?? "gemini-2.5-flash---";
+  
   return { apiKey, model };
 }
 
@@ -117,7 +113,6 @@ function getDateRange(duration: z.infer<typeof commandSchema>["duration"]) {
 }
 
 async function executeListeningHistoryCommand(userId: string, command: z.infer<typeof commandSchema>) {
-  console.log("[ai/chat] executeListeningHistoryCommand ->", { userId, command });
   const userObjectId = new mongoose.Types.ObjectId(userId);
   const { start, end } = getDateRange(command.duration);
   const tracks = await StreamEntry.find({ userId: userObjectId, ts: { $gte: start, $lt: end } })
@@ -125,8 +120,6 @@ async function executeListeningHistoryCommand(userId: string, command: z.infer<t
     .limit(25)
     .select("trackName artistName albumName ts msPlayed platform skipped -_id")
     .lean();
-
-  console.log("[ai/chat] executeListeningHistoryCommand result ->", { returnedCount: tracks.length });
 
   return {
     command: "LISTENING-HISTORY://filter",
@@ -164,11 +157,7 @@ async function generateGoogleText(
   client: GoogleGenAI,
   model: string
 ) {
-  console.log("[ai/chat] generateGoogleText -> calling interactions.create", {
-    model,
-    messageCount: messages.length,
-    promptPreview: prompt.slice(0, 200),
-  });
+  
   try {
     const interaction = await client.interactions.create({
       model,
@@ -178,9 +167,6 @@ async function generateGoogleText(
         temperature: 0.7,
         max_output_tokens: 650,
       },
-    });
-    console.log("[ai/chat] generateGoogleText -> success", {
-      outputLength: interaction.output_text?.length ?? 0,
     });
     return interaction.output_text ?? "";
   } catch (error) {
@@ -196,11 +182,7 @@ async function streamGoogleText(
   client: GoogleGenAI,
   model: string
 ) {
-  console.log("[ai/chat] streamGoogleText -> calling interactions.create (stream)", {
-    model,
-    messageCount: messages.length,
-    promptPreview: prompt.slice(0, 200),
-  });
+  
   try {
     const stream = await client.interactions.create({
       model,
@@ -217,7 +199,6 @@ async function streamGoogleText(
         enqueueEvent(controller, { type: "assistant_delta", text: event.delta.text });
       }
     }
-    console.log("[ai/chat] streamGoogleText -> stream finished", { deltaCount });
   } catch (error) {
     logGoogleCallError("streamGoogleText", error);
     throw error;
@@ -226,7 +207,6 @@ async function streamGoogleText(
 
 export async function POST(req: NextRequest) {
   const userId = await getSessionUserId(req);
-  console.log("[ai/chat] POST -> session", { userId });
   if (!userId) return streamError("Unauthorized", 401);
 
   const rawBody = await req.json().catch((err) => {
@@ -234,7 +214,6 @@ export async function POST(req: NextRequest) {
     return null;
   });
   const parsed = chatRequestSchema.safeParse(rawBody);
-  console.log("[ai/chat] Parsed request:", parsed.success ? parsed.data : parsed.error?.flatten());
   if (!parsed.success) return streamError("Invalid chat request", 400);
 
   const { apiKey, model } = getGoogleConfig();
@@ -244,25 +223,19 @@ export async function POST(req: NextRequest) {
   }
 
   const client = new GoogleGenAI({ apiKey });
-  console.log("[ai/chat] GoogleGenAI client initialized with model:", model);
 
   try {
     await connectDB();
-    console.log("[ai/chat] DB connected");
   } catch (error) {
     logGoogleCallError("connectDB", error);
     return streamError("Database connection failed", 500);
   }
 
   const context = await buildMusicContext(userId);
-  console.log("[ai/chat] built music context", {
-    contextLength: typeof context === "string" ? (context as string).length : undefined,
-  });
 
   const latestQuestion = parsed.data.messages.at(-1)?.content ?? "Summarize my listening history.";
   const recentConversation = parsed.data.messages.slice(-6, -1);
   const firstPrompt = buildMusicAssistantUserPrompt(latestQuestion, context);
-  console.log("[ai/chat] First prompt for AI:", firstPrompt.slice(0, 300));
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -304,7 +277,7 @@ export async function POST(req: NextRequest) {
       }
     },
   });
-  console.log("[ai/chat] Streaming response to client");
+  
 
   return new Response(stream, {
     headers: {
