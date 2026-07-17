@@ -238,17 +238,20 @@ export function AIChat() {
             </div>
           ))}
 
-          {isLoading && messages[messages.length - 1]?.content === "" && (
-            <div className="flex items-center gap-4 text-xs text-white/35">
-              <span className="[font-family:'IBM_Plex_Mono',ui-monospace,monospace] w-14 shrink-0 uppercase tracking-[0.18em]">
-                Analyst
-              </span>
-              <div className="flex items-center gap-2">
-                <EqBars />
-                <span>Reading the log…</span>
+          {isLoading &&
+            !messages.some((message) => message.isLoadingCommand) &&
+            (messages[messages.length - 1]?.role !== "assistant" ||
+              messages[messages.length - 1]?.content === "") && (
+              <div className="flex items-center gap-4 text-xs text-white/35">
+                <span className="[font-family:'IBM_Plex_Mono',ui-monospace,monospace] w-14 shrink-0 uppercase tracking-[0.18em]">
+                  Analyst
+                </span>
+                <div className="flex items-center gap-2">
+                  <EqBars />
+                  <span>Reading the log…</span>
+                </div>
               </div>
-            </div>
-          )}
+            )}
         </div>
 
         {error && (
@@ -283,7 +286,7 @@ export function AIChat() {
         </form>
       </section>
 
-      <style jsx>{`
+      <style jsx global>{`
         @keyframes eq-bar {
           0%,
           100% {
