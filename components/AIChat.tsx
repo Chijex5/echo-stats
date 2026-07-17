@@ -20,7 +20,7 @@ export function AIChat() {
     {
       role: "assistant",
       content:
-        "Ask me about your Echo Stats listening history. I use a compact private summary of your streams — not your Spotify tokens or live account controls.",
+        "Ask me about your Echo Stats listening history. I stream answers from Google AI using a compact private summary of your streams — not your Spotify tokens or live account controls.",
     },
   ]);
   const [input, setInput] = useState("");
@@ -45,9 +45,31 @@ export function AIChat() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: [...requestMessages, { role: "user", content: trimmed }].slice(-8) }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error ?? "AI chat failed");
-      setMessages((current) => [...current, { role: "assistant", content: data.answer }]);
+
+      if (!res.ok || !res.body) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error ?? "AI chat failed");
+      }
+
+      const assistantIndex = nextMessages.length;
+      setMessages((current) => [...current, { role: "assistant", content: "" }]);
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        setMessages((current) =>
+          current.map((message, index) =>
+            index === assistantIndex
+              ? { ...message, content: `${message.content}${chunk}` }
+              : message
+          )
+        );
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "AI chat failed");
     } finally {

@@ -17,58 +17,92 @@ const chatRequestSchema = z.object({
     .max(8),
 });
 
-const OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
+function streamError(message: string, status: number) {
+  return NextResponse.json({ error: message }, { status });
+}
+
+function extractSseText(line: string): string {
+  if (!line.startsWith("data: ")) return "";
+
+  try {
+    const payload = JSON.parse(line.slice("data: ".length));
+    return payload?.candidates?.[0]?.content?.parts?.map((part: { text?: string }) => part.text ?? "").join("") ?? "";
+  } catch {
+    return "";
+  }
+}
 
 export async function POST(req: NextRequest) {
   const userId = await getSessionUserId(req);
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!userId) return streamError("Unauthorized", 401);
 
   const parsed = chatRequestSchema.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid chat request" }, { status: 400 });
-  }
+  if (!parsed.success) return streamError("Invalid chat request", 400);
 
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY ?? process.env.GOOGLE_AI_API_KEY;
   if (!apiKey) {
-    return NextResponse.json(
-      { error: "AI chat is not configured. Add OPENAI_API_KEY on the server." },
-      { status: 503 }
-    );
+    return streamError("AI chat is not configured. Add GOOGLE_GENERATIVE_AI_API_KEY on the server.", 503);
   }
 
   await connectDB();
   const context = await buildMusicContext(userId);
   const latestQuestion = parsed.data.messages.at(-1)?.content ?? "Summarize my listening history.";
   const recentConversation = parsed.data.messages.slice(-6, -1);
+  const model = process.env.GOOGLE_AI_MODEL ?? "gemini-1.5-flash";
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`;
 
-  const aiResponse = await fetch(OPENAI_CHAT_URL, {
+  const googleResponse = await fetch(endpoint, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: process.env.OPENAI_MODEL ?? "gpt-4o-mini",
-      temperature: 0.7,
-      max_tokens: 650,
-      messages: [
-        { role: "system", content: MUSIC_ASSISTANT_SYSTEM_PROMPT },
-        ...recentConversation,
-        { role: "user", content: buildMusicAssistantUserPrompt(latestQuestion, context) },
+      system_instruction: { parts: [{ text: MUSIC_ASSISTANT_SYSTEM_PROMPT }] },
+      contents: [
+        ...recentConversation.map((message) => ({
+          role: message.role === "assistant" ? "model" : "user",
+          parts: [{ text: message.content }],
+        })),
+        { role: "user", parts: [{ text: buildMusicAssistantUserPrompt(latestQuestion, context) }] },
       ],
+      generationConfig: { temperature: 0.7, maxOutputTokens: 650 },
     }),
   });
 
-  if (!aiResponse.ok) {
-    return NextResponse.json({ error: "AI provider request failed" }, { status: 502 });
+  if (!googleResponse.ok || !googleResponse.body) {
+    return streamError("Google AI request failed", 502);
   }
 
-  const payload = await aiResponse.json();
-  const answer = payload?.choices?.[0]?.message?.content;
+  const encoder = new TextEncoder();
+  const decoder = new TextDecoder();
 
-  if (typeof answer !== "string" || !answer.trim()) {
-    return NextResponse.json({ error: "AI provider returned an empty answer" }, { status: 502 });
-  }
+  const stream = new ReadableStream({
+    async start(controller) {
+      const reader = googleResponse.body!.getReader();
+      let buffer = "";
 
-  return NextResponse.json({ answer });
+      try {
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() ?? "";
+
+          for (const line of lines) {
+            const text = extractSseText(line.trim());
+            if (text) controller.enqueue(encoder.encode(text));
+          }
+        }
+      } finally {
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/plain; charset=utf-8",
+      "Cache-Control": "no-cache, no-transform",
+    },
+  });
 }
