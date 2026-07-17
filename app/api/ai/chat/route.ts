@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import mongoose from "mongoose";
+import { GoogleGenAI } from "@google/genai";
 import { getSessionUserId } from "@/lib/get-session-user-id";
 import { connectDB } from "@/lib/db";
 import StreamEntry from "@/lib/models/StreamEntry";
@@ -39,41 +40,24 @@ function streamError(message: string, status: number) {
 }
 
 function getGoogleConfig() {
-  const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY ?? process.env.GOOGLE_AI_API_KEY;
-  const model = process.env.GOOGLE_AI_MODEL ?? "gemini-1.5-flash";
+  const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+  const model = process.env.GOOGLE_AI_MODEL ?? "gemini-3.5-flash";
+  console.log("[ai/chat] getGoogleConfig ->", {
+    hasApiKey: Boolean(apiKey),
+    apiKeyLength: apiKey?.length ?? 0,
+    model,
+  });
   return { apiKey, model };
 }
 
-function getGoogleEndpoint(model: string, apiKey: string, streaming: boolean) {
-  const action = streaming ? "streamGenerateContent?alt=sse" : "generateContent";
-  const separator = streaming ? "&" : "?";
-  return `https://generativelanguage.googleapis.com/v1beta/models/${model}:${action}${separator}key=${apiKey}`;
-}
-
-function toGoogleContents(messages: ChatMessage[], latestPrompt: string) {
+function toInteractionInput(messages: ChatMessage[], latestPrompt: string) {
   return [
     ...messages.map((message) => ({
       role: message.role === "assistant" ? "model" : "user",
-      parts: [{ text: message.content }],
+      content: message.content,
     })),
-    { role: "user", parts: [{ text: latestPrompt }] },
+    { role: "user", content: latestPrompt },
   ];
-}
-
-function extractText(payload: unknown): string {
-  const candidate = (payload as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> })
-    ?.candidates?.[0];
-  return candidate?.content?.parts?.map((part) => part.text ?? "").join("") ?? "";
-}
-
-function extractSseText(line: string): string {
-  if (!line.startsWith("data: ")) return "";
-
-  try {
-    return extractText(JSON.parse(line.slice("data: ".length)));
-  } catch {
-    return "";
-  }
 }
 
 function parseListeningHistoryCommand(text: string) {
@@ -117,6 +101,7 @@ function getDateRange(duration: z.infer<typeof commandSchema>["duration"]) {
 }
 
 async function executeListeningHistoryCommand(userId: string, command: z.infer<typeof commandSchema>) {
+  console.log("[ai/chat] executeListeningHistoryCommand ->", { userId, command });
   const userObjectId = new mongoose.Types.ObjectId(userId);
   const { start, end } = getDateRange(command.duration);
   const tracks = await StreamEntry.find({ userId: userObjectId, ts: { $gte: start, $lt: end } })
@@ -124,6 +109,8 @@ async function executeListeningHistoryCommand(userId: string, command: z.infer<t
     .limit(25)
     .select("trackName artistName albumName ts msPlayed platform skipped -_id")
     .lean();
+
+  console.log("[ai/chat] executeListeningHistoryCommand result ->", { returnedCount: tracks.length });
 
   return {
     command: "LISTENING-HISTORY://filter",
@@ -138,81 +125,129 @@ function enqueueEvent(controller: ReadableStreamDefaultController<Uint8Array>, e
   controller.enqueue(new TextEncoder().encode(`${JSON.stringify(event)}\n`));
 }
 
-async function generateGoogleText(messages: ChatMessage[], prompt: string, apiKey: string, model: string) {
-  const response = await fetch(getGoogleEndpoint(model, apiKey, false), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      system_instruction: { parts: [{ text: MUSIC_ASSISTANT_SYSTEM_PROMPT }] },
-      contents: toGoogleContents(messages, prompt),
-      generationConfig: { temperature: 0.7, maxOutputTokens: 650 },
-    }),
-  });
+// Centralized so every call site logs the same way, and so we can surface
+// error.cause — for "TypeError: fetch failed" the real reason (ENOTFOUND,
+// ECONNREFUSED, certificate error, timeout, etc.) lives in `cause`, not `message`.
+function logGoogleCallError(label: string, error: unknown) {
+  if (error instanceof Error) {
+    console.error(`[ai/chat] ${label} threw:`, {
+      name: error.name,
+      message: error.message,
+      cause: (error as any).cause,
+      stack: error.stack,
+    });
+  } else {
+    console.error(`[ai/chat] ${label} threw non-Error:`, error);
+  }
+}
 
-  if (!response.ok) throw new Error("Google AI request failed");
-  return extractText(await response.json());
+async function generateGoogleText(
+  messages: ChatMessage[],
+  prompt: string,
+  client: GoogleGenAI,
+  model: string
+) {
+  console.log("[ai/chat] generateGoogleText -> calling interactions.create", {
+    model,
+    messageCount: messages.length,
+    promptPreview: prompt.slice(0, 200),
+  });
+  try {
+    const interaction = await client.interactions.create({
+      model,
+      system_instruction: MUSIC_ASSISTANT_SYSTEM_PROMPT,
+      input: toInteractionInput(messages, prompt),
+      generation_config: { temperature: 0.7, max_output_tokens: 650 },
+    });
+    console.log("[ai/chat] generateGoogleText -> success", {
+      outputLength: interaction.output_text?.length ?? 0,
+    });
+    return interaction.output_text ?? "";
+  } catch (error) {
+    logGoogleCallError("generateGoogleText", error);
+    throw error;
+  }
 }
 
 async function streamGoogleText(
   controller: ReadableStreamDefaultController<Uint8Array>,
   messages: ChatMessage[],
   prompt: string,
-  apiKey: string,
+  client: GoogleGenAI,
   model: string
 ) {
-  const response = await fetch(getGoogleEndpoint(model, apiKey, true), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      system_instruction: { parts: [{ text: MUSIC_ASSISTANT_SYSTEM_PROMPT }] },
-      contents: toGoogleContents(messages, prompt),
-      generationConfig: { temperature: 0.7, maxOutputTokens: 650 },
-    }),
+  console.log("[ai/chat] streamGoogleText -> calling interactions.create (stream)", {
+    model,
+    messageCount: messages.length,
+    promptPreview: prompt.slice(0, 200),
   });
+  try {
+    const stream = await client.interactions.create({
+      model,
+      system_instruction: MUSIC_ASSISTANT_SYSTEM_PROMPT,
+      input: toInteractionInput(messages, prompt),
+      generation_config: { temperature: 0.7, max_output_tokens: 650 },
+      stream: true,
+    });
 
-  if (!response.ok || !response.body) throw new Error("Google AI request failed");
-
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-
-  while (true) {
-    const { value, done } = await reader.read();
-    if (done) break;
-
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split("\n");
-    buffer = lines.pop() ?? "";
-
-    for (const line of lines) {
-      const text = extractSseText(line.trim());
-      if (text) enqueueEvent(controller, { type: "assistant_delta", text });
+    let deltaCount = 0;
+    for await (const event of stream) {
+      if (event.event_type === "step.delta" && event.delta?.type === "text" && event.delta.text) {
+        deltaCount += 1;
+        enqueueEvent(controller, { type: "assistant_delta", text: event.delta.text });
+      }
     }
+    console.log("[ai/chat] streamGoogleText -> stream finished", { deltaCount });
+  } catch (error) {
+    logGoogleCallError("streamGoogleText", error);
+    throw error;
   }
 }
 
 export async function POST(req: NextRequest) {
   const userId = await getSessionUserId(req);
+  console.log("[ai/chat] POST -> session", { userId });
   if (!userId) return streamError("Unauthorized", 401);
 
-  const parsed = chatRequestSchema.safeParse(await req.json().catch(() => null));
+  const rawBody = await req.json().catch((err) => {
+    console.error("[ai/chat] POST -> failed to parse request JSON:", err);
+    return null;
+  });
+  const parsed = chatRequestSchema.safeParse(rawBody);
+  console.log("[ai/chat] Parsed request:", parsed.success ? parsed.data : parsed.error?.flatten());
   if (!parsed.success) return streamError("Invalid chat request", 400);
 
   const { apiKey, model } = getGoogleConfig();
   if (!apiKey) {
+    console.error("[ai/chat] Missing GOOGLE_GENERATIVE_AI_API_KEY env var");
     return streamError("AI chat is not configured. Add GOOGLE_GENERATIVE_AI_API_KEY on the server.", 503);
   }
 
-  await connectDB();
+  const client = new GoogleGenAI({ apiKey });
+  console.log("[ai/chat] GoogleGenAI client initialized with model:", model);
+
+  try {
+    await connectDB();
+    console.log("[ai/chat] DB connected");
+  } catch (error) {
+    logGoogleCallError("connectDB", error);
+    return streamError("Database connection failed", 500);
+  }
+
   const context = await buildMusicContext(userId);
+  console.log("[ai/chat] built music context", {
+    contextLength: typeof context === "string" ? context.length : undefined,
+  });
+
   const latestQuestion = parsed.data.messages.at(-1)?.content ?? "Summarize my listening history.";
   const recentConversation = parsed.data.messages.slice(-6, -1);
   const firstPrompt = buildMusicAssistantUserPrompt(latestQuestion, context);
+  console.log("[ai/chat] First prompt for AI:", firstPrompt.slice(0, 300));
 
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        const firstAnswer = await generateGoogleText(recentConversation, firstPrompt, apiKey, model);
+        const firstAnswer = await generateGoogleText(recentConversation, firstPrompt, client, model);
         const { cleanText, command } = parseListeningHistoryCommand(firstAnswer);
 
         enqueueEvent(controller, { type: "assistant_delta", text: cleanText });
@@ -230,12 +265,16 @@ export async function POST(req: NextRequest) {
             controller,
             [],
             buildCommandResultPrompt(latestQuestion, commandResult),
-            apiKey,
+            client,
             model
           );
           enqueueEvent(controller, { type: "assistant_done" });
         }
       } catch (error) {
+        // This is almost certainly where your "fetch failed" surfaces.
+        // logGoogleCallError already printed name/message/cause/stack above —
+        // check the server logs for the `cause` field specifically.
+        logGoogleCallError("stream handler (outer)", error);
         enqueueEvent(controller, {
           type: "error",
           error: error instanceof Error ? error.message : "AI chat failed",
@@ -245,6 +284,7 @@ export async function POST(req: NextRequest) {
       }
     },
   });
+  console.log("[ai/chat] Streaming response to client");
 
   return new Response(stream, {
     headers: {
