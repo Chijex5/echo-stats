@@ -50,13 +50,27 @@ function getGoogleConfig() {
   return { apiKey, model };
 }
 
-function toInteractionInput(messages: ChatMessage[], latestPrompt: string) {
+function toInteractionInput(
+  messages: ChatMessage[],
+  latestPrompt: string
+) {
   return [
     ...messages.map((message) => ({
       role: message.role === "assistant" ? "model" : "user",
-      content: message.content,
+      parts: [
+        {
+          text: message.content,
+        },
+      ],
     })),
-    { role: "user", content: latestPrompt },
+    {
+      role: "user",
+      parts: [
+        {
+          text: latestPrompt,
+        },
+      ],
+    },
   ];
 }
 
@@ -158,7 +172,10 @@ async function generateGoogleText(
       model,
       system_instruction: MUSIC_ASSISTANT_SYSTEM_PROMPT,
       input: toInteractionInput(messages, prompt),
-      generation_config: { temperature: 0.7, max_output_tokens: 650 },
+      generation_config: {
+        temperature: 0.7,
+        max_output_tokens: 650,
+      },
     });
     console.log("[ai/chat] generateGoogleText -> success", {
       outputLength: interaction.output_text?.length ?? 0,
