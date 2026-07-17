@@ -56,19 +56,19 @@ function toInteractionInput(
 ) {
   return [
     ...messages.map((message) => ({
-      type: message.role === "assistant" ? "model_output" : "user_input",
+      type: message.role === "assistant" ? ("model_output" as const) : ("user_input" as const),
       content: [
         {
-          type: "text",
+          type: "text" as const,
           text: message.content,
         },
       ],
     })),
     {
-      type: "user_input",
+      type: "user_input" as const,
       content: [
         {
-          type: "text",
+          type: "text" as const,
           text: latestPrompt,
         },
       ],
