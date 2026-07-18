@@ -2,6 +2,7 @@
 
 import React, { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowUp, Disc3, Clock3, Quote } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 
 type ChatMessage = {
   role: "user" | "assistant";
@@ -10,6 +11,9 @@ type ChatMessage = {
   isIntro?: boolean;
 };
 
+// Styled as a record's side/track index (A1, A2, B1, B2) rather than generic
+// numbering — the one bit of "numbering" here actually means something for
+// a music app, instead of decorative 01/02/03 markers.
 const STARTERS = [
   { tag: "A1", icon: Quote, label: "Summarize my last 30 days in a funny way." },
   { tag: "A2", icon: Disc3, label: "Which artist did I overplay then stop listening to?" },
@@ -201,10 +205,59 @@ export function AIChat() {
                     {message.content}
                   </span>
                 ) : (
-                  <p className="whitespace-pre-wrap text-sm leading-relaxed text-white/85">
-                    {message.content}
+                  <div className="text-sm leading-relaxed text-white/85">
+                    <ReactMarkdown
+                      components={{
+                        p: ({ children }) => (
+                          <p className="mb-3 whitespace-pre-wrap last:mb-0">{children}</p>
+                        ),
+                        h1: ({ children }) => (
+                          <h1 className="mb-3 mt-4 text-base font-semibold text-white first:mt-0">
+                            {children}
+                          </h1>
+                        ),
+                        h2: ({ children }) => (
+                          <h2 className="mb-2 mt-4 text-sm font-semibold text-white first:mt-0">
+                            {children}
+                          </h2>
+                        ),
+                        h3: ({ children }) => (
+                          <h3 className="mb-2 mt-3 text-sm font-semibold text-white/90 first:mt-0">
+                            {children}
+                          </h3>
+                        ),
+                        strong: ({ children }) => (
+                          <strong className="font-semibold text-white">{children}</strong>
+                        ),
+                        em: ({ children }) => <em className="italic">{children}</em>,
+                        ul: ({ children }) => (
+                          <ul className="mb-3 list-disc space-y-1 pl-5 last:mb-0">{children}</ul>
+                        ),
+                        ol: ({ children }) => (
+                          <ol className="mb-3 list-decimal space-y-1 pl-5 last:mb-0">{children}</ol>
+                        ),
+                        li: ({ children }) => <li className="pl-1">{children}</li>,
+                        a: ({ children, href }) => (
+                          <a
+                            href={href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="underline decoration-white/30 underline-offset-2 hover:decoration-white/70"
+                          >
+                            {children}
+                          </a>
+                        ),
+                        code: ({ children }) => (
+                          <code className="rounded bg-white/10 px-1 py-0.5 [font-family:'IBM_Plex_Mono',ui-monospace,monospace] text-[13px]">
+                            {children}
+                          </code>
+                        ),
+                      }}
+                    >
+                      {message.content}
+                    </ReactMarkdown>
                     {isLoading && index === messages.length - 1 && message.content && <Caret />}
-                  </p>
+                  </div>
                 )}
               </div>
             </div>
