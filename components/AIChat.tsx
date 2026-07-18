@@ -10,15 +10,6 @@ type ChatMessage = {
   isIntro?: boolean;
 };
 
-type ChatStreamEvent =
-  | { type: "assistant_delta"; text: string }
-  | { type: "assistant_done" }
-  | { type: "command_loading"; loading: boolean; label?: string }
-  | { type: "error"; error: string };
-
-// Styled as a record's side/track index (A1, A2, B1, B2) rather than generic
-// numbering — the one bit of "numbering" here actually means something for
-// a music app, instead of decorative 01/02/03 markers.
 const STARTERS = [
   { tag: "A1", icon: Quote, label: "Summarize my last 30 days in a funny way." },
   { tag: "A2", icon: Disc3, label: "Which artist did I overplay then stop listening to?" },
@@ -97,9 +88,6 @@ export function AIChat() {
     if (!trimmed || isLoading) return;
     hasStartedRef.current = true;
 
-    const clientRequestId = `c_${Math.random().toString(36).slice(2, 8)}`;
-    console.log(`[ai-chat][${clientRequestId}] submit ->`, { question: trimmed });
-
     const nextMessages: ChatMessage[] = [...messages, { role: "user", content: trimmed }];
     setMessages(nextMessages);
     setInput("");
@@ -109,145 +97,22 @@ export function AIChat() {
     try {
       const res = await fetch("/api/ai/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "X-Client-Request-Id": clientRequestId },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: [...requestMessages, { role: "user", content: trimmed }].slice(-8) }),
       });
 
-      console.log(`[ai-chat][${clientRequestId}] fetch responded`, {
-        ok: res.ok,
-        status: res.status,
-        serverRequestId: res.headers.get("x-chat-request-id"),
-        contentType: res.headers.get("content-type"),
-        hasBody: !!res.body,
-      });
+      const data = await res.json().catch(() => null);
 
-      if (!res.ok || !res.body) {
-        const data = await res.json().catch(() => null);
+      if (!res.ok || !data) {
         throw new Error(data?.error ?? "AI chat failed");
       }
 
-      let assistantIndex = nextMessages.length;
-      setMessages((current) => [...current, { role: "assistant", content: "" }]);
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let chunkCount = 0;
-      let eventCount = 0;
-
-      function applyEvent(event: ChatStreamEvent) {
-        eventCount += 1;
-        console.log(`[ai-chat][${clientRequestId}] event`, {
-          type: event.type,
-          assistantIndex,
-          // full payload, not just the type — this is the piece missing above
-          text: "text" in event ? event.text : undefined,
-          textLen: "text" in event ? event.text.length : undefined,
-        });
-
-
-        if (event.type === "assistant_delta") {
-          setMessages((current) =>
-            current.map((message, index) =>
-              index === assistantIndex
-                ? { ...message, content: `${message.content}${event.text}` }
-                : message
-            )
-          );
-          return;
-        }
-
-        if (event.type === "assistant_done") {
-          assistantIndex += 1;
-          return;
-        }
-
-        if (event.type === "command_loading") {
-          if (event.loading) {
-            setMessages((current) => [
-              ...current,
-              {
-                role: "assistant",
-                content: event.label ?? "Working on that…",
-                isLoadingCommand: true,
-              },
-              { role: "assistant", content: "" },
-            ]);
-            assistantIndex += 1;
-          } else {
-            setMessages((current) => current.filter((message) => !message.isLoadingCommand));
-            assistantIndex -= 1;
-          }
-          return;
-        }
-
-        if (event.type === "error") {
-          throw new Error(event.error);
-        }
-      }
-
-      // Parses whatever complete lines are available and returns any
-      // leftover partial line so the caller can hold onto it.
-      function processBuffer(raw: string, isFinal: boolean) {
-        const lines = raw.split("\n");
-        const remainder = isFinal ? "" : lines.pop() ?? "";
-        for (const line of lines) {
-          if (!line.trim()) continue;
-          try {
-            applyEvent(JSON.parse(line) as ChatStreamEvent);
-          } catch (parseErr) {
-            // Previously this threw uncaught inside the read loop and
-            // silently aborted rendering with no visible error — logging
-            // the raw line here is the key diagnostic if a chunk gets
-            // split mid-JSON by a proxy.
-            console.error(`[ai-chat][${clientRequestId}] failed to parse NDJSON line`, {
-              line,
-              message: parseErr instanceof Error ? parseErr.message : String(parseErr),
-            });
-          }
-        }
-        return remainder;
-      }
-
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) {
-          console.log(`[ai-chat][${clientRequestId}] reader done`, {
-            chunkCount,
-            eventCount,
-            leftoverBufferLen: buffer.length,
-          });
-          // Flush whatever's left — previously any trailing partial line
-          // that never got a newline was silently dropped here.
-          if (buffer.trim()) {
-            console.warn(`[ai-chat][${clientRequestId}] flushing unterminated trailing buffer`, { buffer });
-            processBuffer(buffer, true);
-          }
-          break;
-        }
-
-        chunkCount += 1;
-        const decoded = decoder.decode(value, { stream: true });
-        console.log(`[ai-chat][${clientRequestId}] chunk received`, { chunkCount, bytes: value.length, decodedLen: decoded.length });
-        buffer += decoded;
-        buffer = processBuffer(buffer, false);
-      }
+      const newAssistantMessages: ChatMessage[] = Array.isArray(data.messages) ? data.messages : [];
+      setMessages((current) => [...current, ...newAssistantMessages]);
     } catch (err) {
-      console.error(`[ai-chat][${clientRequestId}] submitQuestion FAILED`, {
-        name: err instanceof Error ? err.name : undefined,
-        message: err instanceof Error ? err.message : String(err),
-        stack: err instanceof Error ? err.stack : undefined,
-      });
       setError(err instanceof Error ? err.message : "AI chat failed");
-      setMessages((current) => {
-        const last = current[current.length - 1];
-        return last?.role === "assistant" && !last.isLoadingCommand && last.content === ""
-          ? current.slice(0, -1)
-          : current;
-      });
     } finally {
       setIsLoading(false);
-      console.log(`[ai-chat][${clientRequestId}] finished`);
     }
   }
 
