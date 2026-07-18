@@ -137,7 +137,14 @@ export function AIChat() {
 
       function applyEvent(event: ChatStreamEvent) {
         eventCount += 1;
-        console.log(`[ai-chat][${clientRequestId}] event`, { type: event.type, assistantIndex });
+        console.log(`[ai-chat][${clientRequestId}] event`, {
+          type: event.type,
+          assistantIndex,
+          // full payload, not just the type — this is the piece missing above
+          text: "text" in event ? event.text : undefined,
+          textLen: "text" in event ? event.text.length : undefined,
+        });
+
 
         if (event.type === "assistant_delta") {
           setMessages((current) =>
