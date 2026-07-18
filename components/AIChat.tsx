@@ -7,6 +7,7 @@ type ChatMessage = {
   role: "user" | "assistant";
   content: string;
   isLoadingCommand?: boolean;
+  isIntro?: boolean;
 };
 
 type ChatStreamEvent =
@@ -25,30 +26,58 @@ const STARTERS = [
   { tag: "B2", icon: Disc3, label: "Recommend tracks from my own history that I forgot about." },
 ];
 
+const INTRO_MESSAGE: ChatMessage = {
+  role: "assistant",
+  isIntro: true,
+  content:
+    "Ask me about your Echo Stats listening history. I stream answers from Google AI using a compact private summary of your streams — not your Spotify tokens or live account controls.",
+};
+
 export function AIChat() {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      role: "assistant",
-      content:
-        "Ask me about your Echo Stats listening history. I stream answers from Google AI using a compact private summary of your streams — not your Spotify tokens or live account controls.",
-    },
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>([INTRO_MESSAGE]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isHydrating, setIsHydrating] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Exclude the initial greeting (index 0) and any placeholder/empty/loading
-  // bubbles — these are UI-only state and are never valid to send upstream,
-  // since the API rejects empty message content.
+  // Resume the single running history on load. Falls back to the canned
+  // intro (already the initial state) if there's nothing saved yet, or if
+  // the fetch fails — history is a nice-to-have, not a blocker.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/ai/chat");
+        if (!res.ok) throw new Error("Failed to load history");
+        const data = await res.json();
+        if (!cancelled && Array.isArray(data.messages) && data.messages.length > 0) {
+          setMessages(data.messages as ChatMessage[]);
+        }
+      } catch {
+        // Silent — nothing to recover, the intro message already covers it.
+      } finally {
+        if (!cancelled) setIsHydrating(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Exclude the canned intro and any placeholder/empty/loading bubbles —
+  // these are UI-only state and are never valid to send upstream, since the
+  // API rejects empty message content.
   const requestMessages = useMemo(
     () =>
       messages
-        .filter((message, index) => !(index === 0 && message.role === "assistant"))
+        .filter((message) => !message.isIntro)
         .filter((message) => !message.isLoadingCommand && message.content.trim().length > 0),
     [messages]
   );
+
+  const hasRealMessages = messages.some((message) => !message.isIntro);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -75,7 +104,6 @@ export function AIChat() {
         const data = await res.json().catch(() => null);
         throw new Error(data?.error ?? "AI chat failed");
       }
-      console.log(res.body)
 
       let assistantIndex = nextMessages.length;
       setMessages((current) => [...current, { role: "assistant", content: "" }]);
@@ -140,6 +168,12 @@ export function AIChat() {
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "AI chat failed");
+      setMessages((current) => {
+        const last = current[current.length - 1];
+        return last?.role === "assistant" && !last.isLoadingCommand && last.content === ""
+          ? current.slice(0, -1)
+          : current;
+      });
     } finally {
       setIsLoading(false);
     }
@@ -175,7 +209,7 @@ export function AIChat() {
       {/* ---------------------------------------------------------------- */}
       {/* Starters — a track listing (side/number), not a card grid.       */}
       {/* ---------------------------------------------------------------- */}
-      {messages.length <= 1 && (
+      {!hasRealMessages && !isHydrating && (
         <div className="flex flex-col border border-white/10">
           {STARTERS.map(({ tag, icon: Icon, label }, index) => (
             <button
@@ -209,6 +243,13 @@ export function AIChat() {
       {/* ---------------------------------------------------------------- */}
       <section className="flex flex-col border border-white/10">
         <div ref={scrollRef} className="max-h-[54vh] min-h-[380px] flex-1 space-y-6 overflow-y-auto px-5 py-6 md:px-7">
+          {isHydrating ? (
+            <div className="flex items-center gap-3 text-xs text-white/30">
+              <EqBars />
+              <span>Resuming your last conversation…</span>
+            </div>
+          ) : (
+            <>
           {messages.map((message, index) => (
             <div key={`${message.role}-${index}`} className="flex gap-4">
               <span
@@ -253,6 +294,8 @@ export function AIChat() {
                 </div>
               </div>
             )}
+            </>
+          )}
         </div>
 
         {error && (
