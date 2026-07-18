@@ -97,6 +97,9 @@ export function AIChat() {
     if (!trimmed || isLoading) return;
     hasStartedRef.current = true;
 
+    const clientRequestId = `c_${Math.random().toString(36).slice(2, 8)}`;
+    console.log(`[ai-chat][${clientRequestId}] submit ->`, { question: trimmed });
+
     const nextMessages: ChatMessage[] = [...messages, { role: "user", content: trimmed }];
     setMessages(nextMessages);
     setInput("");
@@ -106,8 +109,16 @@ export function AIChat() {
     try {
       const res = await fetch("/api/ai/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-Client-Request-Id": clientRequestId },
         body: JSON.stringify({ messages: [...requestMessages, { role: "user", content: trimmed }].slice(-8) }),
+      });
+
+      console.log(`[ai-chat][${clientRequestId}] fetch responded`, {
+        ok: res.ok,
+        status: res.status,
+        serverRequestId: res.headers.get("x-chat-request-id"),
+        contentType: res.headers.get("content-type"),
+        hasBody: !!res.body,
       });
 
       if (!res.ok || !res.body) {
@@ -121,8 +132,13 @@ export function AIChat() {
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
+      let chunkCount = 0;
+      let eventCount = 0;
 
       function applyEvent(event: ChatStreamEvent) {
+        eventCount += 1;
+        console.log(`[ai-chat][${clientRequestId}] event`, { type: event.type, assistantIndex });
+
         if (event.type === "assistant_delta") {
           setMessages((current) =>
             current.map((message, index) =>
@@ -163,20 +179,58 @@ export function AIChat() {
         }
       }
 
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() ?? "";
-
+      // Parses whatever complete lines are available and returns any
+      // leftover partial line so the caller can hold onto it.
+      function processBuffer(raw: string, isFinal: boolean) {
+        const lines = raw.split("\n");
+        const remainder = isFinal ? "" : lines.pop() ?? "";
         for (const line of lines) {
           if (!line.trim()) continue;
-          applyEvent(JSON.parse(line) as ChatStreamEvent);
+          try {
+            applyEvent(JSON.parse(line) as ChatStreamEvent);
+          } catch (parseErr) {
+            // Previously this threw uncaught inside the read loop and
+            // silently aborted rendering with no visible error — logging
+            // the raw line here is the key diagnostic if a chunk gets
+            // split mid-JSON by a proxy.
+            console.error(`[ai-chat][${clientRequestId}] failed to parse NDJSON line`, {
+              line,
+              message: parseErr instanceof Error ? parseErr.message : String(parseErr),
+            });
+          }
         }
+        return remainder;
+      }
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) {
+          console.log(`[ai-chat][${clientRequestId}] reader done`, {
+            chunkCount,
+            eventCount,
+            leftoverBufferLen: buffer.length,
+          });
+          // Flush whatever's left — previously any trailing partial line
+          // that never got a newline was silently dropped here.
+          if (buffer.trim()) {
+            console.warn(`[ai-chat][${clientRequestId}] flushing unterminated trailing buffer`, { buffer });
+            processBuffer(buffer, true);
+          }
+          break;
+        }
+
+        chunkCount += 1;
+        const decoded = decoder.decode(value, { stream: true });
+        console.log(`[ai-chat][${clientRequestId}] chunk received`, { chunkCount, bytes: value.length, decodedLen: decoded.length });
+        buffer += decoded;
+        buffer = processBuffer(buffer, false);
       }
     } catch (err) {
+      console.error(`[ai-chat][${clientRequestId}] submitQuestion FAILED`, {
+        name: err instanceof Error ? err.name : undefined,
+        message: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : undefined,
+      });
       setError(err instanceof Error ? err.message : "AI chat failed");
       setMessages((current) => {
         const last = current[current.length - 1];
@@ -186,6 +240,7 @@ export function AIChat() {
       });
     } finally {
       setIsLoading(false);
+      console.log(`[ai-chat][${clientRequestId}] finished`);
     }
   }
 
