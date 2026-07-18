@@ -41,6 +41,10 @@ export function AIChat() {
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  // Flips true the moment the user sends anything, live or via a starter.
+  // Guards against a slow-resolving hydration fetch overwriting a
+  // conversation that already started while it was in flight.
+  const hasStartedRef = useRef(false);
 
   // Resume the single running history on load. Falls back to the canned
   // intro (already the initial state) if there's nothing saved yet, or if
@@ -52,7 +56,12 @@ export function AIChat() {
         const res = await fetch("/api/ai/chat");
         if (!res.ok) throw new Error("Failed to load history");
         const data = await res.json();
-        if (!cancelled && Array.isArray(data.messages) && data.messages.length > 0) {
+        if (
+          !cancelled &&
+          !hasStartedRef.current &&
+          Array.isArray(data.messages) &&
+          data.messages.length > 0
+        ) {
           setMessages(data.messages as ChatMessage[]);
         }
       } catch {
@@ -86,6 +95,7 @@ export function AIChat() {
   async function submitQuestion(question: string) {
     const trimmed = question.trim();
     if (!trimmed || isLoading) return;
+    hasStartedRef.current = true;
 
     const nextMessages: ChatMessage[] = [...messages, { role: "user", content: trimmed }];
     setMessages(nextMessages);
@@ -243,13 +253,6 @@ export function AIChat() {
       {/* ---------------------------------------------------------------- */}
       <section className="flex flex-col border border-white/10">
         <div ref={scrollRef} className="max-h-[54vh] min-h-[380px] flex-1 space-y-6 overflow-y-auto px-5 py-6 md:px-7">
-          {isHydrating ? (
-            <div className="flex items-center gap-3 text-xs text-white/30">
-              <EqBars />
-              <span>Resuming your last conversation…</span>
-            </div>
-          ) : (
-            <>
           {messages.map((message, index) => (
             <div key={`${message.role}-${index}`} className="flex gap-4">
               <span
@@ -280,6 +283,16 @@ export function AIChat() {
             </div>
           ))}
 
+          {/* Only shown before anything real has happened — a live send
+              flips hasRealMessages immediately, so this never sits on top
+              of (or hides) an actual conversation. */}
+          {isHydrating && !hasRealMessages && (
+            <div className="flex items-center gap-3 text-xs text-white/30">
+              <EqBars />
+              <span>Resuming your last conversation…</span>
+            </div>
+          )}
+
           {isLoading &&
             !messages.some((message) => message.isLoadingCommand) &&
             (messages[messages.length - 1]?.role !== "assistant" ||
@@ -294,8 +307,6 @@ export function AIChat() {
                 </div>
               </div>
             )}
-            </>
-          )}
         </div>
 
         {error && (
