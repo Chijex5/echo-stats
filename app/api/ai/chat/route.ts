@@ -5,6 +5,7 @@ import { GoogleGenAI } from "@google/genai";
 import { getSessionUserId } from "@/lib/get-session-user-id";
 import { connectDB } from "@/lib/db";
 import StreamEntry from "@/lib/models/StreamEntry";
+import { GENRE_GROUP_MAP, groupGenre } from "@/lib/musicAnalysis";
 import { buildMusicContext } from "@/lib/ai/buildMusicContext";
 import {
   MUSIC_ASSISTANT_SYSTEM_PROMPT,
@@ -25,9 +26,24 @@ const chatRequestSchema = z.object({
     .max(8),
 });
 
-const commandSchema = z.object({
-  duration: z.enum(["yesterday", "today", "last-7-days", "last-30-days"]),
-});
+const DURATIONS = ["yesterday", "today", "last-7-days", "last-30-days"] as const;
+type Duration = (typeof DURATIONS)[number];
+
+const DURATION_LABELS: Record<Duration, string> = {
+  yesterday: "yesterday",
+  today: "today",
+  "last-7-days": "the last 7 days",
+  "last-30-days": "the last 30 days",
+};
+
+const listeningHistorySchema = z.object({ duration: z.enum(DURATIONS) });
+const artistTopSongsSchema = z.object({ artist: z.string().trim().min(1).max(200) });
+const createPlaylistSchema = z.object({ genre: z.string().trim().min(1).max(100) });
+
+type AssistantCommand =
+  | { kind: "listening-history"; duration: Duration }
+  | { kind: "artist-top-songs"; artist: string }
+  | { kind: "create-playlist"; genre: string };
 
 type ChatMessage = z.infer<typeof chatRequestSchema>["messages"][number];
 
@@ -54,26 +70,62 @@ function toInteractionInput(messages: ChatMessage[], latestPrompt: string) {
   ];
 }
 
-function parseListeningHistoryCommand(text: string) {
-  const commandMatch = text.match(/LISTENING-HISTORY:\/\/filter:(\{[^\n]+\})/);
-  if (!commandMatch) return { cleanText: text.trim(), command: null };
-
-  const cleanText = text.replace(commandMatch[0], "").trim();
-  const parsedJson = (() => {
-    try {
-      return JSON.parse(commandMatch[1]);
-    } catch {
-      return null;
-    }
-  })();
-  const parsedCommand = commandSchema.safeParse(parsedJson);
-  return {
-    cleanText: cleanText || "Let me get that from your listening history.",
-    command: parsedCommand.success ? parsedCommand.data : null,
-  };
+// Escapes user/model-supplied text before it's used inside a RegExp, so an
+// artist name like "3.O.T (Remix)" doesn't get interpreted as regex syntax.
+function escapeRegex(input: string) {
+  return input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function getDateRange(duration: z.infer<typeof commandSchema>["duration"]) {
+const FALLBACK_ACK = "Let me pull that for you.";
+
+// Recognizes exactly one of the three hidden command formats the prompt
+// teaches the model to emit. Malformed command payloads are treated as "no
+// command" rather than thrown — a broken command shouldn't break the whole
+// response when the acknowledgement text is still perfectly fine on its own.
+function parseAssistantCommand(text: string): { cleanText: string; command: AssistantCommand | null } {
+  const listeningHistoryMatch = text.match(/LISTENING-HISTORY:\/\/filter:(\{[^\n]+\})/);
+  if (listeningHistoryMatch) {
+    const cleanText = text.replace(listeningHistoryMatch[0], "").trim();
+    const parsed = listeningHistorySchema.safeParse(safeJsonParse(listeningHistoryMatch[1]));
+    return {
+      cleanText: cleanText || FALLBACK_ACK,
+      command: parsed.success ? { kind: "listening-history", duration: parsed.data.duration } : null,
+    };
+  }
+
+  const artistTopSongsMatch = text.match(/ARTIST-TOP-SONGS:\/\/filter:(\{[^\n]+\})/);
+  if (artistTopSongsMatch) {
+    const cleanText = text.replace(artistTopSongsMatch[0], "").trim();
+    const parsed = artistTopSongsSchema.safeParse(safeJsonParse(artistTopSongsMatch[1]));
+    return {
+      cleanText: cleanText || FALLBACK_ACK,
+      command: parsed.success ? { kind: "artist-top-songs", artist: parsed.data.artist } : null,
+    };
+  }
+
+  const createPlaylistMatch = text.match(/CREATE-PLAYLIST:\/\/filter:(\{[^\n]+\})/);
+  if (createPlaylistMatch) {
+      
+    const cleanText = text.replace(createPlaylistMatch[0], "").trim();
+    const parsed = createPlaylistSchema.safeParse(safeJsonParse(createPlaylistMatch[1]));
+    return {
+      cleanText: cleanText || FALLBACK_ACK,
+      command: parsed.success ? { kind: "create-playlist", genre: parsed.data.genre } : null,
+    };
+  }
+
+  return { cleanText: text.trim(), command: null };
+}
+
+function safeJsonParse(raw: string): unknown {
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+function getDateRange(duration: Duration) {
   const now = new Date();
   const start = new Date(now);
   const end = new Date(now);
@@ -94,22 +146,130 @@ function getDateRange(duration: z.infer<typeof commandSchema>["duration"]) {
   return { start, end };
 }
 
-async function executeListeningHistoryCommand(userId: string, command: z.infer<typeof commandSchema>) {
+async function fetchListeningHistory(userId: string, duration: Duration) {
   const userObjectId = new mongoose.Types.ObjectId(userId);
-  const { start, end } = getDateRange(command.duration);
+  const { start, end } = getDateRange(duration);
   const tracks = await StreamEntry.find({ userId: userObjectId, ts: { $gte: start, $lt: end } })
     .sort({ ts: -1 })
     .limit(25)
     .select("trackName artistName albumName ts msPlayed platform skipped -_id")
     .lean();
 
-  return {
-    command: "LISTENING-HISTORY://filter",
-    duration: command.duration,
-    range: { start, end },
-    returnedCount: tracks.length,
-    tracks,
-  };
+  return { duration, range: { start, end }, returnedCount: tracks.length, tracks };
+}
+
+// No AI call — the raw data becomes the whole response. This is the actual
+// fix: a plain formatter can't drift from the query results the way a
+// second LLM generation could.
+function formatListeningHistoryMarkdown(result: Awaited<ReturnType<typeof fetchListeningHistory>>): string {
+  if (result.tracks.length === 0) {
+    return `No plays found for **${DURATION_LABELS[result.duration]}**.`;
+  }
+  const lines = result.tracks.map(
+    (t: { trackName: string; artistName: string }) => `- **${t.trackName}** – ${t.artistName}`
+  );
+  return [
+    `Here's your listening history for **${DURATION_LABELS[result.duration]}** (${result.returnedCount} ${
+      result.returnedCount === 1 ? "play" : "plays"
+    }):`,
+    "",
+    ...lines,
+  ].join("\n");
+}
+
+// Top 10 tracks by play count for one artist. Substring match (not an exact
+// match) on purpose: this dataset stores collabs as one combined string
+// (e.g. "Reekado Banks, Sarkodie"), so an exact match on "Sarkodie" alone
+// would silently miss that row.
+async function fetchArtistTopSongs(userId: string, artist: string) {
+  const userObjectId = new mongoose.Types.ObjectId(userId);
+  const artistRegex = new RegExp(escapeRegex(artist.trim()), "i");
+
+  const tracks = await StreamEntry.aggregate([
+    { $match: { userId: userObjectId, artistName: artistRegex } },
+    {
+      $group: {
+        _id: { track: "$trackName", artist: "$artistName" },
+        trackName: { $first: "$trackName" },
+        artistName: { $first: "$artistName" },
+        albumName: { $first: "$albumName" },
+        playCount: { $sum: 1 },
+        lastPlayed: { $max: "$ts" },
+      },
+    },
+    { $sort: { playCount: -1 } },
+    { $limit: 10 },
+    { $project: { _id: 0, trackName: 1, artistName: 1, albumName: 1, playCount: 1, lastPlayed: 1 } },
+  ]);
+
+  return { artist, matchedTrackCount: tracks.length, tracks };
+}
+
+// Maps free-text genre input to one of the canonical group IDs in
+// GENRE_GROUP_MAP (e.g. "hip pop" -> "hiphop"). Also accepts a group ID
+// directly, since the prompt asks the model to already map to these names.
+function normalizeGenreQuery(input: string): string | null {
+  const key = input.trim().toLowerCase();
+  if (GENRE_GROUP_MAP[key]) return GENRE_GROUP_MAP[key];
+  const knownGroups = new Set(Object.values(GENRE_GROUP_MAP));
+  if (knownGroups.has(key)) return key;
+  return null;
+}
+
+
+async function fetchPlaylistByGenre(userId: string, rawGenre: string) {
+  const matchedGenre = normalizeGenreQuery(rawGenre);
+  if (!matchedGenre) {
+    return { genre: rawGenre, matchedGenre: null as string | null, tracks: [] as unknown[] };
+  }
+
+  const userObjectId = new mongoose.Types.ObjectId(userId);
+
+  const distinctRawGenres: string[] = await StreamEntry.distinct("genre", {
+    userId: userObjectId,
+    genre: { $nin: [null, "", "unknown"] },
+  });
+
+  const matchingRawGenres = distinctRawGenres.filter((g) => groupGenre(g) === matchedGenre);
+
+  if (matchingRawGenres.length === 0) {
+    return { genre: rawGenre, matchedGenre, tracks: [] as unknown[] };
+  }
+
+  const tracks = await StreamEntry.aggregate([
+    { $match: { userId: userObjectId, genre: { $in: matchingRawGenres } } },
+    {
+      $group: {
+        _id: { track: "$trackName", artist: "$artistName" },
+        trackName: { $first: "$trackName" },
+        artistName: { $first: "$artistName" },
+        playCount: { $sum: 1 },
+      },
+    },
+    { $sort: { playCount: -1 } },
+    { $limit: 20 },
+    { $project: { _id: 0, trackName: 1, artistName: 1, playCount: 1 } },
+  ]);
+
+  return { genre: rawGenre, matchedGenre, tracks };
+}
+
+// No AI call, same reasoning as formatListeningHistoryMarkdown — this is a
+// judgment call since it wasn't specified explicitly; switch this to route
+// through generateFollowUpText/buildCommandResultPrompt instead if you'd
+// rather have AI-authored framing on playlists.
+function formatPlaylistMarkdown(result: Awaited<ReturnType<typeof fetchPlaylistByGenre>>): string {
+  if (!result.matchedGenre) {
+    return `I don't recognize "${result.genre}" as a genre I can filter by. Try things like afrobeats, hip-hop, R&B, pop, rock, electronic, jazz, latin, or indie.`;
+  }
+  if (result.tracks.length === 0) {
+    return `No ${result.matchedGenre} plays found in your history yet.`;
+  }
+  const lines = (result.tracks as { trackName: string; artistName: string; playCount: number }[]).map(
+    (t) =>
+      `- **${t.trackName}** – ${t.artistName} (${t.playCount} ${t.playCount === 1 ? "play" : "plays"})`
+  );
+  return [`Here's a playlist pulled from your own ${result.matchedGenre} history:`, "", ...lines].join("\n");
 }
 
 function logCallError(label: string, error: unknown) {
@@ -164,6 +324,8 @@ async function generateGoogleText(
   }
 }
 
+// Only reached now for commands that want AI-authored framing
+// (artist-top-songs). Data-dump commands never call this.
 async function generateFollowUpText(
   prompt: string,
   client: GoogleGenAI,
@@ -191,6 +353,33 @@ async function generateFollowUpText(
   }
 }
 
+// Runs whichever command the model picked and returns the finished
+// human-facing text for that turn — either straight Markdown, or (for
+// artist-top-songs) one more AI call to frame the recommendation.
+async function resolveCommand(
+  userId: string,
+  command: AssistantCommand,
+  latestQuestion: string,
+  client: GoogleGenAI,
+  model: string,
+  interactionId: string | undefined
+): Promise<string> {
+  switch (command.kind) {
+    case "listening-history": {
+      const result = await fetchListeningHistory(userId, command.duration);
+      return formatListeningHistoryMarkdown(result);
+    }
+    case "artist-top-songs": {
+      const result = await fetchArtistTopSongs(userId, command.artist);
+      return generateFollowUpText(buildCommandResultPrompt(latestQuestion, result), client, model, interactionId);
+    }
+    case "create-playlist": {
+      const result = await fetchPlaylistByGenre(userId, command.genre);
+      return formatPlaylistMarkdown(result);
+    }
+  }
+}
+
 export async function POST(req: NextRequest) {
   const userId = await getSessionUserId(req);
   if (!userId) return apiError("Unauthorized", 401);
@@ -210,10 +399,7 @@ export async function POST(req: NextRequest) {
 
   const client = new GoogleGenAI({
     apiKey,
-    httpOptions: {
-      timeout: 30_000,
-      retryOptions: { attempts: 3 },
-    },
+    httpOptions: { timeout: 30_000, retryOptions: { attempts: 3 } },
   });
 
   try {
@@ -235,7 +421,7 @@ export async function POST(req: NextRequest) {
       client,
       model
     );
-    const { cleanText, command } = parseListeningHistoryCommand(firstAnswer);
+    const { cleanText, command } = parseAssistantCommand(firstAnswer);
 
     await saveTurns(userId, [
       { role: "user", content: latestQuestion },
@@ -246,13 +432,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ messages: [{ role: "assistant", content: cleanText }] });
     }
 
-    const commandResult = await executeListeningHistoryCommand(userId, command);
-    const followUpText = await generateFollowUpText(
-      buildCommandResultPrompt(latestQuestion, commandResult),
-      client,
-      model,
-      interactionId
-    );
+    const followUpText = await resolveCommand(userId, command, latestQuestion, client, model, interactionId);
     await saveTurns(userId, [{ role: "assistant", content: followUpText }]);
 
     return NextResponse.json({

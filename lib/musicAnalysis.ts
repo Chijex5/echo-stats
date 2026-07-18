@@ -1,7 +1,7 @@
 import { ObjectId } from 'mongodb';
 
 // ── Genre grouping map ─────────────────────────────────────────────
-const GENRE_GROUP_MAP: Record<string, string> = {
+export const GENRE_GROUP_MAP: Record<string, string> = {
   // Afrobeats family
   'afrobeats': 'afrobeats',
   'afro adura': 'afrobeats',
@@ -129,7 +129,7 @@ const GENRE_GROUP_MAP: Record<string, string> = {
   'japanese indie': 'jmusic',
 };
 
-function groupGenre(raw: string): string {
+export function groupGenre(raw: string): string {
   const normalized = normalizeGenre(raw);
   return GENRE_GROUP_MAP[normalized] ?? normalized; // ungrouped genres keep their name
 }
